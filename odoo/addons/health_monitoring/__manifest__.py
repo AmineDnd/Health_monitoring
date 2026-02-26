@@ -1,0 +1,30 @@
+{
+    'name': 'Health Monitoring & AI Alerts',
+    'version': '17.0.1.0.0',
+    'category': 'Healthcare',
+    'summary': 'Real-time patient vitals monitoring with ML anomaly detection',
+    'author': 'SmartLab 2026',
+    'license': 'LGPL-3',
+    'depends': ['base', 'mail'],
+    'data': [
+        'security/security_groups.xml',
+        'security/ir.model.access.csv',
+        'data/cron.xml',
+        'data/demo_action.xml',
+        'views/health_vital_record_views.xml',
+        'views/health_alert_views.xml',
+        'views/health_patient_views.xml',
+        'views/dashboard_views.xml',
+        'views/menus.xml',
+        'reports/patient_history_report.xml',
+        'reports/alert_statistics_report.xml',
+    ],
+    'assets': {
+        'web.assets_backend': [
+            'https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap',
+            'health_monitoring/static/src/css/smartlab_theme.css',
+        ],
+    },
+    'installable': True,
+    'application': True,
+}

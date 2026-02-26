@@ -1,0 +1,82 @@
+2026-02-21 20:47:43,583 102 INFO ? odoo: Odoo version 17.0-20260217 
+2026-02-21 20:47:43,584 102 INFO ? odoo: Using configuration file at /etc/odoo/odoo.conf 
+2026-02-21 20:47:43,584 102 INFO ? odoo: addons paths: ['/usr/lib/python3/dist-packages/odoo/addons', '/var/lib/odoo/.local/share/Odoo/addons/17.0', '/mnt/extra-addons'] 
+2026-02-21 20:47:43,584 102 INFO ? odoo: database: odoo@db:5432 
+2026-02-21 20:47:43,707 102 INFO ? odoo.addons.base.models.ir_actions_report: Will use the Wkhtmltopdf binary at /usr/local/bin/wkhtmltopdf 
+2026-02-21 20:47:44,017 102 INFO smartlab_db odoo.modules.loading: loading 1 modules... 
+2026-02-21 20:47:44,021 102 INFO smartlab_db odoo.modules.loading: 1 modules loaded in 0.00s, 0 queries (+0 extra) 
+2026-02-21 20:47:44,035 102 INFO smartlab_db odoo.modules.loading: updating modules list 
+2026-02-21 20:47:44,038 102 INFO smartlab_db odoo.addons.base.models.ir_module: ALLOW access to module.update_list on [] to user __system__ #1 via n/a 
+2026-02-21 20:47:45,571 102 INFO smartlab_db odoo.addons.base.models.ir_module: ALLOW access to module.button_upgrade on ['Health Monitoring & AI Alerts'] to user __system__ #1 via n/a 
+2026-02-21 20:47:45,571 102 INFO smartlab_db odoo.addons.base.models.ir_module: ALLOW access to module.update_list on ['Health Monitoring & AI Alerts'] to user __system__ #1 via n/a 
+2026-02-21 20:47:46,174 102 INFO smartlab_db odoo.addons.base.models.ir_module: ALLOW access to module.button_install on [] to user __system__ #1 via n/a 
+2026-02-21 20:47:46,195 102 INFO smartlab_db odoo.modules.loading: loading 16 modules... 
+2026-02-21 20:47:46,437 102 INFO smartlab_db odoo.modules.loading: Loading module health_monitoring (15/16) 
+2026-02-21 20:47:46,573 102 INFO smartlab_db odoo.modules.registry: module health_monitoring: creating or updating database tables 
+2026-02-21 20:47:46,679 102 INFO smartlab_db odoo.schema: Table 'health_alert': unable to set NOT NULL on column 'patient_id' 
+2026-02-21 20:47:46,699 102 INFO smartlab_db odoo.schema: Keep unexpected index health_alert__acknowledged_index on table health_alert 
+2026-02-21 20:47:46,818 102 INFO smartlab_db odoo.modules.loading: loading health_monitoring/security/ir.model.access.csv 
+2026-02-21 20:47:46,843 102 WARNING smartlab_db odoo.addons.base.models.ir_model: Rule health.patient.user has no group, this is a deprecated feature. Every access-granting rule should specify a group. 
+2026-02-21 20:47:46,849 102 INFO smartlab_db odoo.modules.loading: loading health_monitoring/data/cron.xml 
+2026-02-21 20:47:46,875 102 INFO smartlab_db odoo.modules.loading: loading health_monitoring/data/demo_action.xml 
+2026-02-21 20:47:46,893 102 WARNING smartlab_db odoo.modules.loading: Transient module states were reset 
+2026-02-21 20:47:46,894 102 ERROR smartlab_db odoo.modules.registry: Failed to load registry 
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/odoo/modules/registry.py", line 110, in new
+    odoo.modules.load_modules(registry, force_demo, status, update_module)
+  File "/usr/lib/python3/dist-packages/odoo/modules/loading.py", line 481, in load_modules
+    processed_modules += load_marked_modules(env, graph,
+  File "/usr/lib/python3/dist-packages/odoo/modules/loading.py", line 366, in load_marked_modules
+    loaded, processed = load_module_graph(
+  File "/usr/lib/python3/dist-packages/odoo/modules/loading.py", line 229, in load_module_graph
+    load_data(env, idref, mode, kind='data', package=package)
+  File "/usr/lib/python3/dist-packages/odoo/modules/loading.py", line 73, in load_data
+    tools.convert_file(env, package.name, filename, idref, mode, noupdate, kind)
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 682, in convert_file
+    convert_xml_import(env, module, fp, idref, mode, noupdate)
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 748, in convert_xml_import
+    obj.parse(doc.getroot())
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 668, in parse
+    self._tag_root(de)
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 621, in _tag_root
+    raise ParseError(msg) from None  # Restart with "--log-handler odoo.tools.convert:DEBUG" for complete traceback
+odoo.tools.convert.ParseError: while parsing /mnt/extra-addons/health_monitoring/data/demo_action.xml:3
+forbidden opcode(s) in '# Generate 20 patients\nimport random\nfrom datetime import timedelta\n\nPatient = env[\'health.patient\']\nVital = env[\'health.vital.record\']\nAlert = env[\'health.alert\']\n\nfirst_names = [\'John\', \'Jane\', \'Michael\', \'Emily\', \'William\', \'Olivia\', \'James\', \'Sophia\', \'Benjamin\', \'Isabella\', \'Lucas\', \'Mia\', \'Henry\', \'Amelia\', \'Alexander\', \'Harper\', \'Sebastian\', \'Evelyn\', \'Matthew\', \'Abigail\']\nlast_names = [\'Smith\', \'Johnson\', \'Williams\', \'Brown\', \'Jones\', \'Garcia\', \'Miller\', \'Davis\', \'Rodriguez\', \'Martinez\', \'Hernandez\', \'Lopez\', \'Gonzalez\', \'Wilson\', \'Anderson\', \'Thomas\', \'Taylor\', \'Moore\', \'Jackson\', \'Martin\']\n\ndef random_date(start, end):\n    return start + timedelta(seconds=random.randint(0, int((end - start).total_seconds())))\n\nnow = fields.Datetime.now()\nstart_time = now - timedelta(days=7)\n\nfor i in range(20):\n    patient = Patient.create({\n        \'name\': f"{random.choice(first_names)} {random.choice(last_names)}",\n        \'age\': random.randint(25, 85),\n        \'gender\': random.choice([\'male\', \'female\']),\n        \'risk_level\': random.choice([\'low\', \'low\', \'medium\', \'medium\', \'high\', \'critical\']),\n    })\n\n    # Generate 15-25 vital records per patient\n    num_vitals = random.randint(15, 25)\n    for _ in range(num_vitals):\n        v_type = random.choice([\'blood_pressure\', \'heart_rate\', \'glucose\', \'temperature\', \'oxygen\', \'respiratory_rate\'])\n        val2 = 0.0\n        if v_type == \'blood_pressure\':\n            val = random.uniform(90, 180)\n            val2 = random.uniform(60, 110)\n        elif v_type == \'heart_rate\':\n            val = random.uniform(60, 130)\n        elif v_type == \'glucose\':\n            val = random.uniform(70, 250)\n        elif v_type == \'temperature\':\n            val = random.uniform(36.0, 39.5)\n        elif v_type == \'oxygen\':\n            val = random.uniform(88, 100)\n        else:\n            val = random.uniform(12, 30)\n\n        # For demo purposes, we will bypass the actual AI call to avoid spamming the AI service API during installation\n        # Or we can just let it call! If we let it call, 20*20 = 400 requests to FastAPI. It might be slow.\n        # Let\'s bypass the AI call safely by using `with_context(no_ai=True)`. Wait, we didn\'t add that context.\n        # Let\'s just create it. Oh wait, it will trigger AI for each! 400 requests * 0.1s = 40 seconds. That\'s acceptable, but we should do it manually to add history.\n        \n        vital = Vital.create({\n            \'patient_id\': patient.id,\n            \'type\': v_type,\n            \'value\': round(val, 1),\n            \'value2\': round(val2, 1),\n            \'recorded_at\': random_date(start_time, now),\n        })\n\naction = {\n    \'type\': \'ir.actions.client\',\n    \'tag\': \'display_notification\',\n    \'params\': {\n        \'title\': \'Success\',\n        \'message\': \'Demo data generated successfully!\',\n        \'type\': \'success\',\n        \'sticky\': False,\n    }\n}': IMPORT_NAME, IMPORT_FROM
+
+View error context:
+'-no context-'
+
+2026-02-21 20:47:46,896 102 CRITICAL smartlab_db odoo.service.server: Failed to initialize database `smartlab_db`. 
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/odoo/service/server.py", line 1374, in preload_registries
+    registry = Registry.new(dbname, update_module=update_module)
+  File "<decorator-gen-16>", line 2, in new
+  File "/usr/lib/python3/dist-packages/odoo/tools/func.py", line 87, in locked
+    return func(inst, *args, **kwargs)
+  File "/usr/lib/python3/dist-packages/odoo/modules/registry.py", line 110, in new
+    odoo.modules.load_modules(registry, force_demo, status, update_module)
+  File "/usr/lib/python3/dist-packages/odoo/modules/loading.py", line 481, in load_modules
+    processed_modules += load_marked_modules(env, graph,
+  File "/usr/lib/python3/dist-packages/odoo/modules/loading.py", line 366, in load_marked_modules
+    loaded, processed = load_module_graph(
+  File "/usr/lib/python3/dist-packages/odoo/modules/loading.py", line 229, in load_module_graph
+    load_data(env, idref, mode, kind='data', package=package)
+  File "/usr/lib/python3/dist-packages/odoo/modules/loading.py", line 73, in load_data
+    tools.convert_file(env, package.name, filename, idref, mode, noupdate, kind)
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 682, in convert_file
+    convert_xml_import(env, module, fp, idref, mode, noupdate)
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 748, in convert_xml_import
+    obj.parse(doc.getroot())
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 668, in parse
+    self._tag_root(de)
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 621, in _tag_root
+    raise ParseError(msg) from None  # Restart with "--log-handler odoo.tools.convert:DEBUG" for complete traceback
+odoo.tools.convert.ParseError: while parsing /mnt/extra-addons/health_monitoring/data/demo_action.xml:3
+forbidden opcode(s) in '# Generate 20 patients\nimport random\nfrom datetime import timedelta\n\nPatient = env[\'health.patient\']\nVital = env[\'health.vital.record\']\nAlert = env[\'health.alert\']\n\nfirst_names = [\'John\', \'Jane\', \'Michael\', \'Emily\', \'William\', \'Olivia\', \'James\', \'Sophia\', \'Benjamin\', \'Isabella\', \'Lucas\', \'Mia\', \'Henry\', \'Amelia\', \'Alexander\', \'Harper\', \'Sebastian\', \'Evelyn\', \'Matthew\', \'Abigail\']\nlast_names = [\'Smith\', \'Johnson\', \'Williams\', \'Brown\', \'Jones\', \'Garcia\', \'Miller\', \'Davis\', \'Rodriguez\', \'Martinez\', \'Hernandez\', \'Lopez\', \'Gonzalez\', \'Wilson\', \'Anderson\', \'Thomas\', \'Taylor\', \'Moore\', \'Jackson\', \'Martin\']\n\ndef random_date(start, end):\n    return start + timedelta(seconds=random.randint(0, int((end - start).total_seconds())))\n\nnow = fields.Datetime.now()\nstart_time = now - timedelta(days=7)\n\nfor i in range(20):\n    patient = Patient.create({\n        \'name\': f"{random.choice(first_names)} {random.choice(last_names)}",\n        \'age\': random.randint(25, 85),\n        \'gender\': random.choice([\'male\', \'female\']),\n        \'risk_level\': random.choice([\'low\', \'low\', \'medium\', \'medium\', \'high\', \'critical\']),\n    })\n\n    # Generate 15-25 vital records per patient\n    num_vitals = random.randint(15, 25)\n    for _ in range(num_vitals):\n        v_type = random.choice([\'blood_pressure\', \'heart_rate\', \'glucose\', \'temperature\', \'oxygen\', \'respiratory_rate\'])\n        val2 = 0.0\n        if v_type == \'blood_pressure\':\n            val = random.uniform(90, 180)\n            val2 = random.uniform(60, 110)\n        elif v_type == \'heart_rate\':\n            val = random.uniform(60, 130)\n        elif v_type == \'glucose\':\n            val = random.uniform(70, 250)\n        elif v_type == \'temperature\':\n            val = random.uniform(36.0, 39.5)\n        elif v_type == \'oxygen\':\n            val = random.uniform(88, 100)\n        else:\n            val = random.uniform(12, 30)\n\n        # For demo purposes, we will bypass the actual AI call to avoid spamming the AI service API during installation\n        # Or we can just let it call! If we let it call, 20*20 = 400 requests to FastAPI. It might be slow.\n        # Let\'s bypass the AI call safely by using `with_context(no_ai=True)`. Wait, we didn\'t add that context.\n        # Let\'s just create it. Oh wait, it will trigger AI for each! 400 requests * 0.1s = 40 seconds. That\'s acceptable, but we should do it manually to add history.\n        \n        vital = Vital.create({\n            \'patient_id\': patient.id,\n            \'type\': v_type,\n            \'value\': round(val, 1),\n            \'value2\': round(val2, 1),\n            \'recorded_at\': random_date(start_time, now),\n        })\n\naction = {\n    \'type\': \'ir.actions.client\',\n    \'tag\': \'display_notification\',\n    \'params\': {\n        \'title\': \'Success\',\n        \'message\': \'Demo data generated successfully!\',\n        \'type\': \'success\',\n        \'sticky\': False,\n    }\n}': IMPORT_NAME, IMPORT_FROM
+
+View error context:
+'-no context-'
+
+2026-02-21 20:47:46,898 102 INFO smartlab_db odoo.service.server: Initiating shutdown 
+2026-02-21 20:47:46,898 102 INFO smartlab_db odoo.service.server: Hit CTRL-C again or send a second signal to force the shutdown. 
+2026-02-21 20:47:46,898 102 INFO smartlab_db odoo.sql_db: ConnectionPool(used=0/count=0/max=64): Closed 1 connections  

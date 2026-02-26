@@ -1,0 +1,38 @@
+2026-02-21 20:59:07,352 187 INFO ? odoo: Odoo version 17.0-20260217 
+2026-02-21 20:59:07,354 187 INFO ? odoo: Using configuration file at /etc/odoo/odoo.conf 
+2026-02-21 20:59:07,354 187 INFO ? odoo: addons paths: ['/usr/lib/python3/dist-packages/odoo/addons', '/var/lib/odoo/.local/share/Odoo/addons/17.0', '/mnt/extra-addons'] 
+2026-02-21 20:59:07,354 187 INFO ? odoo: database: odoo@db:5432 
+2026-02-21 20:59:07,429 187 INFO ? odoo.addons.base.models.ir_actions_report: Will use the Wkhtmltopdf binary at /usr/local/bin/wkhtmltopdf 
+2026-02-21 20:59:07,538 187 INFO ? odoo.service.server: Initiating shutdown 
+2026-02-21 20:59:07,538 187 INFO ? odoo.service.server: Hit CTRL-C again or send a second signal to force the shutdown. 
+2026-02-21 20:59:07,558 187 INFO smartlab_db odoo.modules.loading: loading 1 modules... 
+2026-02-21 20:59:07,562 187 INFO smartlab_db odoo.modules.loading: 1 modules loaded in 0.00s, 0 queries (+0 extra) 
+2026-02-21 20:59:07,579 187 INFO smartlab_db odoo.modules.loading: loading 16 modules... 
+2026-02-21 20:59:07,756 187 INFO smartlab_db odoo.modules.loading: 16 modules loaded in 0.18s, 0 queries (+0 extra) 
+2026-02-21 20:59:07,808 187 INFO smartlab_db odoo.modules.loading: Modules loaded. 
+2026-02-21 20:59:07,812 187 INFO smartlab_db odoo.modules.registry: Registry loaded in 0.274s 
+2026-02-21 20:59:07,830 187 ERROR smartlab_db odoo.sql_db: bad query: SELECT id, name FROM ir_ui_view WHERE arch_db ILIKE '%patient_name%'
+ERROR: operator does not exist: jsonb ~~* unknown
+LINE 1: SELECT id, name FROM ir_ui_view WHERE arch_db ILIKE '%patien...
+                                                      ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+ 
+Traceback (most recent call last):
+  File "/usr/bin/odoo", line 8, in <module>
+    odoo.cli.main()
+  File "/usr/lib/python3/dist-packages/odoo/cli/command.py", line 76, in main
+    o.run(args)
+  File "/usr/lib/python3/dist-packages/odoo/cli/shell.py", line 129, in run
+    self.shell(config['db_name'])
+  File "/usr/lib/python3/dist-packages/odoo/cli/shell.py", line 122, in shell
+    self.console(local_vars)
+  File "/usr/lib/python3/dist-packages/odoo/cli/shell.py", line 67, in console
+    exec(sys.stdin.read(), local_vars)
+  File "<string>", line 2, in <module>
+  File "/usr/lib/python3/dist-packages/odoo/sql_db.py", line 342, in execute
+    res = self._obj.execute(query, params)
+psycopg2.errors.UndefinedFunction: operator does not exist: jsonb ~~* unknown
+LINE 1: SELECT id, name FROM ir_ui_view WHERE arch_db ILIKE '%patien...
+                                                      ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+

@@ -1,0 +1,17 @@
+2026-02-21 21:01:06,434 216 INFO ? odoo: Odoo version 17.0-20260217 
+2026-02-21 21:01:06,435 216 INFO ? odoo: Using configuration file at /etc/odoo/odoo.conf 
+2026-02-21 21:01:06,435 216 INFO ? odoo: addons paths: ['/usr/lib/python3/dist-packages/odoo/addons', '/var/lib/odoo/.local/share/Odoo/addons/17.0', '/mnt/extra-addons'] 
+2026-02-21 21:01:06,435 216 INFO ? odoo: database: odoo@db:5432 
+2026-02-21 21:01:06,512 216 INFO ? odoo.addons.base.models.ir_actions_report: Will use the Wkhtmltopdf binary at /usr/local/bin/wkhtmltopdf 
+2026-02-21 21:01:06,614 216 INFO ? odoo.service.server: Initiating shutdown 
+2026-02-21 21:01:06,614 216 INFO ? odoo.service.server: Hit CTRL-C again or send a second signal to force the shutdown. 
+2026-02-21 21:01:06,637 216 INFO smartlab_db odoo.modules.loading: loading 1 modules... 
+2026-02-21 21:01:06,644 216 INFO smartlab_db odoo.modules.loading: 1 modules loaded in 0.01s, 0 queries (+0 extra) 
+2026-02-21 21:01:06,676 216 INFO smartlab_db odoo.modules.loading: loading 16 modules... 
+2026-02-21 21:01:06,900 216 INFO smartlab_db odoo.modules.loading: 16 modules loaded in 0.22s, 0 queries (+0 extra) 
+2026-02-21 21:01:06,943 216 INFO smartlab_db odoo.modules.loading: Modules loaded. 
+2026-02-21 21:01:06,946 216 INFO smartlab_db odoo.modules.registry: Registry loaded in 0.331s 
+Found Views with patient_name: []
+Found Ghost Fields with patient_name: [(2654, 'patient_name', 'health.alert')]
+Error deleting field 2654: This column contains module data and cannot be removed!
+Database cleanup complete.

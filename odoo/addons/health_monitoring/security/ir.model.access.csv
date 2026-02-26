@@ -1,0 +1,13 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_patient_nurse,health.patient.nurse,model_health_patient,group_health_nurse,1,0,0,0
+access_patient_doc,health.patient.doc,model_health_patient,group_health_doctor,1,1,1,0
+access_patient_admin,health.patient.admin,model_health_patient,group_health_admin,1,1,1,1
+access_vitals_nurse,health.vital.record.nurse,model_health_vital_record,group_health_nurse,1,1,1,0
+access_vitals_doc,health.vital.record.doc,model_health_vital_record,group_health_doctor,1,1,1,0
+access_vitals_admin,health.vital.record.admin,model_health_vital_record,group_health_admin,1,1,1,1
+access_alert_nurse,health.alert.nurse,model_health_alert,group_health_nurse,1,0,0,0
+access_alert_doc,health.alert.doc,model_health_alert,group_health_doctor,1,1,1,0
+access_alert_admin,health.alert.admin,model_health_alert,group_health_admin,1,1,1,1
+access_dash_nurse,health.dashboard.nurse,model_health_dashboard,group_health_nurse,1,0,0,0
+access_dash_doc,health.dashboard.doc,model_health_dashboard,group_health_doctor,1,0,0,0
+access_dash_admin,health.dashboard.admin,model_health_dashboard,group_health_admin,1,1,1,1

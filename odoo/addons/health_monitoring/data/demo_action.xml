@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="action_generate_demo_data" model="ir.actions.server">
+    <field name="name">Generate SaaS Demo Data</field>
+    <field name="model_id" ref="model_health_patient"/>
+    <field name="state">code</field>
+    <field name="code">
+# Generate 20 patients without forbidden imports
+Patient = env['health.patient']
+Vital = env['health.vital.record']
+Alert = env['health.alert']
+
+first_names = ['John', 'Jane', 'Michael', 'Emily', 'William', 'Olivia', 'James', 'Sophia', 'Benjamin', 'Isabella', 'Lucas', 'Mia', 'Henry', 'Amelia', 'Alexander', 'Harper', 'Sebastian', 'Evelyn', 'Matthew', 'Abigail']
+last_names = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin']
+vital_types = ['blood_pressure', 'heart_rate', 'glucose', 'temperature', 'oxygen', 'respiratory_rate']
+risk_levels = ['low', 'low', 'medium', 'medium', 'high', 'critical']
+
+now = datetime.datetime.now()
+
+for i in range(20):
+    # pseudo-randomness without import random
+    r_idx = (i * 7) % len(first_names)
+    r_idx2 = (i * 13) % len(last_names)
+    gender_choice = 'male' if (i % 2 == 0) else 'female'
+    risk_choice = risk_levels[(i * 3) % len(risk_levels)]
+    
+    patient = Patient.create({
+        'name': f"{first_names[r_idx]} {last_names[r_idx2]}",
+        'age': 25 + (i * 17 % 60),
+        'gender': gender_choice,
+        'risk_level': risk_choice,
+    })
+
+    num_vitals = 15 + (i % 10)
+    for j in range(num_vitals):
+        v_idx = (i + j) % len(vital_types)
+        v_type = vital_types[v_idx]
+        val2 = 0.0
+        
+        # Pseudo-random ranges
+        pseudo_val = (i * 11 + j * 7) % 100
+        
+        if v_type == 'blood_pressure':
+            val = 90 + pseudo_val
+            val2 = 60 + (pseudo_val / 2)
+        elif v_type == 'heart_rate':
+            val = 60 + (pseudo_val * 0.7)
+        elif v_type == 'glucose':
+            val = 70 + (pseudo_val * 1.8)
+        elif v_type == 'temperature':
+            val = 36.0 + (pseudo_val * 0.035)
+        elif v_type == 'oxygen':
+            val = 88 + (pseudo_val * 0.12)
+        else:
+            val = 12 + (pseudo_val * 0.18)
+            
+        rec_time = now - datetime.timedelta(hours=(j * 12 + i))
+            
+        vital = Vital.create({
+            'patient_id': patient.id,
+            'type': v_type,
+            'value': round(val, 1),
+            'value2': round(val2, 1),
+            'recorded_at': rec_time,
+        })
+
+action = {
+    'type': 'ir.actions.client',
+    'tag': 'display_notification',
+    'params': {
+        'title': 'Success',
+        'message': 'Demo data generated successfully!',
+        'type': 'success',
+        'sticky': False,
+    }
+}
+    </field>
+  </record>
+
+  <menuitem id="menu_generate_demo" name="Generate Demo Data" parent="menu_health_root" action="action_generate_demo_data" sequence="99"/>
+</odoo>

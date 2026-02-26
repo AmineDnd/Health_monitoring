@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <menuitem id="menu_health_root"  name="Health SaaS" sequence="10"/>
+
+  <menuitem id="menu_dashboard"    name="Dashboard"       parent="menu_health_root" action="action_dashboard_server" sequence="5"/>
+  <menuitem id="menu_patients"     name="Patients"        parent="menu_health_root" action="action_patients" sequence="10"/>
+  <menuitem id="menu_alerts"       name="Alerts"   parent="menu_health_root" sequence="15"/>
+  
+  <menuitem id="menu_alerts_pipeline" name="Alert Pipeline" parent="menu_alerts" action="action_alerts" sequence="1"/>
+  <menuitem id="menu_all_alerts"      name="Alert History"  parent="menu_alerts" action="action_all_alerts" sequence="2"/>
+  
+  <menuitem id="menu_vitals"       name="Vitals"          parent="menu_health_root" action="action_vitals_all" sequence="20"/>
+
+  <!-- Analytics -->
+  <menuitem id="menu_analytics_root" name="Analytics" parent="menu_health_root" sequence="30"/>
+  <menuitem id="menu_analytics_vitals" name="Vital Trends" parent="menu_analytics_root" action="action_analytics_vitals_graph" sequence="1"/>
+  <menuitem id="menu_analytics_alerts" name="Alert Severity" parent="menu_analytics_root" action="action_analytics_alerts_graph" sequence="2"/>
+  
+</odoo>

@@ -1,0 +1,87 @@
+2026-02-21 20:52:51,695 140 INFO ? odoo: Odoo version 17.0-20260217 
+2026-02-21 20:52:51,695 140 INFO ? odoo: Using configuration file at /etc/odoo/odoo.conf 
+2026-02-21 20:52:51,695 140 INFO ? odoo: addons paths: ['/usr/lib/python3/dist-packages/odoo/addons', '/var/lib/odoo/.local/share/Odoo/addons/17.0', '/mnt/extra-addons'] 
+2026-02-21 20:52:51,695 140 INFO ? odoo: database: odoo@db:5432 
+2026-02-21 20:52:51,801 140 INFO ? odoo.addons.base.models.ir_actions_report: Will use the Wkhtmltopdf binary at /usr/local/bin/wkhtmltopdf 
+2026-02-21 20:52:52,084 140 INFO smartlab_db odoo.modules.loading: loading 1 modules... 
+2026-02-21 20:52:52,091 140 INFO smartlab_db odoo.modules.loading: 1 modules loaded in 0.01s, 0 queries (+0 extra) 
+2026-02-21 20:52:52,113 140 INFO smartlab_db odoo.modules.loading: updating modules list 
+2026-02-21 20:52:52,116 140 INFO smartlab_db odoo.addons.base.models.ir_module: ALLOW access to module.update_list on [] to user __system__ #1 via n/a 
+2026-02-21 20:52:54,147 140 INFO smartlab_db odoo.addons.base.models.ir_module: ALLOW access to module.button_upgrade on ['Health Monitoring & AI Alerts'] to user __system__ #1 via n/a 
+2026-02-21 20:52:54,147 140 INFO smartlab_db odoo.addons.base.models.ir_module: ALLOW access to module.update_list on ['Health Monitoring & AI Alerts'] to user __system__ #1 via n/a 
+2026-02-21 20:52:54,832 140 INFO smartlab_db odoo.addons.base.models.ir_module: ALLOW access to module.button_install on [] to user __system__ #1 via n/a 
+2026-02-21 20:52:54,853 140 INFO smartlab_db odoo.modules.loading: loading 16 modules... 
+2026-02-21 20:52:55,092 140 INFO smartlab_db odoo.modules.loading: Loading module health_monitoring (15/16) 
+2026-02-21 20:52:55,216 140 INFO smartlab_db odoo.modules.registry: module health_monitoring: creating or updating database tables 
+2026-02-21 20:52:55,359 140 INFO smartlab_db odoo.schema: Table 'health_alert': unable to set NOT NULL on column 'patient_id' 
+2026-02-21 20:52:55,385 140 INFO smartlab_db odoo.schema: Keep unexpected index health_alert__acknowledged_index on table health_alert 
+2026-02-21 20:52:55,492 140 INFO smartlab_db odoo.modules.loading: loading health_monitoring/security/ir.model.access.csv 
+2026-02-21 20:52:55,520 140 WARNING smartlab_db odoo.addons.base.models.ir_model: Rule health.patient.user has no group, this is a deprecated feature. Every access-granting rule should specify a group. 
+2026-02-21 20:52:55,527 140 INFO smartlab_db odoo.modules.loading: loading health_monitoring/data/cron.xml 
+2026-02-21 20:52:55,557 140 INFO smartlab_db odoo.modules.loading: loading health_monitoring/data/demo_action.xml 
+2026-02-21 20:52:55,582 140 INFO smartlab_db odoo.modules.loading: loading health_monitoring/views/health_vital_record_views.xml 
+2026-02-21 20:52:55,629 140 INFO smartlab_db odoo.modules.loading: loading health_monitoring/views/health_alert_views.xml 
+2026-02-21 20:52:55,670 140 INFO smartlab_db odoo.modules.loading: loading health_monitoring/views/health_patient_views.xml 
+2026-02-21 20:52:55,697 140 INFO smartlab_db odoo.modules.loading: loading health_monitoring/views/dashboard_views.xml 
+2026-02-21 20:52:55,714 140 INFO smartlab_db odoo.modules.loading: loading health_monitoring/views/menus.xml 
+2026-02-21 20:52:55,726 140 WARNING smartlab_db odoo.modules.loading: Transient module states were reset 
+2026-02-21 20:52:55,726 140 ERROR smartlab_db odoo.modules.registry: Failed to load registry 
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/odoo/modules/registry.py", line 110, in new
+    odoo.modules.load_modules(registry, force_demo, status, update_module)
+  File "/usr/lib/python3/dist-packages/odoo/modules/loading.py", line 481, in load_modules
+    processed_modules += load_marked_modules(env, graph,
+  File "/usr/lib/python3/dist-packages/odoo/modules/loading.py", line 366, in load_marked_modules
+    loaded, processed = load_module_graph(
+  File "/usr/lib/python3/dist-packages/odoo/modules/loading.py", line 229, in load_module_graph
+    load_data(env, idref, mode, kind='data', package=package)
+  File "/usr/lib/python3/dist-packages/odoo/modules/loading.py", line 73, in load_data
+    tools.convert_file(env, package.name, filename, idref, mode, noupdate, kind)
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 682, in convert_file
+    convert_xml_import(env, module, fp, idref, mode, noupdate)
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 727, in convert_xml_import
+    doc = etree.parse(xmlfile)
+  File "src/lxml/etree.pyx", line 3536, in lxml.etree.parse
+  File "src/lxml/parser.pxi", line 1897, in lxml.etree._parseDocument
+  File "src/lxml/parser.pxi", line 1917, in lxml.etree._parseFilelikeDocument
+  File "src/lxml/parser.pxi", line 1811, in lxml.etree._parseDocFromFilelike
+  File "src/lxml/parser.pxi", line 1201, in lxml.etree._BaseParser._parseDocFromFilelike
+  File "src/lxml/parser.pxi", line 615, in lxml.etree._ParserContext._handleParseResultDoc
+  File "src/lxml/parser.pxi", line 725, in lxml.etree._handleParseResult
+  File "src/lxml/parser.pxi", line 654, in lxml.etree._raiseParseError
+  File "/mnt/extra-addons/health_monitoring/views/menus.xml", line 7
+lxml.etree.XMLSyntaxError: Attribute name redefined, line 7, column 112
+2026-02-21 20:52:55,729 140 CRITICAL smartlab_db odoo.service.server: Failed to initialize database `smartlab_db`. 
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/odoo/service/server.py", line 1374, in preload_registries
+    registry = Registry.new(dbname, update_module=update_module)
+  File "<decorator-gen-16>", line 2, in new
+  File "/usr/lib/python3/dist-packages/odoo/tools/func.py", line 87, in locked
+    return func(inst, *args, **kwargs)
+  File "/usr/lib/python3/dist-packages/odoo/modules/registry.py", line 110, in new
+    odoo.modules.load_modules(registry, force_demo, status, update_module)
+  File "/usr/lib/python3/dist-packages/odoo/modules/loading.py", line 481, in load_modules
+    processed_modules += load_marked_modules(env, graph,
+  File "/usr/lib/python3/dist-packages/odoo/modules/loading.py", line 366, in load_marked_modules
+    loaded, processed = load_module_graph(
+  File "/usr/lib/python3/dist-packages/odoo/modules/loading.py", line 229, in load_module_graph
+    load_data(env, idref, mode, kind='data', package=package)
+  File "/usr/lib/python3/dist-packages/odoo/modules/loading.py", line 73, in load_data
+    tools.convert_file(env, package.name, filename, idref, mode, noupdate, kind)
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 682, in convert_file
+    convert_xml_import(env, module, fp, idref, mode, noupdate)
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 727, in convert_xml_import
+    doc = etree.parse(xmlfile)
+  File "src/lxml/etree.pyx", line 3536, in lxml.etree.parse
+  File "src/lxml/parser.pxi", line 1897, in lxml.etree._parseDocument
+  File "src/lxml/parser.pxi", line 1917, in lxml.etree._parseFilelikeDocument
+  File "src/lxml/parser.pxi", line 1811, in lxml.etree._parseDocFromFilelike
+  File "src/lxml/parser.pxi", line 1201, in lxml.etree._BaseParser._parseDocFromFilelike
+  File "src/lxml/parser.pxi", line 615, in lxml.etree._ParserContext._handleParseResultDoc
+  File "src/lxml/parser.pxi", line 725, in lxml.etree._handleParseResult
+  File "src/lxml/parser.pxi", line 654, in lxml.etree._raiseParseError
+  File "/mnt/extra-addons/health_monitoring/views/menus.xml", line 7
+lxml.etree.XMLSyntaxError: Attribute name redefined, line 7, column 112
+2026-02-21 20:52:55,731 140 INFO smartlab_db odoo.service.server: Initiating shutdown 
+2026-02-21 20:52:55,731 140 INFO smartlab_db odoo.service.server: Hit CTRL-C again or send a second signal to force the shutdown. 
+2026-02-21 20:52:55,732 140 INFO smartlab_db odoo.sql_db: ConnectionPool(used=0/count=0/max=64): Closed 1 connections  

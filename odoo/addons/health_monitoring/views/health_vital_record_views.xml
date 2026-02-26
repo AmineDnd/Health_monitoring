@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- VITALS FORM VIEW -->
+  <record id="view_vitals_form" model="ir.ui.view">
+    <field name="name">health.vital.record.form</field>
+    <field name="model">health.vital.record</field>
+    <field name="arch" type="xml">
+      <form>
+        <header>
+          <button string="Save &amp; Close Patient Record" type="object" name="action_manual_save_close" class="oe_highlight ms-2" invisible="id"/>
+        </header>
+        <sheet>
+          <field name="anomaly_detected" invisible="1"/>
+          
+          <div class="oe_title mb-3" invisible="not id">
+            <h1 class="d-flex align-items-center">
+              Vital Reading: <field name="type" class="ms-2" readonly="1" invisible="not id"/>
+            </h1>
+          </div>
+
+          <group>
+            <group string="Vital Sign Details">
+              <field name="type" string="Vital Type" required="1" invisible="id"/>
+              <field name="patient_id" widget="many2one_avatar" options="{'no_create': True}"/>
+              <field name="recorded_at"/>
+              <label for="value" string="Measurement"/>
+              <div class="d-flex align-items-center">
+                <field name="value" class="oe_inline ms-1" placeholder="Value..."/>
+                <span invisible="type != 'blood_pressure'" class="ms-1 me-1">/</span>
+                <field name="value2" class="oe_inline" invisible="type != 'blood_pressure'" placeholder="Diastolic..."/>
+                <field name="unit" class="ms-2 fw-bold text-muted oe_inline" readonly="1"/>
+              </div>
+            </group>
+            <group string="AI Analysis Results">
+              <field name="anomaly_detected" widget="boolean_toggle" readonly="1"/>
+              <field name="ai_score" widget="progressbar" string="AI Risk Score" options="{'max_value': 1.0}" readonly="1"/>
+            </group>
+          </group>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <!-- VITALS TREE VIEW -->
+  <record id="view_vitals_tree" model="ir.ui.view">
+    <field name="name">health.vital.record.tree</field>
+    <field name="model">health.vital.record</field>
+    <field name="arch" type="xml">
+      <tree decoration-danger="anomaly_detected==True">
+        <field name="recorded_at" string="Timestamp"/>
+        <field name="patient_id" widget="many2one_avatar"/>
+        <field name="type" string="Vital Sign"/>
+        <field name="value" string="Measurement"/>
+        <field name="value2" optional="show" invisible="type != 'blood_pressure'" string="Diastolic"/>
+        <field name="unit"/>
+        <field name="ai_score" widget="progressbar" string="AI Score" optional="show"/>
+        <field name="anomaly_detected" string="Anomaly" widget="boolean_toggle" readonly="1" optional="show"/>
+      </tree>
+    </field>
+  </record>
+
+  <!-- VITALS GRAPH VIEW -->
+  <record id="view_vitals_graph" model="ir.ui.view">
+    <field name="name">health.vital.record.graph</field>
+    <field name="model">health.vital.record</field>
+    <field name="arch" type="xml">
+      <graph string="Vitals Analysis" type="line">
+        <field name="recorded_at" interval="day"/>
+        <field name="value" type="measure"/>
+        <field name="type" type="col"/>
+      </graph>
+    </field>
+  </record>
+
+  <!-- VITALS SEARCH VIEW -->
+  <record id="view_vitals_search" model="ir.ui.view">
+    <field name="name">health.vital.record.search</field>
+    <field name="model">health.vital.record</field>
+    <field name="arch" type="xml">
+      <search>
+        <field name="patient_id"/>
+        <field name="type"/>
+        <filter string="Anomalies Detected" name="anomalies" domain="[('anomaly_detected', '=', True)]"/>
+        <filter string="Normal Records" name="normal" domain="[('anomaly_detected', '=', False)]"/>
+        <separator/>
+        <filter string="Today's Vitals" name="today" domain="[('recorded_at', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0))), ('recorded_at', '&lt;=', datetime.datetime.combine(context_today(), datetime.time(23,59,59)))]"/>
+        <group expand="0" string="Group By">
+          <filter string="Patient" name="group_by_patient" context="{'group_by':'patient_id'}"/>
+          <filter string="Vital Type" name="group_by_type" context="{'group_by':'type'}"/>
+          <filter string="Date" name="group_by_date" context="{'group_by':'recorded_at:day'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
+  <!-- ACTIONS -->
+  <record id="action_vitals_all" model="ir.actions.act_window">
+    <field name="name">All Vital Records</field>
+    <field name="res_model">health.vital.record</field>
+    <field name="view_mode">tree,form,graph</field>
+    <field name="search_view_id" ref="view_vitals_search"/>
+    <field name="context">{'search_default_today': 1}</field>
+  </record>
+
+  <record id="action_patient_vitals" model="ir.actions.act_window">
+    <field name="name">Patient Vitals</field>
+    <field name="res_model">health.vital.record</field>
+    <field name="view_mode">tree,form,graph</field>
+    <field name="domain">[('patient_id', '=', active_id)]</field>
+    <field name="context">{'default_patient_id': active_id}</field>
+  </record>
+
+</odoo>

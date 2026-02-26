@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- ALERTS KANBAN VIEW -->
+  <record id="view_alerts_kanban" model="ir.ui.view">
+    <field name="name">health.alert.kanban</field>
+    <field name="model">health.alert</field>
+    <field name="arch" type="xml">
+      <kanban default_group_by="state" class="o_kanban_mobile">
+        <field name="patient_id"/>
+        <field name="severity"/>
+        <field name="message"/>
+        <field name="ai_confidence"/>
+        <field name="create_date"/>
+        <field name="state"/>
+        <templates>
+          <t t-name="kanban-box">
+             <div t-attf-class="oe_kanban_card oe_kanban_global_click #{record.severity.raw_value == 'critical' ? 'border border-danger border-2' : ''}"
+                 t-attf-style="border-left: 4px solid #{record.severity.raw_value == 'critical' ? '#EF4444' : record.severity.raw_value == 'high' ? '#F59E0B' : record.severity.raw_value == 'medium' ? '#3B82F6' : '#22C55E'};">
+              
+              <div class="d-flex justify-content-between mb-2">
+                <strong style="font-size: 14px;"><field name="patient_id"/></strong>
+                <span t-attf-class="badge #{record.severity.raw_value == 'critical' ? 'text-bg-danger' : record.severity.raw_value == 'high' ? 'text-bg-warning' : record.severity.raw_value == 'medium' ? 'text-bg-info' : 'text-bg-success'}">
+                  <field name="severity"/>
+                </span>
+              </div>
+              
+              <div class="mb-2 text-muted" style="font-size: 12px;">
+                <field name="message"/>
+              </div>
+              
+              <div class="d-flex justify-content-between align-items-center mt-2" style="font-size: 11px;">
+                <div class="text-muted"><field name="create_date"/></div>
+                <div><strong>AI Conf:</strong> <field name="ai_confidence"/>%</div>
+              </div>
+              
+              <div class="mt-2 text-end" t-if="record.state.raw_value == 'new'">
+                <button name="action_acknowledge" type="object" class="btn btn-sm btn-primary">Acknowledge</button>
+              </div>
+              <div class="mt-2 text-end" t-if="record.state.raw_value == 'investigating'">
+                <button name="action_resolve" type="object" class="btn btn-sm btn-success">Resolve</button>
+              </div>
+
+            </div>
+          </t>
+        </templates>
+      </kanban>
+    </field>
+  </record>
+
+  <!-- ALERTS TREE VIEW -->
+  <record id="view_alerts_tree" model="ir.ui.view">
+    <field name="name">health.alert.tree</field>
+    <field name="model">health.alert</field>
+    <field name="arch" type="xml">
+      <tree decoration-danger="severity=='critical'"
+            decoration-warning="severity=='high'"
+            decoration-muted="state=='resolved'">
+        <field name="create_date" string="Time"/>
+        <field name="patient_id" widget="many2one_avatar" string="Patient"/>
+        <field name="doctor_id" widget="many2one_avatar_user" string="Doctor" optional="show"/>
+        <field name="severity" string="Severity" widget="badge"
+               decoration-danger="severity=='critical'"
+               decoration-warning="severity=='high'"
+               decoration-info="severity=='medium'"
+               decoration-success="severity=='low'"/>
+        <field name="ai_confidence" string="AI Conf. %" optional="show"/>
+        <field name="message" string="AI Message"/>
+        <field name="state" string="Status" widget="badge" 
+               decoration-success="state=='resolved'" 
+               decoration-info="state=='investigating'"
+               decoration-muted="state=='new'"/>
+        <button name="action_acknowledge" type="object"
+                string="Acknowledge" class="btn btn-sm btn-primary"
+                invisible="state != 'new'"/>
+        <button name="action_resolve" type="object"
+                string="Resolve" class="btn btn-sm btn-success"
+                invisible="state != 'investigating'"/>
+      </tree>
+    </field>
+  </record>
+
+  <!-- ALERT FORM VIEW -->
+  <record id="view_alerts_form" model="ir.ui.view">
+    <field name="name">health.alert.form</field>
+    <field name="model">health.alert</field>
+    <field name="arch" type="xml">
+      <form>
+        <header>
+          <button name="action_acknowledge" type="object" string="Acknowledge Alert" class="oe_highlight" invisible="state != 'new'"/>
+          <button name="action_resolve" type="object" string="Mark Resolved" class="btn-success" invisible="state != 'investigating'"/>
+          <field name="state" widget="statusbar" statusbar_visible="new,investigating,resolved"/>
+        </header>
+        <sheet>
+          <div class="oe_title">
+            <h1><field name="patient_id" readonly="1" widget="many2one_avatar"/></h1>
+          </div>
+          <group>
+            <group string="Alert Details">
+              <field name="severity" readonly="1" widget="badge" 
+                     decoration-danger="severity=='critical'"
+                     decoration-warning="severity=='high'"
+                     decoration-info="severity=='medium'"
+                     decoration-success="severity=='low'"/>
+              <field name="vital_record_id" readonly="1"/>
+              <field name="create_date" readonly="1" string="Triggered At"/>
+              <field name="ai_confidence" widget="percentpie" string="AI Confidence"/>
+              <field name="doctor_id" widget="many2one_avatar_user" readonly="1"/>
+            </group>
+            <group string="Acknowledgement &amp; Resolution" invisible="state == 'new'">
+              <field name="acknowledged" readonly="1"/>
+              <field name="acknowledged_by" readonly="1" widget="many2one_avatar_user"/>
+              <field name="acknowledged_at" readonly="1"/>
+            </group>
+          </group>
+          <group string="AI Analysis Message">
+            <field name="message" readonly="1" nolabel="1"/>
+          </group>
+        </sheet>
+        <div class="oe_chatter">
+          <field name="message_follower_ids"/>
+          <field name="message_ids"/>
+        </div>
+      </form>
+    </field>
+  </record>
+  
+  <record id="view_alerts_pivot" model="ir.ui.view">
+      <field name="name">health.alert.pivot</field>
+      <field name="model">health.alert</field>
+      <field name="arch" type="xml">
+          <pivot string="Alert Analysis">
+              <field name="create_date" interval="month" type="row"/>
+              <field name="severity" type="col"/>
+              <field name="patient_id" type="measure"/>
+          </pivot>
+      </field>
+  </record>
+
+  <!-- ALERTS SEARCH VIEW -->
+  <record id="view_alerts_search" model="ir.ui.view">
+    <field name="name">health.alert.search</field>
+    <field name="model">health.alert</field>
+    <field name="arch" type="xml">
+      <search>
+        <field name="patient_id"/>
+        <filter string="New (Unacknowledged)" name="new" domain="[('state', '=', 'new')]"/>
+        <filter string="Investigating" name="investigating" domain="[('state', '=', 'investigating')]"/>
+        <filter string="Active Alerts" name="active" domain="[('state', '!=', 'resolved')]"/>
+        <separator/>
+        <filter string="Critical Severity" name="critical" domain="[('severity', '=', 'critical')]"/>
+        <filter string="High Severity" name="high" domain="[('severity', '=', 'high')]"/>
+        <separator/>
+        <filter string="Today's Alerts" name="today" domain="[('create_date', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0))), ('create_date', '&lt;=', datetime.datetime.combine(context_today(), datetime.time(23,59,59)))]"/>
+        <group expand="0" string="Group By">
+          <filter string="Patient" name="group_by_patient" context="{'group_by':'patient_id'}"/>
+          <filter string="Severity" name="group_by_severity" context="{'group_by':'severity'}"/>
+          <filter string="Status" name="group_by_state" context="{'group_by':'state'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
+  <record id="action_alerts" model="ir.actions.act_window">
+    <field name="name">SaaS Alert Pipeline</field>
+    <field name="res_model">health.alert</field>
+    <field name="view_mode">kanban,tree,form,pivot</field>
+    <field name="search_view_id" ref="view_alerts_search"/>
+    <field name="context">{'search_default_active': 1}</field>
+  </record>
+  
+  <record id="action_all_alerts" model="ir.actions.act_window">
+    <field name="name">All Alerts</field>
+    <field name="res_model">health.alert</field>
+    <field name="view_mode">tree,kanban,form,pivot</field>
+  </record>
+  
+  <record id="action_patient_alerts" model="ir.actions.act_window">
+    <field name="name">Patient Alerts</field>
+    <field name="res_model">health.alert</field>
+    <field name="view_mode">tree,form</field>
+    <field name="domain">[('patient_id', '=', active_id)]</field>
+  </record>
+
+  <record id="action_patient_critical_alerts" model="ir.actions.act_window">
+    <field name="name">Critical Alerts</field>
+    <field name="res_model">health.alert</field>
+    <field name="view_mode">tree,form</field>
+    <field name="domain">[('patient_id', '=', active_id), ('severity', '=', 'critical')]</field>
+  </record>
+
+</odoo>

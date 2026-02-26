@@ -1,0 +1,10 @@
+{
+    "python.analysis.extraPaths": [
+        "odoo",
+        "odoo/addons"
+    ],
+    "python.autoComplete.extraPaths": [
+        "odoo",
+        "odoo/addons"
+    ]
+}
