@@ -1,0 +1,331 @@
+2026-02-21 20:49:43,250 120 INFO ? odoo: Odoo version 17.0-20260217 
+2026-02-21 20:49:43,250 120 INFO ? odoo: Using configuration file at /etc/odoo/odoo.conf 
+2026-02-21 20:49:43,250 120 INFO ? odoo: addons paths: ['/usr/lib/python3/dist-packages/odoo/addons', '/var/lib/odoo/.local/share/Odoo/addons/17.0', '/mnt/extra-addons'] 
+2026-02-21 20:49:43,250 120 INFO ? odoo: database: odoo@db:5432 
+2026-02-21 20:49:43,364 120 INFO ? odoo.addons.base.models.ir_actions_report: Will use the Wkhtmltopdf binary at /usr/local/bin/wkhtmltopdf 
+2026-02-21 20:49:43,656 120 INFO smartlab_db odoo.modules.loading: loading 1 modules... 
+2026-02-21 20:49:43,660 120 INFO smartlab_db odoo.modules.loading: 1 modules loaded in 0.00s, 0 queries (+0 extra) 
+2026-02-21 20:49:43,674 120 INFO smartlab_db odoo.modules.loading: updating modules list 
+2026-02-21 20:49:43,676 120 INFO smartlab_db odoo.addons.base.models.ir_module: ALLOW access to module.update_list on [] to user __system__ #1 via n/a 
+2026-02-21 20:49:45,474 120 INFO smartlab_db odoo.addons.base.models.ir_module: ALLOW access to module.button_upgrade on ['Health Monitoring & AI Alerts'] to user __system__ #1 via n/a 
+2026-02-21 20:49:45,475 120 INFO smartlab_db odoo.addons.base.models.ir_module: ALLOW access to module.update_list on ['Health Monitoring & AI Alerts'] to user __system__ #1 via n/a 
+2026-02-21 20:49:46,332 120 INFO smartlab_db odoo.addons.base.models.ir_module: ALLOW access to module.button_install on [] to user __system__ #1 via n/a 
+2026-02-21 20:49:46,357 120 INFO smartlab_db odoo.modules.loading: loading 16 modules... 
+2026-02-21 20:49:46,668 120 INFO smartlab_db odoo.modules.loading: Loading module health_monitoring (15/16) 
+2026-02-21 20:49:46,810 120 INFO smartlab_db odoo.modules.registry: module health_monitoring: creating or updating database tables 
+2026-02-21 20:49:46,917 120 INFO smartlab_db odoo.schema: Table 'health_alert': unable to set NOT NULL on column 'patient_id' 
+2026-02-21 20:49:46,938 120 INFO smartlab_db odoo.schema: Keep unexpected index health_alert__acknowledged_index on table health_alert 
+2026-02-21 20:49:47,064 120 INFO smartlab_db odoo.modules.loading: loading health_monitoring/security/ir.model.access.csv 
+2026-02-21 20:49:47,091 120 WARNING smartlab_db odoo.addons.base.models.ir_model: Rule health.patient.user has no group, this is a deprecated feature. Every access-granting rule should specify a group. 
+2026-02-21 20:49:47,098 120 INFO smartlab_db odoo.modules.loading: loading health_monitoring/data/cron.xml 
+2026-02-21 20:49:47,121 120 INFO smartlab_db odoo.modules.loading: loading health_monitoring/data/demo_action.xml 
+2026-02-21 20:49:47,144 120 INFO smartlab_db odoo.modules.loading: loading health_monitoring/views/health_patient_views.xml 
+2026-02-21 20:49:47,159 120 WARNING smartlab_db odoo.modules.loading: Transient module states were reset 
+2026-02-21 20:49:47,159 120 ERROR smartlab_db odoo.modules.registry: Failed to load registry 
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/odoo/tools/cache.py", line 99, in lookup
+    r = d[key]
+  File "<decorator-gen-5>", line 2, in __getitem__
+  File "/usr/lib/python3/dist-packages/odoo/tools/func.py", line 87, in locked
+    return func(inst, *args, **kwargs)
+  File "/usr/lib/python3/dist-packages/odoo/tools/lru.py", line 34, in __getitem__
+    a = self.d[obj]
+KeyError: ('ir.model.data', <function IrModelData._xmlid_lookup at 0x7271de05c1f0>, 'health_monitoring.action_patient_vitals')
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 610, in _tag_root
+    f(rec)
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 434, in _tag_record
+    f_val = _eval_xml(self, field, env)
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 143, in _eval_xml
+    +_process("".join(etree.tostring(n, encoding='unicode') for n in node))
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 132, in _process
+    self.idref[id] = self.id_get(id)
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 592, in id_get
+    res = self.model_id_get(id_str, raise_if_not_found)
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 598, in model_id_get
+    return self.env['ir.model.data']._xmlid_to_res_model_res_id(id_str, raise_if_not_found=raise_if_not_found)
+  File "/usr/lib/python3/dist-packages/odoo/addons/base/models/ir_model.py", line 2215, in _xmlid_to_res_model_res_id
+    return self._xmlid_lookup(xmlid)
+  File "<decorator-gen-43>", line 2, in _xmlid_lookup
+  File "/usr/lib/python3/dist-packages/odoo/tools/cache.py", line 104, in lookup
+    value = d[key] = self.method(*args, **kwargs)
+  File "/usr/lib/python3/dist-packages/odoo/addons/base/models/ir_model.py", line 2208, in _xmlid_lookup
+    raise ValueError('External ID not found in the system: %s' % xmlid)
+ValueError: External ID not found in the system: health_monitoring.action_patient_vitals
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/odoo/modules/registry.py", line 110, in new
+    odoo.modules.load_modules(registry, force_demo, status, update_module)
+  File "/usr/lib/python3/dist-packages/odoo/modules/loading.py", line 481, in load_modules
+    processed_modules += load_marked_modules(env, graph,
+  File "/usr/lib/python3/dist-packages/odoo/modules/loading.py", line 366, in load_marked_modules
+    loaded, processed = load_module_graph(
+  File "/usr/lib/python3/dist-packages/odoo/modules/loading.py", line 229, in load_module_graph
+    load_data(env, idref, mode, kind='data', package=package)
+  File "/usr/lib/python3/dist-packages/odoo/modules/loading.py", line 73, in load_data
+    tools.convert_file(env, package.name, filename, idref, mode, noupdate, kind)
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 682, in convert_file
+    convert_xml_import(env, module, fp, idref, mode, noupdate)
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 748, in convert_xml_import
+    obj.parse(doc.getroot())
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 668, in parse
+    self._tag_root(de)
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 623, in _tag_root
+    raise ParseError('while parsing %s:%s, somewhere inside\n%s' % (
+odoo.tools.convert.ParseError: while parsing /mnt/extra-addons/health_monitoring/views/health_patient_views.xml:5, somewhere inside
+<record id="view_patient_form" model="ir.ui.view">
+    <field name="name">health.patient.form</field>
+    <field name="model">health.patient</field>
+    <field name="arch" type="xml">
+      <form>
+        <header>
+          <field name="risk_level" widget="statusbar" statusbar_visible="low,medium,high,critical"/>
+        </header>
+        <sheet>
+          <!-- Smart Buttons -->
+          <div class="oe_button_box" name="button_box">
+            <button class="oe_stat_button" type="action" name="%(action_patient_vitals)d" icon="fa-heartbeat">
+              <field string="Vitals" name="vitals_count" widget="statinfo"/>
+            </button>
+            <button class="oe_stat_button" type="action" name="%(action_patient_alerts)d" icon="fa-bell">
+              <field string="Total Alerts" name="alerts_count" widget="statinfo"/>
+            </button>
+            <button class="oe_stat_button" type="action" name="%(action_patient_critical_alerts)d" icon="fa-exclamation-triangle" context="{'search_default_critical': 1}">
+              <div class="o_stat_info o_text_danger">
+                <span class="o_stat_value"><field name="critical_alerts_count"/></span>
+                <span class="o_stat_text">Critical</span>
+              </div>
+            </button>
+          </div>
+
+          <!-- Title Area -->
+          <div class="oe_title mb-4">
+            <h1 class="d-flex align-items-center">
+              <field name="name" placeholder="Patient Name" class="me-3"/>
+              <span t-if="record.risk_level.raw_value == 'critical'" class="badge rounded-pill text-bg-danger ms-2" style="font-size: 14px;">Critical Risk</span>
+              <span t-if="record.risk_level.raw_value == 'high'" class="badge rounded-pill text-bg-warning ms-2" style="font-size: 14px;">High Risk</span>
+              <span t-if="record.risk_level.raw_value == 'medium'" class="badge rounded-pill text-bg-info ms-2" style="font-size: 14px;">Medium Risk</span>
+              <span t-if="record.risk_level.raw_value == 'low'" class="badge rounded-pill text-bg-success ms-2" style="font-size: 14px;">Low Risk</span>
+            </h1>
+          </div>
+
+          <!-- Basic Info -->
+          <group>
+            <group>
+              <field name="age"/>
+              <field name="gender"/>
+              <field name="doctor_id"/>
+            </group>
+            <group>
+              <field name="last_score" widget="progressbar" string="Latest AI Score" options="{'max_value': 1.0}"/>
+              <field name="last_alert_id" readonly="1" string="Latest Alert"/>
+            </group>
+          </group>
+
+          <!-- Tabs -->
+          <notebook>
+            <page string="Overview" name="overview">
+              <!-- Placeholder for custom layout inside Overview -->
+              <div class="row mt-3">
+                <div class="col-md-6">
+                  <h4 class="o_horizontal_separator">Latest Active Alerts</h4>
+                  <field name="alert_ids" readonly="1">
+                    <tree decoration-danger="severity=='critical'" decoration-warning="severity=='high'">
+                      <field name="severity"/>
+                      <field name="message"/>
+                      <field name="create_date"/>
+                      <field name="state"/>
+                    </tree>
+                  </field>
+                </div>
+                <div class="col-md-6">
+                  <h4 class="o_horizontal_separator">Recent Vitals</h4>
+                  <field name="vital_record_ids" readonly="1">
+                    <tree>
+                      <field name="recorded_at"/>
+                      <field name="type"/>
+                      <field name="value"/>
+                      <field name="ai_score" string="Score"/>
+                    </tree>
+                  </field>
+                </div>
+              </div>
+            </page>
+            <page string="Vitals" name="vitals">
+              <field name="vital_record_ids"/>
+            </page>
+            <page string="Alerts" name="alerts">
+              <field name="alert_ids"/>
+            </page>
+          </notebook>
+        </sheet>
+        <div class="oe_chatter">
+          <field name="message_follower_ids"/>
+          <field name="message_ids"/>
+        </div>
+      </form>
+    </field>
+  </record>
+2026-02-21 20:49:47,164 120 CRITICAL smartlab_db odoo.service.server: Failed to initialize database `smartlab_db`. 
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/odoo/tools/cache.py", line 99, in lookup
+    r = d[key]
+  File "<decorator-gen-5>", line 2, in __getitem__
+  File "/usr/lib/python3/dist-packages/odoo/tools/func.py", line 87, in locked
+    return func(inst, *args, **kwargs)
+  File "/usr/lib/python3/dist-packages/odoo/tools/lru.py", line 34, in __getitem__
+    a = self.d[obj]
+KeyError: ('ir.model.data', <function IrModelData._xmlid_lookup at 0x7271de05c1f0>, 'health_monitoring.action_patient_vitals')
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 610, in _tag_root
+    f(rec)
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 434, in _tag_record
+    f_val = _eval_xml(self, field, env)
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 143, in _eval_xml
+    +_process("".join(etree.tostring(n, encoding='unicode') for n in node))
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 132, in _process
+    self.idref[id] = self.id_get(id)
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 592, in id_get
+    res = self.model_id_get(id_str, raise_if_not_found)
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 598, in model_id_get
+    return self.env['ir.model.data']._xmlid_to_res_model_res_id(id_str, raise_if_not_found=raise_if_not_found)
+  File "/usr/lib/python3/dist-packages/odoo/addons/base/models/ir_model.py", line 2215, in _xmlid_to_res_model_res_id
+    return self._xmlid_lookup(xmlid)
+  File "<decorator-gen-43>", line 2, in _xmlid_lookup
+  File "/usr/lib/python3/dist-packages/odoo/tools/cache.py", line 104, in lookup
+    value = d[key] = self.method(*args, **kwargs)
+  File "/usr/lib/python3/dist-packages/odoo/addons/base/models/ir_model.py", line 2208, in _xmlid_lookup
+    raise ValueError('External ID not found in the system: %s' % xmlid)
+ValueError: External ID not found in the system: health_monitoring.action_patient_vitals
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/odoo/service/server.py", line 1374, in preload_registries
+    registry = Registry.new(dbname, update_module=update_module)
+  File "<decorator-gen-16>", line 2, in new
+  File "/usr/lib/python3/dist-packages/odoo/tools/func.py", line 87, in locked
+    return func(inst, *args, **kwargs)
+  File "/usr/lib/python3/dist-packages/odoo/modules/registry.py", line 110, in new
+    odoo.modules.load_modules(registry, force_demo, status, update_module)
+  File "/usr/lib/python3/dist-packages/odoo/modules/loading.py", line 481, in load_modules
+    processed_modules += load_marked_modules(env, graph,
+  File "/usr/lib/python3/dist-packages/odoo/modules/loading.py", line 366, in load_marked_modules
+    loaded, processed = load_module_graph(
+  File "/usr/lib/python3/dist-packages/odoo/modules/loading.py", line 229, in load_module_graph
+    load_data(env, idref, mode, kind='data', package=package)
+  File "/usr/lib/python3/dist-packages/odoo/modules/loading.py", line 73, in load_data
+    tools.convert_file(env, package.name, filename, idref, mode, noupdate, kind)
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 682, in convert_file
+    convert_xml_import(env, module, fp, idref, mode, noupdate)
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 748, in convert_xml_import
+    obj.parse(doc.getroot())
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 668, in parse
+    self._tag_root(de)
+  File "/usr/lib/python3/dist-packages/odoo/tools/convert.py", line 623, in _tag_root
+    raise ParseError('while parsing %s:%s, somewhere inside\n%s' % (
+odoo.tools.convert.ParseError: while parsing /mnt/extra-addons/health_monitoring/views/health_patient_views.xml:5, somewhere inside
+<record id="view_patient_form" model="ir.ui.view">
+    <field name="name">health.patient.form</field>
+    <field name="model">health.patient</field>
+    <field name="arch" type="xml">
+      <form>
+        <header>
+          <field name="risk_level" widget="statusbar" statusbar_visible="low,medium,high,critical"/>
+        </header>
+        <sheet>
+          <!-- Smart Buttons -->
+          <div class="oe_button_box" name="button_box">
+            <button class="oe_stat_button" type="action" name="%(action_patient_vitals)d" icon="fa-heartbeat">
+              <field string="Vitals" name="vitals_count" widget="statinfo"/>
+            </button>
+            <button class="oe_stat_button" type="action" name="%(action_patient_alerts)d" icon="fa-bell">
+              <field string="Total Alerts" name="alerts_count" widget="statinfo"/>
+            </button>
+            <button class="oe_stat_button" type="action" name="%(action_patient_critical_alerts)d" icon="fa-exclamation-triangle" context="{'search_default_critical': 1}">
+              <div class="o_stat_info o_text_danger">
+                <span class="o_stat_value"><field name="critical_alerts_count"/></span>
+                <span class="o_stat_text">Critical</span>
+              </div>
+            </button>
+          </div>
+
+          <!-- Title Area -->
+          <div class="oe_title mb-4">
+            <h1 class="d-flex align-items-center">
+              <field name="name" placeholder="Patient Name" class="me-3"/>
+              <span t-if="record.risk_level.raw_value == 'critical'" class="badge rounded-pill text-bg-danger ms-2" style="font-size: 14px;">Critical Risk</span>
+              <span t-if="record.risk_level.raw_value == 'high'" class="badge rounded-pill text-bg-warning ms-2" style="font-size: 14px;">High Risk</span>
+              <span t-if="record.risk_level.raw_value == 'medium'" class="badge rounded-pill text-bg-info ms-2" style="font-size: 14px;">Medium Risk</span>
+              <span t-if="record.risk_level.raw_value == 'low'" class="badge rounded-pill text-bg-success ms-2" style="font-size: 14px;">Low Risk</span>
+            </h1>
+          </div>
+
+          <!-- Basic Info -->
+          <group>
+            <group>
+              <field name="age"/>
+              <field name="gender"/>
+              <field name="doctor_id"/>
+            </group>
+            <group>
+              <field name="last_score" widget="progressbar" string="Latest AI Score" options="{'max_value': 1.0}"/>
+              <field name="last_alert_id" readonly="1" string="Latest Alert"/>
+            </group>
+          </group>
+
+          <!-- Tabs -->
+          <notebook>
+            <page string="Overview" name="overview">
+              <!-- Placeholder for custom layout inside Overview -->
+              <div class="row mt-3">
+                <div class="col-md-6">
+                  <h4 class="o_horizontal_separator">Latest Active Alerts</h4>
+                  <field name="alert_ids" readonly="1">
+                    <tree decoration-danger="severity=='critical'" decoration-warning="severity=='high'">
+                      <field name="severity"/>
+                      <field name="message"/>
+                      <field name="create_date"/>
+                      <field name="state"/>
+                    </tree>
+                  </field>
+                </div>
+                <div class="col-md-6">
+                  <h4 class="o_horizontal_separator">Recent Vitals</h4>
+                  <field name="vital_record_ids" readonly="1">
+                    <tree>
+                      <field name="recorded_at"/>
+                      <field name="type"/>
+                      <field name="value"/>
+                      <field name="ai_score" string="Score"/>
+                    </tree>
+                  </field>
+                </div>
+              </div>
+            </page>
+            <page string="Vitals" name="vitals">
+              <field name="vital_record_ids"/>
+            </page>
+            <page string="Alerts" name="alerts">
+              <field name="alert_ids"/>
+            </page>
+          </notebook>
+        </sheet>
+        <div class="oe_chatter">
+          <field name="message_follower_ids"/>
+          <field name="message_ids"/>
+        </div>
+      </form>
+    </field>
+  </record>
+2026-02-21 20:49:47,166 120 INFO smartlab_db odoo.service.server: Initiating shutdown 
+2026-02-21 20:49:47,166 120 INFO smartlab_db odoo.service.server: Hit CTRL-C again or send a second signal to force the shutdown. 
+2026-02-21 20:49:47,166 120 INFO smartlab_db odoo.sql_db: ConnectionPool(used=0/count=0/max=64): Closed 1 connections  

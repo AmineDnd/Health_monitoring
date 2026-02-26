@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- NEW ANALYTICS GRAPHS AND PIVOTS -->
+  <record id="action_analytics_vitals_graph" model="ir.actions.act_window">
+    <field name="name">Interactive Vital Trends</field>
+    <field name="res_model">health.vital.record</field>
+    <field name="view_mode">graph,pivot,tree</field>
+  </record>
+  
+  <record id="action_analytics_alerts_graph" model="ir.actions.act_window">
+    <field name="name">Alert Severity Distribution</field>
+    <field name="res_model">health.alert</field>
+    <field name="view_mode">graph,pivot,tree</field>
+  </record>
+
+  <!-- DASHBOARD FORM VIEW (Now with better layout and direct action buttons) -->
+  <record id="view_dashboard_form" model="ir.ui.view">
+    <field name="name">health.dashboard.form</field>
+    <field name="model">health.dashboard</field>
+    <field name="arch" type="xml">
+      <form create="0" edit="0" delete="0">
+        <sheet>
+          <div class="row mb-5">
+            <div class="col-12 text-center">
+              <h1 style="font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 800; color: #4F46E5;">
+                <i class="fa fa-heartbeat me-2"></i> Health AI Analytics Center
+              </h1>
+              <p class="text-muted" style="font-size: 18px;">Real-time Intelligent Patient Monitoring</p>
+            </div>
+          </div>
+          
+          <div class="row mb-4">
+            <!-- Professional KPI Cards with Icons -->
+            <div class="col-md-3">
+              <div class="card shadow-sm border-0 rounded-4 p-4 text-center" style="background: linear-gradient(135deg, #ffffff, #f8f9fa); border-bottom: 4px solid #0D9488 !important;">
+                <i class="fa fa-users fa-3x" style="color: #0D9488; opacity: 0.2; position: absolute; right: 20px; top: 20px;"></i>
+                <div class="text-muted text-uppercase fw-bold" style="font-size: 13px; letter-spacing: 1px;">Registered Patients</div>
+                <div class="mt-2 text-dark fw-bolder" style="font-size: 40px;"><field name="total_patients" nolabel="1"/></div>
+              </div>
+            </div>
+            
+            <div class="col-md-3">
+              <div class="card shadow-sm border-0 rounded-4 p-4 text-center" style="background: linear-gradient(135deg, #ffffff, #f8f9fa); border-bottom: 4px solid #3B82F6 !important;">
+                <i class="fa fa-bell fa-3x" style="color: #3B82F6; opacity: 0.2; position: absolute; right: 20px; top: 20px;"></i>
+                <div class="text-muted text-uppercase fw-bold" style="font-size: 13px; letter-spacing: 1px;">Active Alerts</div>
+                <div class="mt-2 text-primary fw-bolder" style="font-size: 40px;"><field name="active_alerts" nolabel="1"/></div>
+              </div>
+            </div>
+            
+            <div class="col-md-3">
+              <div class="card shadow-sm border-0 rounded-4 p-4 text-center" style="background: linear-gradient(135deg, #ffffff, #fef2f2); border-bottom: 4px solid #DC2626 !important;">
+                <i class="fa fa-exclamation-triangle fa-3x" style="color: #DC2626; opacity: 0.2; position: absolute; right: 20px; top: 20px;"></i>
+                <div class="text-danger text-uppercase fw-bold" style="font-size: 13px; letter-spacing: 1px;">Critical Emergencies</div>
+                <div class="mt-2 text-danger fw-bolder" style="font-size: 40px;"><field name="critical_alerts" nolabel="1"/></div>
+              </div>
+            </div>
+            
+            <div class="col-md-3">
+              <div class="card shadow-sm border-0 rounded-4 p-4 text-center" style="background: linear-gradient(135deg, #ffffff, #f8f9fa); border-bottom: 4px solid #8B5CF6 !important;">
+                <i class="fa fa-brain fa-3x" style="color: #8B5CF6; opacity: 0.2; position: absolute; right: 20px; top: 20px;"></i>
+                <div class="text-muted text-uppercase fw-bold" style="font-size: 13px; letter-spacing: 1px;">Avg AI Risk Score</div>
+                <div class="mt-2 text-dark fw-bolder" style="font-size: 40px;">
+                    <field name="avg_score" nolabel="1" widget="float" options="{'precision': 2}"/>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-12 text-center mt-5 mb-3">
+              <h3 class="text-muted">Interactive Analytics</h3>
+              <p>Click the buttons below to open beautiful, interactive charts for deep analysis.</p>
+            </div>
+            
+            <div class="col-md-6 text-center">
+               <button name="%(action_analytics_vitals_graph)d" type="action" class="btn btn-lg btn-outline-primary shadow-sm" style="width: 80%; padding: 20px; font-size: 18px;">
+                 <i class="fa fa-line-chart me-2"></i> Open Vitals Flow Chart
+               </button>
+            </div>
+            <div class="col-md-6 text-center">
+               <button name="%(action_analytics_alerts_graph)d" type="action" class="btn btn-lg btn-outline-danger shadow-sm" style="width: 80%; padding: 20px; font-size: 18px;">
+                 <i class="fa fa-pie-chart me-2"></i> Open Alert Distribution
+               </button>
+            </div>
+          </div>
+          <div class="row mt-5">
+            <div class="col-md-6">
+              <h3 class="o_horizontal_separator" style="color: #4F46E5;">Recent Alerts</h3>
+              <field name="recent_alert_ids" readonly="1">
+                <tree decoration-danger="severity=='critical'" decoration-warning="severity=='high'">
+                  <field name="create_date" string="Time"/>
+                  <field name="patient_id" widget="many2one_avatar"/>
+                  <field name="severity" widget="badge" 
+                         decoration-danger="severity=='critical'"
+                         decoration-warning="severity=='high'"
+                         decoration-info="severity=='medium'"
+                         decoration-success="severity=='low'"/>
+                  <field name="state"/>
+                </tree>
+              </field>
+            </div>
+            <div class="col-md-6">
+              <h3 class="o_horizontal_separator" style="color: #0D9488;">Latest Vitals</h3>
+              <field name="recent_vital_ids" readonly="1">
+                <tree decoration-danger="anomaly_detected==True">
+                  <field name="recorded_at" string="Time"/>
+                  <field name="patient_id" widget="many2one_avatar"/>
+                  <field name="type"/>
+                  <field name="value"/>
+                  <field name="anomaly_detected" string="Anomaly" widget="boolean_toggle"/>
+                </tree>
+              </field>
+            </div>
+          </div>
+          
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <!-- NEW ANALYTICS GRAPHS AND PIVOTS -->
+  <record id="action_analytics_vitals_graph" model="ir.actions.act_window">
+    <field name="name">Interactive Vital Trends</field>
+    <field name="res_model">health.vital.record</field>
+    <field name="view_mode">graph,pivot,tree</field>
+  </record>
+  
+  <record id="action_analytics_alerts_graph" model="ir.actions.act_window">
+    <field name="name">Alert Severity Distribution</field>
+    <field name="res_model">health.alert</field>
+    <field name="view_mode">graph,pivot,tree</field>
+  </record>
+
+  <record id="action_dashboard_server" model="ir.actions.server">
+    <field name="name">SaaS Dashboard</field>
+    <field name="model_id" ref="model_health_dashboard"/>
+    <field name="state">code</field>
+    <field name="code">
+dashboard = env['health.dashboard'].create({})
+action = {
+    'name': 'AI Health Analytics',
+    'type': 'ir.actions.act_window',
+    'res_model': 'health.dashboard',
+    'view_mode': 'form',
+    'res_id': dashboard.id,
+    'target': 'current',
+}
+    </field>
+  </record>
+
+</odoo>

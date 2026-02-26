@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="cron_reanalyze_vitals" model="ir.cron">
+    <field name="name">Health Monitor: Re-analyze Recent Vitals</field>
+    <field name="model_id" ref="model_health_vital_record"/>
+    <field name="state">code</field>
+    <field name="code">model.cron_reanalyze_recent()</field>
+    <field name="interval_number">15</field>
+    <field name="interval_type">minutes</field>
+    <field name="numbercall">-1</field>   <!-- -1 = run forever -->
+    <field name="active" eval="True"/>
+  </record>
+</odoo>

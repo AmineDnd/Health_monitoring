@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_report_alert_stats" model="ir.actions.report">
+        <field name="name">Alert Statistics Report</field>
+        <field name="model">health.alert</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">health_monitoring.report_alert_stats_view</field>
+        <field name="report_file">health_monitoring.report_alert_stats_view</field>
+        <field name="print_report_name">'Alert_Stats'</field>
+        <field name="binding_model_id" ref="model_health_alert"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_alert_stats_view">
+        <t t-call="web.html_container">
+            <t t-call="web.external_layout">
+                <div class="page">
+                    <h2 class="mb-4">Alert Statistics Report</h2>
+                    <p>Generated on: <span t-esc="datetime.datetime.now().strftime('%Y-%m-%d %H:%M')"/></p>
+                    
+                    <h4 class="mt-4 mb-3" style="color:#DC2626; border-bottom: 2px solid #DC2626;">Selected Alerts Directory</h4>
+                    <table class="table table-sm table-bordered">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>Date Triggered</th>
+                                <th>Patient</th>
+                                <th>Severity</th>
+                                <th>AI Message</th>
+                                <th>AI Confidence</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="docs.sorted(key=lambda r: r.create_date, reverse=True)" t-as="alert">
+                                <tr>
+                                    <td><span t-field="alert.create_date" t-options='{"widget": "datetime"}'/></td>
+                                    <td class="fw-bold"><span t-field="alert.patient_id.name"/></td>
+                                    <td>
+                                        <span t-if="alert.severity == 'critical'" class="text-danger fw-bold">CRITICAL</span>
+                                        <span t-if="alert.severity == 'high'" class="text-warning fw-bold">HIGH</span>
+                                        <span t-if="alert.severity == 'medium'" class="text-info fw-bold">MEDIUM</span>
+                                        <span t-if="alert.severity == 'low'" class="text-success fw-bold">LOW</span>
+                                    </td>
+                                    <td><span t-field="alert.message"/></td>
+                                    <td><span t-field="alert.ai_confidence"/>%</td>
+                                    <td class="text-uppercase"><span t-field="alert.state"/></td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </div>
+            </t>
+        </t>
+    </template>
+</odoo>

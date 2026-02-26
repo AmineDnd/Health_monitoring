@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="smartlab_assets" inherit_id="web.assets_backend">
+        <xpath expr="." position="inside">
+            <link rel="stylesheet" type="text/css" href="/health_monitoring/static/src/css/smartlab_theme.css"/>
+        </xpath>
+    </template>
+</odoo>

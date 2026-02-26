@@ -1,0 +1,65 @@
+version: '3.9'
+
+services:
+
+  # ── 1. PostgreSQL ──────────────────────────────────────────
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - smartlab_net
+    healthcheck:
+      # Odoo will NOT start until this passes
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER}']
+      interval: 5s
+      retries: 10
+
+  # ── 2. Odoo ERP ────────────────────────────────────────────
+  odoo:
+    image: odoo:17.0
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy   # waits until PostgreSQL is ready
+    environment:
+      HOST: db
+      USER: ${POSTGRES_USER}
+      PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB}
+      AI_SERVICE_URL: ${AI_SERVICE_URL}
+    volumes:
+      - ./odoo/config/odoo.conf:/etc/odoo/odoo.conf:ro
+      - ./odoo/addons:/mnt/extra-addons
+      - odoo_web_data:/var/lib/odoo
+    ports:
+      - '8069:8069'    # http://localhost:8069
+    networks:
+      - smartlab_net
+
+  # ── 3. FastAPI AI Service ───────────────────────────────────
+  ai_service:
+    build:
+      context: ./ai_service
+    restart: unless-stopped
+    volumes:
+      - ./ai_service:/app   # hot reload: edit code, uvicorn reloads instantly
+    ports:
+      - '8000:8000'    # http://localhost:8000/docs (Swagger UI)
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - smartlab_net
+
+volumes:
+  postgres_data:
+  odoo_web_data:
+
+networks:
+  smartlab_net:
+    driver: bridge
