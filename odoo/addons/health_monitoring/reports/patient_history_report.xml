@@ -30,31 +30,36 @@
                             </div>
                         </div>
 
-                        <h4 class="mt-4 mb-3" style="color:#0D9488; border-bottom: 2px solid #0D9488;">Vital Signs Record</h4>
-                        <table class="table table-sm table-striped">
+                        <h4 class="mt-4 mb-3" style="color:#0D9488; border-bottom: 2px solid #0D9488;">Clinical Checkups History</h4>
+                        <table class="table table-sm table-striped" style="font-size: 11px;">
                             <thead>
-                                <tr>
+                                <tr class="table-primary">
                                     <th>Date</th>
-                                    <th>Type</th>
-                                    <th>Measurement</th>
-                                    <th>AI Score</th>
-                                    <th>Anomaly?</th>
+                                    <th>BP (SYS/DIA)</th>
+                                    <th>HR (bpm)</th>
+                                    <th>SpO2 (%)</th>
+                                    <th>Temp (°C)</th>
+                                    <th>Glucose</th>
+                                    <th>Resp</th>
+                                    <th>Risk Score</th>
+                                    <th>Result</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <t t-foreach="doc.vital_record_ids.sorted(key=lambda r: r.recorded_at, reverse=True)" t-as="vital">
-                                    <tr t-att-class="'text-danger fw-bold' if vital.anomaly_detected else ''">
-                                        <td><span t-field="vital.recorded_at" t-options='{"widget": "datetime"}'/></td>
-                                        <td><span t-field="vital.type"/></td>
+                                    <tr t-att-class="'table-danger font-weight-bold' if vital.status == 'critical' else 'table-warning' if vital.status == 'warning' else ''">
+                                        <td><span t-field="vital.recorded_at" t-options='{"widget": "datetime", "format": "dd/MM/yyyy HH:mm"}'/></td>
+                                        <td><span t-field="vital.bp_systolic"/> / <span t-field="vital.bp_diastolic"/></td>
+                                        <td><span t-field="vital.heart_rate"/></td>
+                                        <td><span t-field="vital.spo2"/></td>
+                                        <td><span t-field="vital.temperature"/></td>
+                                        <td><span t-field="vital.glucose"/></td>
+                                        <td><span t-field="vital.respiratory_rate"/></td>
+                                        <td><span t-field="vital.ai_score" t-options='{"widget": "percentage"}'/></td>
                                         <td>
-                                            <span t-field="vital.value"/>
-                                            <span t-if="vital.type == 'blood_pressure'"> / <span t-field="vital.value2"/></span>
-                                            <span t-field="vital.unit"/>
-                                        </td>
-                                        <td><span t-field="vital.ai_score"/></td>
-                                        <td>
-                                            <span t-if="vital.anomaly_detected" class="badge text-bg-danger">Yes</span>
-                                            <span t-else="" class="text-muted">No</span>
+                                            <span t-if="vital.status == 'critical'" class="badge text-bg-danger">CRITICAL</span>
+                                            <span t-elif="vital.status == 'warning'" class="badge text-bg-warning">WARNING</span>
+                                            <span t-else="" class="text-success">Normal</span>
                                         </td>
                                     </tr>
                                 </t>

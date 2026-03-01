@@ -18,8 +18,17 @@ class HealthAlert(models.Model):
     ], 'Severity', required=True, tracking=True)
     
     message = fields.Text('Message')
+    parsed_message_html = fields.Html('AI Clinical Analysis', compute='_compute_parsed_message')
     ai_confidence = fields.Float('AI Confidence (%)', help="Confidence score from the AI model (0-100%).")
     
+    @api.depends('message')
+    def _compute_parsed_message(self):
+        for rec in self:
+            msg = rec.message or ""
+            # Professional cleanup for the UI
+            clean_msg = msg.replace('[WARNING]', '').replace('[CRITICAL]', '').replace('[INFO]', '').strip()
+            rec.parsed_message_html = f"<div class='alert alert-info' style='border-left: 4px solid #3A86FF;'>{clean_msg}</div>"
+
     acknowledged = fields.Boolean('Acknowledged', default=False, tracking=True)
     acknowledged_by = fields.Many2one('res.users', 'Acknowledged By')
     acknowledged_at = fields.Datetime('Acknowledged At')

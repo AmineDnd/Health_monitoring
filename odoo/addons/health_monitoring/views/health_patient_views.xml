@@ -30,7 +30,7 @@
           <!-- Title Area -->
           <div class="oe_title mb-4">
             <h1 class="d-flex align-items-center">
-              <field name="name" placeholder="Patient Name" class="me-3"/>
+              <field name="name" placeholder="Patient Name" class="me-3 sl-name-lead" style="font-size: 1.5em;"/>
               <span invisible="risk_level != 'critical'" class="badge rounded-pill text-bg-danger ms-2" style="font-size: 14px;">Critical Risk</span>
               <span invisible="risk_level != 'high'" class="badge rounded-pill text-bg-warning ms-2" style="font-size: 14px;">High Risk</span>
               <span invisible="risk_level != 'medium'" class="badge rounded-pill text-bg-info ms-2" style="font-size: 14px;">Medium Risk</span>
@@ -38,29 +38,69 @@
             </h1>
           </div>
 
-          <!-- Basic Info -->
-          <group>
-            <group string="General Information">
-              <field name="age"/>
-              <field name="gender"/>
-              <field name="doctor_id" widget="many2one_avatar_user" options="{'no_create': True}"/>
-            </group>
-            <group string="AI Health Status">
-              <field name="last_score" widget="progressbar" string="Latest AI Score" options="{'max_value': 1.0}"/>
-              <field name="last_alert_id" readonly="1" string="Latest Alert"/>
-              <field name="risk_level" widget="badge" 
-                     decoration-danger="risk_level=='critical'"
-                     decoration-warning="risk_level=='high'"
-                     decoration-info="risk_level=='medium'"
-                     decoration-success="risk_level=='low'"/>
-            </group>
-          </group>
+          <!-- Structured Layout -->
+          <div class="row sl-card-container">
+            <div class="col-md-6 mb-3">
+              <div class="sl-card shadow-sm p-4 bg-white rounded border-0">
+                  <h3 class="o_horizontal_separator text-primary mb-3"><i class="fa fa-user-circle-o me-2"></i>Personal Profile</h3>
+                  <group>
+                    <field name="age"/>
+                    <field name="gender" widget="radio" options="{'horizontal': true}"/>
+                    <field name="category" widget="badge" 
+                           decoration-info="category=='child'"
+                           decoration-warning="category=='elderly'"
+                           decoration-success="category=='adult'"
+                           decoration-primary="category=='teen'"/>
+                  </group>
+              </div>
+            </div>
+            <div class="col-md-6 mb-3">
+              <div class="sl-card shadow-sm p-4 bg-white rounded border-0">
+                  <h3 class="o_horizontal_separator text-primary mb-3"><i class="fa fa-stethoscope me-2"></i>Medical Context</h3>
+                  <group>
+                    <field name="doctor_id" widget="many2one_avatar_user" options="{'no_create': True}"/>
+                    <field name="tag_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
+                  </group>
+              </div>
+            </div>
+          </div>
+          <div class="row sl-card-container">
+            <div class="col-md-12 mb-3">
+              <div class="sl-card shadow-sm p-4 bg-white rounded border-0">
+                  <h3 class="o_horizontal_separator text-primary mb-3"><i class="fa fa-brain me-2"></i>AI Risk Assessment</h3>
+              <div class="sl-ai-alert-box" invisible="risk_level in ['low', 'medium']">
+                <i class="fa fa-exclamation-triangle"></i>
+                <div>
+                  <strong>Attention Required</strong><br/>
+                  <span style="font-size: 13px;">This patient has a high AI risk score. Please review latest vitals.</span>
+                </div>
+              </div>
+              <div class="row">
+                  <div class="col-md-6">
+                      <group>
+                        <field name="last_score" widget="progressbar" string="Latest AI Score" options="{'max_value': 1.0}"/>
+                        <field name="last_alert_id" readonly="1" string="Latest Alert"/>
+                      </group>
+                  </div>
+                  <div class="col-md-6">
+                      <group>
+                        <field name="risk_level" widget="badge" 
+                               decoration-danger="risk_level=='critical'"
+                               decoration-warning="risk_level=='high'"
+                               decoration-info="risk_level=='medium'"
+                               decoration-success="risk_level=='low'"/>
+                      </group>
+                  </div>
+              </div>
+              </div>
+            </div>
+          </div>
 
           <!-- Tabs -->
           <notebook>
             <page string="Overview" name="overview">
               <!-- Placeholder for custom layout inside Overview -->
-              <div class="row mt-3">
+              <div class="row gx-5 mt-3">
                 <div class="col-md-6">
                   <h4 class="o_horizontal_separator">Latest Active Alerts</h4>
                   <field name="alert_ids" readonly="1">
@@ -72,14 +112,14 @@
                     </tree>
                   </field>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-6 border-start ps-4">
                   <h4 class="o_horizontal_separator">Recent Vitals</h4>
                   <field name="vital_record_ids" readonly="1">
                     <tree>
                       <field name="recorded_at"/>
-                      <field name="type"/>
-                      <field name="value"/>
-                      <field name="ai_score" string="Score"/>
+                      <field name="bp_systolic" string="SYS" class="sl-numeric"/>
+                      <field name="heart_rate" string="HR" class="sl-numeric"/>
+                      <field name="ai_score" string="Score" widget="progressbar"/>
                     </tree>
                   </field>
                 </div>
@@ -106,10 +146,11 @@
     <field name="name">health.patient.tree</field>
     <field name="model">health.patient</field>
     <field name="arch" type="xml">
-      <tree decoration-danger="risk_level=='critical'" decoration-warning="risk_level=='high'">
+      <tree decoration-danger="risk_level=='critical'" decoration-warning="risk_level=='high'" class="sl-modern-tree">
         <field name="name" string="Patient Name" decoration-bf="1"/>
         <field name="age" optional="show"/>
-        <field name="gender" optional="show"/>
+        <field name="category" widget="badge" optional="show"/>
+        <field name="tag_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
         <field name="doctor_id" widget="many2one_avatar_user"/>
         <field name="risk_level" widget="badge" 
                decoration-danger="risk_level=='critical'"
@@ -135,26 +176,32 @@
         <templates>
           <t t-name="kanban-box">
              <div class="oe_kanban_card oe_kanban_global_click"
-                 t-attf-style="border-left: 4px solid #{record.risk_level.raw_value == 'critical' ? '#EF4444' : record.risk_level.raw_value == 'high' ? '#F59E0B' : record.risk_level.raw_value == 'medium' ? '#3B82F6' : '#22C55E'};">
-              <div class="o_kanban_record_top mb-2">
-                <div class="o_kanban_record_headings">
-                  <strong class="o_kanban_record_title" style="font-size: 16px;"><field name="name"/></strong>
+                 t-attf-style="border-top: 4px solid #{record.risk_level.raw_value == 'critical' ? '#EF4444' : record.risk_level.raw_value == 'high' ? '#F59E0B' : record.risk_level.raw_value == 'medium' ? '#3A86FF' : '#22C55E'};">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center">
+                  <!-- Simulated Avatar circle -->
+                  <div class="me-3 d-flex justify-content-center align-items-center" style="width: 40px; height: 40px; border-radius: 50%; background-color: #E8F0FF; color: #3A86FF; font-weight: 600; font-size: 16px;">
+                    <t t-esc="record.name.value ? record.name.value.substring(0, 2).toUpperCase() : ''"/>
+                  </div>
+                  <div>
+                    <strong class="o_kanban_record_title" style="font-size: 16px; color: #1E293B;"><field name="name"/></strong>
+                    <div style="font-size: 12px; color: #64748B;"><field name="doctor_id"/></div>
+                  </div>
                 </div>
-                <div class="o_dropdown_kanban dropdown">
-                </div>
+                <span t-attf-class="badge #{record.risk_level.raw_value == 'critical' ? 'text-bg-danger' : record.risk_level.raw_value == 'high' ? 'text-bg-warning' : record.risk_level.raw_value == 'medium' ? 'text-bg-info' : 'text-bg-success'}">
+                  <field name="risk_level"/>
+                </span>
               </div>
-              <div class="o_kanban_record_body">
-                <div>Doctor: <field name="doctor_id"/></div>
-                <div class="mt-2">
-                  <span class="text-muted">AI Score: </span>
-                  <field name="last_score" widget="progressbar"/>
+              
+              <div class="mt-3 bg-light p-2 rounded">
+                <div class="d-flex justify-content-between mb-1" style="font-size: 12px;">
+                  <span class="text-muted fw-bold">AI Risk Prediction</span>
+                  <span class="sl-numeric"><t t-esc="Math.round((record.last_score.raw_value || 0) * 100)"/>%</span>
                 </div>
-              </div>
-              <div class="o_kanban_record_bottom mt-2">
-                <div class="oe_kanban_bottom_left">
-                  <span t-attf-class="badge #{record.risk_level.raw_value == 'critical' ? 'text-bg-danger' : record.risk_level.raw_value == 'high' ? 'text-bg-warning' : record.risk_level.raw_value == 'medium' ? 'text-bg-info' : 'text-bg-success'}">
-                    <field name="risk_level"/>
-                  </span>
+                <div class="progress" style="height: 6px; border-radius: 3px;">
+                  <div class="progress-bar" role="progressbar" 
+                       t-attf-style="width: #{(record.last_score.raw_value || 0) * 100}%; background-color: #{record.risk_level.raw_value == 'critical' ? '#EF4444' : record.risk_level.raw_value == 'high' ? '#F59E0B' : record.risk_level.raw_value == 'medium' ? '#3A86FF' : '#22C55E'};" 
+                       t-att-aria-valuenow="(record.last_score.raw_value || 0) * 100" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
               </div>
             </div>

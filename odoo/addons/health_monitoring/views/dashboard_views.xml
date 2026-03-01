@@ -20,97 +20,135 @@
     <field name="model">health.dashboard</field>
     <field name="arch" type="xml">
       <form create="0" edit="0" delete="0">
-        <sheet>
-          <div class="row mb-5">
-            <div class="col-12 text-center">
-              <h1 style="font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 800; color: #4F46E5;">
-                <i class="fa fa-heartbeat me-2"></i> Health AI Analytics Center
-              </h1>
-              <p class="text-muted" style="font-size: 18px;">Real-time Intelligent Patient Monitoring</p>
+        <sheet class="sl-dashboard p-0" style="background: transparent !important; border: none !important; box-shadow: none !important;">
+          <!-- Top Bar styling -->
+          <div class="d-flex justify-content-between align-items-center mb-4 pb-3" style="border-bottom: 1px solid #E2E8F0;">
+            <div class="d-flex align-items-center">
+              <span class="badge rounded-pill me-3" style="background-color: #DCFCE7; color: #166534; padding: 6px 12px; font-weight: 600; font-size: 12px; letter-spacing: 0.5px;">
+                <i class="fa fa-circle text-success me-1" style="font-size: 8px; vertical-align: middle;"></i> LIVE
+              </span>
+              <h1 class="m-0" style="font-size: 24px; font-weight: 700; color: #0F172A;">SmartLab Health Monitor</h1>
+            </div>
+            <div class="text-muted" style="font-weight: 500; font-size: 14px;">
+              <i class="fa fa-calendar me-2"></i> Real-time Analytics Center
             </div>
           </div>
           
-          <div class="row mb-4">
-            <!-- Professional KPI Cards with Icons -->
+          <!-- Row 1: KPI Cards -->
+          <div class="row g-4 mb-5">
             <div class="col-md-3">
-              <div class="card shadow-sm border-0 rounded-4 p-4 text-center" style="background: linear-gradient(135deg, #ffffff, #f8f9fa); border-bottom: 4px solid #0D9488 !important;">
-                <i class="fa fa-users fa-3x" style="color: #0D9488; opacity: 0.2; position: absolute; right: 20px; top: 20px;"></i>
-                <div class="text-muted text-uppercase fw-bold" style="font-size: 13px; letter-spacing: 1px;">Registered Patients</div>
-                <div class="mt-2 text-dark fw-bolder" style="font-size: 40px;"><field name="total_patients" nolabel="1"/></div>
+              <div class="sl-kpi-card sl-border-primary">
+                <i class="fa fa-hospital-o sl-kpi-icon text-primary"></i>
+                <div class="sl-kpi-title">Registered Patients</div>
+                <div class="sl-kpi-value text-primary font-monospace"><field name="total_patients" nolabel="1"/></div>
+                <div class="mt-2 text-muted" style="font-size: 12px;"><i class="fa fa-arrow-up text-success me-1"></i> Active monitoring</div>
               </div>
             </div>
             
             <div class="col-md-3">
-              <div class="card shadow-sm border-0 rounded-4 p-4 text-center" style="background: linear-gradient(135deg, #ffffff, #f8f9fa); border-bottom: 4px solid #3B82F6 !important;">
-                <i class="fa fa-bell fa-3x" style="color: #3B82F6; opacity: 0.2; position: absolute; right: 20px; top: 20px;"></i>
-                <div class="text-muted text-uppercase fw-bold" style="font-size: 13px; letter-spacing: 1px;">Active Alerts</div>
-                <div class="mt-2 text-primary fw-bolder" style="font-size: 40px;"><field name="active_alerts" nolabel="1"/></div>
+              <div class="sl-kpi-card sl-border-warning">
+                <i class="fa fa-bell-o sl-kpi-icon text-warning"></i>
+                <div class="sl-kpi-title">Active Alerts</div>
+                <div class="sl-kpi-value text-warning font-monospace"><field name="active_alerts" nolabel="1"/></div>
+                <div class="mt-2 text-muted" style="font-size: 12px;">Needs investigation</div>
               </div>
             </div>
             
             <div class="col-md-3">
-              <div class="card shadow-sm border-0 rounded-4 p-4 text-center" style="background: linear-gradient(135deg, #ffffff, #fef2f2); border-bottom: 4px solid #DC2626 !important;">
-                <i class="fa fa-exclamation-triangle fa-3x" style="color: #DC2626; opacity: 0.2; position: absolute; right: 20px; top: 20px;"></i>
-                <div class="text-danger text-uppercase fw-bold" style="font-size: 13px; letter-spacing: 1px;">Critical Emergencies</div>
-                <div class="mt-2 text-danger fw-bolder" style="font-size: 40px;"><field name="critical_alerts" nolabel="1"/></div>
+              <div class="sl-kpi-card sl-border-critical sl-pulse-critical">
+                <i class="fa fa-exclamation-triangle sl-kpi-icon text-danger"></i>
+                <div class="sl-kpi-title text-danger">Critical Emergencies</div>
+                <div class="sl-kpi-value text-danger font-monospace"><field name="critical_alerts" nolabel="1"/></div>
+                <div class="mt-2 text-danger" style="font-size: 12px; font-weight: 500;"><i class="fa fa-warning me-1"></i> Immediate action required</div>
               </div>
             </div>
             
             <div class="col-md-3">
-              <div class="card shadow-sm border-0 rounded-4 p-4 text-center" style="background: linear-gradient(135deg, #ffffff, #f8f9fa); border-bottom: 4px solid #8B5CF6 !important;">
-                <i class="fa fa-brain fa-3x" style="color: #8B5CF6; opacity: 0.2; position: absolute; right: 20px; top: 20px;"></i>
-                <div class="text-muted text-uppercase fw-bold" style="font-size: 13px; letter-spacing: 1px;">Avg AI Risk Score</div>
-                <div class="mt-2 text-dark fw-bolder" style="font-size: 40px;">
-                    <field name="avg_score" nolabel="1" widget="float" options="{'precision': 2}"/>
+              <div class="sl-kpi-card sl-border-success">
+                <i class="fa fa-heartbeat sl-kpi-icon text-success"></i>
+                <div class="sl-kpi-title">System Health Avg</div>
+                <div class="sl-kpi-value text-success">
+                  <field name="avg_score" nolabel="1" widget="percentage" class="font-monospace"/>
                 </div>
+                <div class="mt-2 text-muted" style="font-size: 12px;">Based on ML Analysis</div>
               </div>
             </div>
           </div>
           
-          <div class="row">
-            <div class="col-12 text-center mt-5 mb-3">
-              <h3 class="text-muted">Interactive Analytics</h3>
-              <p>Click the buttons below to open beautiful, interactive charts for deep analysis.</p>
+          <!-- Row 2: Graph Action Area (Simulating visual layout blocks) -->
+          <h3 class="mt-2 mb-4" style="font-size: 18px; font-weight: 600; color: #1E293B;">Deep Analytics</h3>
+          <div class="row g-4 mb-4">
+            <div class="col-md-6">
+               <div class="sl-card shadow-sm p-4 bg-white rounded border-0" onmouseover="this.style.borderColor='#3A86FF'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.1)'" onmouseout="this.style.borderColor='#E2E8F0'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.05)'">
+                   <div class="d-flex justify-content-between align-items-center mb-3">
+                       <div>
+                           <h4 style="margin:0; font-size: 16px; font-weight: 600; color: #0F172A;">Vital Trends Analysis</h4>
+                           <span style="font-size: 13px; color: #64748B;">Interactive timeline of all patient vitals</span>
+                       </div>
+                       <div style="background: #E8F0FF; padding: 12px; border-radius: 8px;">
+                           <i class="fa fa-line-chart" style="color: #3A86FF; font-size: 20px;"></i>
+                       </div>
+                   </div>
+                   <button name="%(action_analytics_vitals_graph)d" type="action" class="btn w-100 mt-2" style="background: #F8FAFC; border: 1px solid #CBD5E1; color: #334155; font-weight: 500; border-radius: 6px; padding: 10px;">
+                     <i class="fa fa-external-link me-2"></i> Open Vitals Flow Chart
+                   </button>
+               </div>
             </div>
             
-            <div class="col-md-6 text-center">
-               <button name="%(action_analytics_vitals_graph)d" type="action" class="btn btn-lg btn-outline-primary shadow-sm" style="width: 80%; padding: 20px; font-size: 18px;">
-                 <i class="fa fa-line-chart me-2"></i> Open Vitals Flow Chart
-               </button>
-            </div>
-            <div class="col-md-6 text-center">
-               <button name="%(action_analytics_alerts_graph)d" type="action" class="btn btn-lg btn-outline-danger shadow-sm" style="width: 80%; padding: 20px; font-size: 18px;">
-                 <i class="fa fa-pie-chart me-2"></i> Open Alert Distribution
-               </button>
+            <div class="col-md-6">
+               <div class="sl-card shadow-sm p-4 bg-white rounded border-0" onmouseover="this.style.borderColor='#EF4444'; this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.1)'" onmouseout="this.style.borderColor='#E2E8F0'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.05)'">
+                   <div class="d-flex justify-content-between align-items-center mb-3">
+                       <div>
+                           <h4 style="margin:0; font-size: 16px; font-weight: 600; color: #0F172A;">Alert Distribution</h4>
+                           <span style="font-size: 13px; color: #64748B;">By severity and historical volume</span>
+                       </div>
+                       <div style="background: #FEE2E2; padding: 12px; border-radius: 8px;">
+                           <i class="fa fa-pie-chart" style="color: #EF4444; font-size: 20px;"></i>
+                       </div>
+                   </div>
+                   <button name="%(action_analytics_alerts_graph)d" type="action" class="btn w-100 mt-2" style="background: #F8FAFC; border: 1px solid #CBD5E1; color: #334155; font-weight: 500; border-radius: 6px; padding: 10px;">
+                     <i class="fa fa-external-link me-2"></i> Open Alert Distribution
+                   </button>
+               </div>
             </div>
           </div>
-          <div class="row mt-5">
+          
+          <!-- Row 3: Embedded Lists -->
+          <div class="row g-4 gx-5 mb-4">
             <div class="col-md-6">
-              <h3 class="o_horizontal_separator" style="color: #4F46E5;">Recent Alerts</h3>
-              <field name="recent_alert_ids" readonly="1">
-                <tree decoration-danger="severity=='critical'" decoration-warning="severity=='high'">
-                  <field name="create_date" string="Time"/>
-                  <field name="patient_id" widget="many2one_avatar"/>
-                  <field name="severity" widget="badge" 
-                         decoration-danger="severity=='critical'"
-                         decoration-warning="severity=='high'"
-                         decoration-info="severity=='medium'"
-                         decoration-success="severity=='low'"/>
-                  <field name="state"/>
-                </tree>
-              </field>
+              <div class="sl-card shadow-sm p-3 bg-white rounded border-0">
+                  <div class="d-flex justify-content-between align-items-center mb-3 pb-2" style="border-bottom: 1px solid #F1F5F9;">
+                      <h3 style="font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #64748B; margin: 0;">Latest Active Alerts</h3>
+                  </div>
+                  <field name="recent_alert_ids" readonly="1">
+                    <tree decoration-danger="severity=='critical'" decoration-warning="severity=='high'" limit="8" class="sl-modern-tree">
+                      <field name="create_date" string="Time"/>
+                      <field name="patient_id" widget="many2one_avatar"/>
+                      <field name="severity" widget="badge" 
+                             decoration-danger="severity=='critical'"
+                             decoration-warning="severity=='high'"
+                             decoration-info="severity=='medium'"
+                             decoration-success="severity=='low'"/>
+                      <field name="state"/>
+                    </tree>
+                  </field>
+              </div>
             </div>
             <div class="col-md-6">
-              <h3 class="o_horizontal_separator" style="color: #0D9488;">Latest Vitals</h3>
-              <field name="recent_vital_ids" readonly="1">
-                <tree decoration-danger="anomaly_detected==True">
-                  <field name="recorded_at" string="Time"/>
-                  <field name="patient_id" widget="many2one_avatar"/>
-                  <field name="type"/>
-                  <field name="value"/>
-                  <field name="anomaly_detected" string="Anomaly" widget="boolean_toggle"/>
-                </tree>
-              </field>
+              <div class="sl-card shadow-sm p-3 bg-white rounded border-0">
+                  <div class="d-flex justify-content-between align-items-center mb-3 pb-2" style="border-bottom: 1px solid #F1F5F9;">
+                      <h3 style="font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #64748B; margin: 0;">Recent Vitals</h3>
+                  </div>
+                  <field name="recent_vital_ids" readonly="1">
+                    <tree decoration-danger="anomaly_detected==True" limit="8" class="sl-modern-tree">
+                      <field name="recorded_at" string="Time"/>
+                      <field name="patient_id" widget="many2one_avatar"/>
+                      <field name="bp_systolic" string="SYS" class="sl-numeric"/>
+                      <field name="heart_rate" string="HR" class="sl-numeric"/>
+                      <field name="anomaly_detected" string="Result" widget="boolean_toggle"/>
+                    </tree>
+                  </field>
+              </div>
             </div>
           </div>
           

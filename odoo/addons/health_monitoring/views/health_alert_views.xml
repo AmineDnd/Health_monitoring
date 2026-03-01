@@ -15,30 +15,36 @@
         <field name="state"/>
         <templates>
           <t t-name="kanban-box">
-             <div t-attf-class="oe_kanban_card oe_kanban_global_click #{record.severity.raw_value == 'critical' ? 'border border-danger border-2' : ''}"
-                 t-attf-style="border-left: 4px solid #{record.severity.raw_value == 'critical' ? '#EF4444' : record.severity.raw_value == 'high' ? '#F59E0B' : record.severity.raw_value == 'medium' ? '#3B82F6' : '#22C55E'};">
+             <div t-attf-class="oe_kanban_card oe_kanban_global_click #{record.severity.raw_value == 'critical' and record.state.raw_value == 'new' ? 'sl-pulse-critical' : ''}"
+                 t-attf-style="border-left: 4px solid #{record.severity.raw_value == 'critical' ? '#EF4444' : record.severity.raw_value == 'high' ? '#F59E0B' : record.severity.raw_value == 'medium' ? '#3A86FF' : '#22C55E'};">
               
-              <div class="d-flex justify-content-between mb-2">
-                <strong style="font-size: 14px;"><field name="patient_id"/></strong>
+              <div class="d-flex justify-content-between mb-2 pb-2" style="border-bottom: 1px solid #F1F5F9;">
+                <strong style="font-size: 15px; color: #1E293B;"><field name="patient_id"/></strong>
                 <span t-attf-class="badge #{record.severity.raw_value == 'critical' ? 'text-bg-danger' : record.severity.raw_value == 'high' ? 'text-bg-warning' : record.severity.raw_value == 'medium' ? 'text-bg-info' : 'text-bg-success'}">
                   <field name="severity"/>
                 </span>
               </div>
               
-              <div class="mb-2 text-muted" style="font-size: 12px;">
+              <div class="mb-3 text-muted" style="font-size: 13px; font-style: italic; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                <i class="fa fa-quote-left text-light me-1"></i>
                 <field name="message"/>
               </div>
               
-              <div class="d-flex justify-content-between align-items-center mt-2" style="font-size: 11px;">
-                <div class="text-muted"><field name="create_date"/></div>
-                <div><strong>AI Conf:</strong> <field name="ai_confidence"/>%</div>
+              <div class="d-flex justify-content-between align-items-center mb-3" style="font-size: 11px;">
+                <div class="text-muted"><i class="fa fa-clock-o me-1"></i> <field name="create_date"/></div>
+                <div style="background: #F8FAFC; padding: 4px 8px; border-radius: 4px; border: 1px solid #E2E8F0;">
+                  <strong class="text-muted">AI Conf:</strong> 
+                  <span t-attf-style="color: #{record.severity.raw_value == 'critical' ? '#EF4444' : '#3A86FF'}; font-family: 'JetBrains Mono', monospace; font-weight: bold;">
+                    <t t-esc="Math.round(record.ai_confidence.raw_value)"/>%
+                  </span>
+                </div>
               </div>
               
               <div class="mt-2 text-end" t-if="record.state.raw_value == 'new'">
-                <button name="action_acknowledge" type="object" class="btn btn-sm btn-primary">Acknowledge</button>
+                <button name="action_acknowledge" type="object" class="btn btn-sm btn-primary w-100"><i class="fa fa-check me-1"></i> Acknowledge</button>
               </div>
               <div class="mt-2 text-end" t-if="record.state.raw_value == 'investigating'">
-                <button name="action_resolve" type="object" class="btn btn-sm btn-success">Resolve</button>
+                <button name="action_resolve" type="object" class="btn btn-sm btn-success w-100"><i class="fa fa-flag-checkered me-1"></i> Mark Resolved</button>
               </div>
 
             </div>
@@ -92,30 +98,46 @@
           <field name="state" widget="statusbar" statusbar_visible="new,investigating,resolved"/>
         </header>
         <sheet>
-          <div class="oe_title">
-            <h1><field name="patient_id" readonly="1" widget="many2one_avatar"/></h1>
+          <div class="oe_title mb-4">
+            <h1><field name="patient_id" readonly="1" widget="many2one_avatar" class="text-primary"/></h1>
           </div>
-          <group>
-            <group string="Alert Details">
-              <field name="severity" readonly="1" widget="badge" 
-                     decoration-danger="severity=='critical'"
-                     decoration-warning="severity=='high'"
-                     decoration-info="severity=='medium'"
-                     decoration-success="severity=='low'"/>
-              <field name="vital_record_id" readonly="1"/>
-              <field name="create_date" readonly="1" string="Triggered At"/>
-              <field name="ai_confidence" widget="percentpie" string="AI Confidence"/>
-              <field name="doctor_id" widget="many2one_avatar_user" readonly="1"/>
-            </group>
-            <group string="Acknowledgement &amp; Resolution" invisible="state == 'new'">
-              <field name="acknowledged" readonly="1"/>
-              <field name="acknowledged_by" readonly="1" widget="many2one_avatar_user"/>
-              <field name="acknowledged_at" readonly="1"/>
-            </group>
-          </group>
-          <group string="AI Analysis Message">
-            <field name="message" readonly="1" nolabel="1"/>
-          </group>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <div class="sl-card shadow-sm p-4 bg-white rounded border-0 h-100">
+                <h3 class="o_horizontal_separator text-primary mb-3"><i class="fa fa-info-circle me-2"></i>Trigger Details</h3>
+                <group>
+                  <field name="severity" readonly="1" widget="badge" 
+                         decoration-danger="severity=='critical'"
+                         decoration-warning="severity=='high'"
+                         decoration-info="severity=='medium'"
+                         decoration-success="severity=='low'"/>
+                  <field name="vital_record_id" readonly="1"/>
+                  <field name="create_date" readonly="1" string="Triggered At"/>
+                  <field name="ai_confidence" widget="percentpie" string="AI Confidence"/>
+                  <field name="doctor_id" widget="many2one_avatar_user" readonly="1"/>
+                </group>
+              </div>
+            </div>
+            <div class="col-md-6 mb-3">
+              <div class="sl-card shadow-sm p-4 bg-white rounded border-0 h-100" invisible="state == 'new'">
+                <h3 class="o_horizontal_separator text-success mb-3"><i class="fa fa-check-circle me-2"></i>Resolution Status</h3>
+                <group>
+                  <field name="acknowledged" readonly="1"/>
+                  <field name="acknowledged_by" readonly="1" widget="many2one_avatar_user"/>
+                  <field name="acknowledged_at" readonly="1"/>
+                </group>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row mt-3">
+            <div class="col-12">
+              <div class="sl-card shadow-sm p-4 bg-white rounded border-0">
+                <h3 class="o_horizontal_separator text-danger mb-3"><i class="fa fa-exclamation-triangle me-2"></i>AI Clinical Analysis</h3>
+                <field name="parsed_message_html" nolabel="1" readonly="1"/>
+              </div>
+            </div>
+          </div>
         </sheet>
         <div class="oe_chatter">
           <field name="message_follower_ids"/>
@@ -151,7 +173,7 @@
         <filter string="Critical Severity" name="critical" domain="[('severity', '=', 'critical')]"/>
         <filter string="High Severity" name="high" domain="[('severity', '=', 'high')]"/>
         <separator/>
-        <filter string="Today's Alerts" name="today" domain="[('create_date', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0))), ('create_date', '&lt;=', datetime.datetime.combine(context_today(), datetime.time(23,59,59)))]"/>
+        <filter string="Today's Alerts" name="today" domain="[('create_date', '&gt;=', context_today().strftime('%Y-%m-%d 00:00:00')), ('create_date', '&lt;=', context_today().strftime('%Y-%m-%d 23:59:59'))]"/>
         <group expand="0" string="Group By">
           <filter string="Patient" name="group_by_patient" context="{'group_by':'patient_id'}"/>
           <filter string="Severity" name="group_by_severity" context="{'group_by':'severity'}"/>

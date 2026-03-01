@@ -8,35 +8,90 @@
     <field name="arch" type="xml">
       <form>
         <header>
-          <button string="Save &amp; Close Patient Record" type="object" name="action_manual_save_close" class="oe_highlight ms-2" invisible="id"/>
+          <button string="Analyze &amp; Save" type="object" name="action_manual_save_close" class="btn-primary ms-2" invisible="id"/>
+          <field name="status" widget="statusbar" statusbar_visible="normal,warning,critical"/>
         </header>
         <sheet>
           <field name="anomaly_detected" invisible="1"/>
           
-          <div class="oe_title mb-3" invisible="not id">
-            <h1 class="d-flex align-items-center">
-              Vital Reading: <field name="type" class="ms-2" readonly="1" invisible="not id"/>
+          <div class="oe_title mb-4">
+            <h1 class="d-flex align-items-center text-primary">
+              <i class="fa fa-heartbeat me-3"></i>Clinical Checkup
             </h1>
           </div>
 
-          <group>
-            <group string="Vital Sign Details">
-              <field name="type" string="Vital Type" required="1" invisible="id"/>
-              <field name="patient_id" widget="many2one_avatar" options="{'no_create': True}"/>
-              <field name="recorded_at"/>
-              <label for="value" string="Measurement"/>
-              <div class="d-flex align-items-center">
-                <field name="value" class="oe_inline ms-1" placeholder="Value..."/>
-                <span invisible="type != 'blood_pressure'" class="ms-1 me-1">/</span>
-                <field name="value2" class="oe_inline" invisible="type != 'blood_pressure'" placeholder="Diastolic..."/>
-                <field name="unit" class="ms-2 fw-bold text-muted oe_inline" readonly="1"/>
+          <!-- AI RESULT & SMART HINTS -->
+          <div class="row mb-4 sl-card-container">
+              <div class="col-md-12">
+                  <div class="sl-card shadow-sm p-3 bg-white rounded border-0" invisible="anomaly_detected == False">
+                    <div class="d-flex align-items-center text-danger">
+                        <i class="fa fa-brain fa-2x me-3"></i>
+                        <div>
+                          <strong>AI Anomaly Detected</strong><br/>
+                          <span style="font-size: 13px;">The AI model flagged this checkup. Risk Score: <field name="ai_score" readonly="1" class="sl-numeric" widget="percentage" nolabel="1"/></span>
+                        </div>
+                    </div>
+                  </div>
+                  
+                  <div class="sl-card shadow-sm p-3 bg-white rounded border-0 mt-3">
+                      <h4 class="text-primary mb-2" style="font-size: 14px; text-transform: uppercase;">Real-time Clinical Hints</h4>
+                      <field name="clinical_hints" nolabel="1"/>
+                  </div>
               </div>
-            </group>
-            <group string="AI Analysis Results">
-              <field name="anomaly_detected" widget="boolean_toggle" readonly="1"/>
-              <field name="ai_score" widget="progressbar" string="AI Risk Score" options="{'max_value': 1.0}" readonly="1"/>
-            </group>
-          </group>
+          </div>
+
+          <!-- GROUPED CLINICAL CARDS -->
+          <div class="row sl-card-container">
+            <!-- Left Column: Patient & Cardio -->
+            <div class="col-md-6 mb-3">
+              <div class="sl-card shadow-sm p-4 bg-white rounded border-0 mb-4">
+                  <h3 class="o_horizontal_separator text-primary mb-3"><i class="fa fa-info-circle me-2"></i>Context</h3>
+                  <group>
+                    <field name="patient_id" widget="many2one_avatar" options="{'no_create': True}"/>
+                    <field name="recorded_at"/>
+                  </group>
+              </div>
+
+              <div class="sl-card shadow-sm p-4 bg-white rounded border-0">
+                  <h3 class="o_horizontal_separator text-danger mb-3"><i class="fa fa-heart me-2"></i>Cardiovascular</h3>
+                  <group>
+                    <label for="bp_systolic" string="Blood Pressure"/>
+                    <div class="o_row">
+                      <field name="bp_systolic" class="sl-numeric" placeholder="120 (Normal: 90-120)"/>
+                      <span class="mx-2">/</span>
+                      <field name="bp_diastolic" class="sl-numeric" placeholder="80 (Normal: 60-80)"/>
+                    </div>
+                    <label for="heart_rate" string="Heart Rate"/>
+                    <field name="heart_rate" nolabel="1" class="sl-numeric" placeholder="bpm (Normal: 60-100)"/>
+                  </group>
+              </div>
+            </div>
+            
+            <!-- Right Column: Resp & Metabolic -->
+            <div class="col-md-6 mb-3">
+              <div class="sl-card shadow-sm p-4 bg-white rounded border-0 mb-4">
+                  <h3 class="o_horizontal_separator text-info mb-3"><i class="fa fa-lungs me-2"></i>Respiratory &amp; Oxygen</h3>
+                  <group>
+                    <label for="spo2" string="SpO2"/>
+                    <field name="spo2" nolabel="1" class="sl-numeric" placeholder="% (Normal: 95-100)"/>
+                    
+                    <label for="respiratory_rate" string="Respiration"/>
+                    <field name="respiratory_rate" nolabel="1" class="sl-numeric" placeholder="/min (Normal: 12-20)"/>
+                  </group>
+              </div>
+
+              <div class="sl-card shadow-sm p-4 bg-white rounded border-0">
+                  <h3 class="o_horizontal_separator text-warning mb-3"><i class="fa fa-thermometer-half me-2"></i>Metabolic &amp; Temp</h3>
+                  <group>
+                    <label for="temperature" string="Temperature"/>
+                    <field name="temperature" nolabel="1" class="sl-numeric" placeholder="°C (Normal: 36.1-37.2)"/>
+                    
+                    <label for="glucose" string="Glucose (Fasting)"/>
+                    <field name="glucose" nolabel="1" class="sl-numeric" placeholder="mg/dL (Normal: 70-99)"/>
+                  </group>
+              </div>
+            </div>
+          </div>
         </sheet>
       </form>
     </field>
@@ -47,15 +102,20 @@
     <field name="name">health.vital.record.tree</field>
     <field name="model">health.vital.record</field>
     <field name="arch" type="xml">
-      <tree decoration-danger="anomaly_detected==True">
+      <tree decoration-danger="status=='critical'" decoration-warning="status=='warning'" decoration-success="status=='normal'" class="sl-modern-tree">
         <field name="recorded_at" string="Timestamp"/>
         <field name="patient_id" widget="many2one_avatar"/>
-        <field name="type" string="Vital Sign"/>
-        <field name="value" string="Measurement"/>
-        <field name="value2" optional="show" invisible="type != 'blood_pressure'" string="Diastolic"/>
-        <field name="unit"/>
-        <field name="ai_score" widget="progressbar" string="AI Score" optional="show"/>
-        <field name="anomaly_detected" string="Anomaly" widget="boolean_toggle" readonly="1" optional="show"/>
+        <field name="bp_systolic" string="SYS" class="sl-numeric"/>
+        <field name="bp_diastolic" string="DIA" class="sl-numeric"/>
+        <field name="heart_rate" string="HR" class="sl-numeric"/>
+        <field name="spo2" string="SpO2" class="sl-numeric"/>
+        <field name="temperature" string="Temp" class="sl-numeric"/>
+        <field name="glucose" string="Glu" class="sl-numeric"/>
+        <field name="ai_score" widget="progressbar" string="AI Score"/>
+        <field name="status" string="Status" widget="badge" 
+               decoration-danger="status=='critical'"
+               decoration-warning="status=='warning'"
+               decoration-success="status=='normal'"/>
       </tree>
     </field>
   </record>
@@ -67,9 +127,24 @@
     <field name="arch" type="xml">
       <graph string="Vitals Analysis" type="line">
         <field name="recorded_at" interval="day"/>
-        <field name="value" type="measure"/>
-        <field name="type" type="col"/>
+        <field name="heart_rate" type="measure"/>
+        <field name="bp_systolic" type="measure"/>
       </graph>
+    </field>
+  </record>
+
+  <!-- VITALS PIVOT VIEW -->
+  <record id="view_vitals_pivot" model="ir.ui.view">
+    <field name="name">health.vital.record.pivot</field>
+    <field name="model">health.vital.record</field>
+    <field name="arch" type="xml">
+      <pivot string="Vitals Pivot">
+        <field name="recorded_at" interval="month" type="row"/>
+        <field name="patient_id" type="row"/>
+        <field name="heart_rate" type="measure"/>
+        <field name="bp_systolic" type="measure"/>
+        <field name="ai_score" type="measure"/>
+      </pivot>
     </field>
   </record>
 
@@ -80,14 +155,12 @@
     <field name="arch" type="xml">
       <search>
         <field name="patient_id"/>
-        <field name="type"/>
         <filter string="Anomalies Detected" name="anomalies" domain="[('anomaly_detected', '=', True)]"/>
         <filter string="Normal Records" name="normal" domain="[('anomaly_detected', '=', False)]"/>
         <separator/>
-        <filter string="Today's Vitals" name="today" domain="[('recorded_at', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0))), ('recorded_at', '&lt;=', datetime.datetime.combine(context_today(), datetime.time(23,59,59)))]"/>
+        <filter string="Today's Vitals" name="today" domain="[('recorded_at', '&gt;=', context_today().strftime('%Y-%m-%d 00:00:00')), ('recorded_at', '&lt;=', context_today().strftime('%Y-%m-%d 23:59:59'))]"/>
         <group expand="0" string="Group By">
           <filter string="Patient" name="group_by_patient" context="{'group_by':'patient_id'}"/>
-          <filter string="Vital Type" name="group_by_type" context="{'group_by':'type'}"/>
           <filter string="Date" name="group_by_date" context="{'group_by':'recorded_at:day'}"/>
         </group>
       </search>
