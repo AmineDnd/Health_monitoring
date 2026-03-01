@@ -21,8 +21,8 @@
     ],
     'assets': {
         'web.assets_backend': [
-            'https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap',
-            'health_monitoring/static/src/css/smartlab_theme.css',
+            'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap',
+            'health_monitoring/static/src/scss/smartlab_theme.scss',
         ],
     },
     'installable': True,

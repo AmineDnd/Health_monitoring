@@ -1,5 +1,12 @@
 from odoo import models, fields, api
 
+class HealthPatientTag(models.Model):
+    _name = 'health.patient.tag'
+    _description = 'Patient Tag'
+
+    name = fields.Char('Tag Name', required=True)
+    color = fields.Integer('Color Index')
+
 class HealthPatient(models.Model):
     _name = 'health.patient'
     _description = 'Patient Registry'
@@ -8,8 +15,30 @@ class HealthPatient(models.Model):
     name = fields.Char('Patient Name', required=True, tracking=True)
     age = fields.Integer('Age')
     gender = fields.Selection([('male', 'Male'), ('female', 'Female'), ('other', 'Other')], 'Gender')
+    category = fields.Selection([
+        ('child', 'Child'),
+        ('teen', 'Teen'),
+        ('adult', 'Adult'),
+        ('elderly', 'Elderly')
+    ], 'Category', compute='_compute_category')
+    tag_ids = fields.Many2many('health.patient.tag', string='Tags')
+    
     doctor_id = fields.Many2one('res.users', 'Assigned Doctor', tracking=True)
     
+    @api.depends('age')
+    def _compute_category(self):
+        for rec in self:
+            if not rec.age:
+                rec.category = False
+            elif rec.age < 13:
+                rec.category = 'child'
+            elif rec.age < 20:
+                rec.category = 'teen'
+            elif rec.age < 65:
+                rec.category = 'adult'
+            else:
+                rec.category = 'elderly'
+
     risk_level = fields.Selection([
         ('low', 'Low'),
         ('medium', 'Medium'),

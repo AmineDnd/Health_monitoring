@@ -26,7 +26,8 @@ class HealthDashboard(models.TransientModel):
             rec.critical_alerts = len(alerts.filtered(lambda a: a.severity == 'critical'))
             
             patients = self.env['health.patient'].search([('last_score', '>', 0)])
-            rec.avg_score = sum(patients.mapped('last_score')) / len(patients) if patients else 0.0
+            valid_scores = [float(s) for s in patients.mapped('last_score') if s]
+            rec.avg_score = sum(valid_scores) / len(valid_scores) if valid_scores else 0.0
 
     def action_open_patients(self):
         return {
