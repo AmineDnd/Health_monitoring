@@ -41,6 +41,7 @@ class HealthVitalRecord(models.Model):
     glucose = fields.Float('Glucose')
     respiratory_rate = fields.Float('Respiratory Rate')
     clinical_hints = fields.Text('Clinical Hints')
+    parsed_clinical_hints = fields.Html('AI Clinical Analysis', compute='_compute_parsed_hints')
     status = fields.Selection([
         ('normal', 'Normal'),
         ('warning', 'Warning'),
@@ -56,6 +57,32 @@ class HealthVitalRecord(models.Model):
                 rec.status = 'warning'
             else:
                 rec.status = 'normal'
+    
+    def _compute_parsed_hints(self):
+        for rec in self:
+            hints = rec.clinical_hints or ""
+            if not hints or "normal range" in hints.lower():
+                rec.parsed_clinical_hints = "<div class='text-success'><i class='fa fa-check-circle me-2'></i>All vitals within normal range.</div>"
+                continue
+            
+            # Professional medical formatting
+            html = "<ul class='list-unstyled mb-0'>"
+            parts = [p.strip() for p in hints.split('|')]
+            for part in parts:
+                icon = "fa-warning text-warning"
+                if "CRITICAL" in part.upper(): icon = "fa-exclamation-triangle text-danger"
+                
+                # Highlight the vital name
+                if "=" in part:
+                    vital_name = part.split('=')[0].replace('_', ' ').title()
+                    the_rest = part.split('=', 1)[1]
+                    part_html = f"<b>{vital_name}</b>: {the_rest}"
+                else:
+                    part_html = part
+                
+                html += f"<li class='mb-2 d-flex align-items-start'><i class='fa {icon} mt-1 me-2' style='width: 20px;'></i><span>{part_html}</span></li>"
+            html += "</ul>"
+            rec.parsed_clinical_hints = html
     
     @api.depends('type')
     def _compute_unit(self):
@@ -77,6 +104,12 @@ class HealthVitalRecord(models.Model):
             rec._call_ai_service()
         return records
 
+    def write(self, vals):
+        res = super().write(vals)
+        for rec in self:
+            rec._call_ai_service()
+        return res
+
     def _call_ai_service(self):
         if self.env.context.get('no_ai'):
             return
@@ -88,13 +121,13 @@ class HealthVitalRecord(models.Model):
 
         payload = {
             'patient_code': str(patient.id),
-            'bp_systolic': latest['blood_pressure'].value if latest['blood_pressure'] else 0.0,
-            'bp_diastolic': latest['blood_pressure'].value2 if latest['blood_pressure'] else 0.0,
-            'heart_rate': latest['heart_rate'].value if latest['heart_rate'] else 0.0,
-            'glucose': latest['glucose'].value if latest['glucose'] else 0.0,
-            'temperature': latest['temperature'].value if latest['temperature'] else 0.0,
-            'spo2': latest['oxygen'].value if latest['oxygen'] else 0.0,
-            'respiratory_rate': latest['respiratory_rate'].value if latest['respiratory_rate'] else 0.0,
+            'bp_systolic': self.bp_systolic or (latest['blood_pressure'].value if latest['blood_pressure'] else 0.0),
+            'bp_diastolic': self.bp_diastolic or (latest['blood_pressure'].value2 if latest['blood_pressure'] else 0.0),
+            'heart_rate': self.heart_rate or (latest['heart_rate'].value if latest['heart_rate'] else 0.0),
+            'glucose': self.glucose or (latest['glucose'].value if latest['glucose'] else 0.0),
+            'temperature': self.temperature or (latest['temperature'].value if latest['temperature'] else 0.0),
+            'spo2': self.spo2 or (latest['oxygen'].value if latest['oxygen'] else 0.0),
+            'respiratory_rate': self.respiratory_rate or (latest['respiratory_rate'].value if latest['respiratory_rate'] else 0.0),
         }
 
         try:
@@ -105,22 +138,25 @@ class HealthVitalRecord(models.Model):
             is_anomaly = result.get('is_anomaly', False)
             severity = result.get('severity', 'low')
             
-            # Default to warning if it's 'normal' but anomaly detected, just to match Odoo severity options
-            if severity == 'normal' and is_anomaly:
-                severity = 'medium'
+            # Align severities with Odoo selection options
+            if severity == 'critical':
+                odoo_severity = 'critical'
             elif severity == 'warning':
-                severity = 'medium'
-            elif severity == 'normal':
-                severity = 'low'
+                odoo_severity = 'high'
+            elif is_anomaly:
+                odoo_severity = 'medium'
+            else:
+                odoo_severity = 'low'
             
-            self.write({
+            self.with_context(no_ai=True).write({
                 'ai_score': score,
-                'anomaly_detected': is_anomaly
+                'anomaly_detected': is_anomaly,
+                'clinical_hints': result.get('message', '')
             })
             
             patient.write({
                 'last_score': score,
-                'risk_level': severity
+                'risk_level': odoo_severity
             })
 
             if is_anomaly:
@@ -131,9 +167,9 @@ class HealthVitalRecord(models.Model):
                 alert = self.env['health.alert'].create({
                     'patient_id': patient.id,
                     'vital_record_id': self.id,
-                    'severity': severity if severity in ['low', 'medium', 'high', 'critical'] else 'medium',
+                    'severity': odoo_severity,
                     'message': clean_msg,
-                    'ai_confidence': score * 100, 
+                    'ai_confidence': score, 
                     'state': 'new'
                 })
                 patient.write({'last_alert_id': alert.id})

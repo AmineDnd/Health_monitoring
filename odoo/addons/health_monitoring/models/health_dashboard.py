@@ -6,21 +6,34 @@ class HealthDashboard(models.TransientModel):
 
     name = fields.Char(default='Dashboard')
     total_patients = fields.Integer(compute='_compute_kpis')
-    active_alerts = fields.Integer(compute='_compute_kpis')
-    critical_alerts = fields.Integer(compute='_compute_kpis')
-    avg_score = fields.Float(compute='_compute_kpis')
+    active_alerts = fields.Integer(compute='_compute_kpi_values')
+    critical_alerts = fields.Integer(compute='_compute_kpi_values')
+    avg_score = fields.Float(compute='_compute_kpi_values', string="Avg AI Risk")
     
-    recent_alert_ids = fields.Many2many('health.alert', compute='_compute_recent_activity')
+    followed_patient_ids = fields.Many2many('health.patient', string="My Watchlist", compute='_compute_recent_activity')
+    recent_alert_ids = fields.Many2many('health.alert', string="Recent Alerts", compute='_compute_recent_activity')
     recent_vital_ids = fields.Many2many('health.vital.record', compute='_compute_recent_activity')
 
     def _compute_recent_activity(self):
         for rec in self:
-            rec.recent_alert_ids = self.env['health.alert'].search([], order='create_date desc', limit=5)
-            rec.recent_vital_ids = self.env['health.vital.record'].search([], order='recorded_at desc', limit=5)
+            # My Watchlist: Explicitly find patients followed by the current user
+            followed_ids = self.env['mail.followers'].search([
+                ('res_model', '=', 'health.patient'),
+                ('partner_id', '=', self.env.user.partner_id.id)
+            ]).mapped('res_id')
+            rec.followed_patient_ids = self.env['health.patient'].browse(followed_ids)
+
+            rec.recent_alert_ids = self.env['health.alert'].search([
+                ('state', '!=', 'resolved')
+            ], order='create_date desc', limit=10)
+            rec.recent_vital_ids = self.env['health.vital.record'].search([], order='recorded_at desc', limit=10)
 
     def _compute_kpis(self):
         for rec in self:
             rec.total_patients = self.env['health.patient'].search_count([])
+
+    def _compute_kpi_values(self):
+        for rec in self:
             alerts = self.env['health.alert'].search([('state', '!=', 'resolved')])
             rec.active_alerts = len(alerts)
             rec.critical_alerts = len(alerts.filtered(lambda a: a.severity == 'critical'))

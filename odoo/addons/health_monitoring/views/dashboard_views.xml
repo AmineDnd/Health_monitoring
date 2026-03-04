@@ -37,30 +37,30 @@
           <!-- Row 1: KPI Cards -->
           <div class="row g-4 mb-5">
             <div class="col-md-3">
-              <div class="sl-kpi-card sl-border-primary">
+              <button name="action_open_patients" type="object" class="sl-kpi-card sl-border-primary w-100 text-start border-0 bg-white shadow-sm p-4 rounded d-block" style="transition: transform 0.2s;">
                 <i class="fa fa-hospital-o sl-kpi-icon text-primary"></i>
                 <div class="sl-kpi-title">Registered Patients</div>
                 <div class="sl-kpi-value text-primary font-monospace"><field name="total_patients" nolabel="1"/></div>
-                <div class="mt-2 text-muted" style="font-size: 12px;"><i class="fa fa-arrow-up text-success me-1"></i> Active monitoring</div>
-              </div>
+                <div class="mt-2 text-muted" style="font-size: 12px;"><i class="fa fa-arrow-up text-success me-1"></i> Click to view</div>
+              </button>
             </div>
             
             <div class="col-md-3">
-              <div class="sl-kpi-card sl-border-warning">
+              <button name="action_open_alerts" type="object" class="sl-kpi-card sl-border-warning w-100 text-start border-0 bg-white shadow-sm p-4 rounded d-block" style="transition: transform 0.2s;">
                 <i class="fa fa-bell-o sl-kpi-icon text-warning"></i>
                 <div class="sl-kpi-title">Active Alerts</div>
                 <div class="sl-kpi-value text-warning font-monospace"><field name="active_alerts" nolabel="1"/></div>
-                <div class="mt-2 text-muted" style="font-size: 12px;">Needs investigation</div>
-              </div>
+                <div class="mt-2 text-muted" style="font-size: 12px;">Click to manage</div>
+              </button>
             </div>
             
             <div class="col-md-3">
-              <div class="sl-kpi-card sl-border-critical sl-pulse-critical">
+              <button name="action_open_critical" type="object" class="sl-kpi-card sl-border-critical sl-pulse-critical w-100 text-start border-0 bg-white shadow-sm p-4 rounded d-block" style="transition: transform 0.2s;">
                 <i class="fa fa-exclamation-triangle sl-kpi-icon text-danger"></i>
                 <div class="sl-kpi-title text-danger">Critical Emergencies</div>
                 <div class="sl-kpi-value text-danger font-monospace"><field name="critical_alerts" nolabel="1"/></div>
-                <div class="mt-2 text-danger" style="font-size: 12px; font-weight: 500;"><i class="fa fa-warning me-1"></i> Immediate action required</div>
-              </div>
+                <div class="mt-2 text-danger" style="font-size: 12px; font-weight: 500;"><i class="fa fa-warning me-1"></i> Immediate action</div>
+              </button>
             </div>
             
             <div class="col-md-3">
@@ -118,20 +118,26 @@
             <div class="col-md-6">
               <div class="sl-card shadow-sm p-3 bg-white rounded border-0">
                   <div class="d-flex justify-content-between align-items-center mb-3 pb-2" style="border-bottom: 1px solid #F1F5F9;">
-                      <h3 style="font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #64748B; margin: 0;">Latest Active Alerts</h3>
+                      <h3 style="font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #64748B; margin: 0;">Unresolved Priority Alerts</h3>
                   </div>
-                  <field name="recent_alert_ids" readonly="1">
-                    <tree decoration-danger="severity=='critical'" decoration-warning="severity=='high'" limit="8" class="sl-modern-tree">
-                      <field name="create_date" string="Time"/>
-                      <field name="patient_id" widget="many2one_avatar"/>
-                      <field name="severity" widget="badge" 
-                             decoration-danger="severity=='critical'"
-                             decoration-warning="severity=='high'"
-                             decoration-info="severity=='medium'"
-                             decoration-success="severity=='low'"/>
-                      <field name="state"/>
-                    </tree>
-                  </field>
+                  <div style="max-height: 400px; overflow-y: auto;">
+                    <field name="recent_alert_ids" readonly="1">
+                      <tree decoration-danger="severity=='critical'" decoration-warning="severity=='high'" limit="20" class="sl-modern-tree">
+                        <field name="create_date" string="Time"/>
+                        <field name="patient_id" widget="many2one_avatar"/>
+                        <field name="severity" widget="badge" 
+                               decoration-danger="severity=='critical'"
+                               decoration-warning="severity=='high'"
+                               decoration-info="severity=='medium'"
+                               decoration-success="severity=='low'"/>
+                        <field name="parsed_message_html" string="Clinical Analysis" widget="html"/>
+                        <field name="state" widget="badge"
+                               decoration-success="state=='resolved'"
+                               decoration-info="state=='investigating'"
+                               decoration-muted="state=='new'"/>
+                      </tree>
+                    </field>
+                  </div>
               </div>
             </div>
             <div class="col-md-6">
@@ -139,19 +145,67 @@
                   <div class="d-flex justify-content-between align-items-center mb-3 pb-2" style="border-bottom: 1px solid #F1F5F9;">
                       <h3 style="font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #64748B; margin: 0;">Recent Vitals</h3>
                   </div>
-                  <field name="recent_vital_ids" readonly="1">
-                    <tree decoration-danger="anomaly_detected==True" limit="8" class="sl-modern-tree">
-                      <field name="recorded_at" string="Time"/>
-                      <field name="patient_id" widget="many2one_avatar"/>
-                      <field name="bp_systolic" string="SYS" class="sl-numeric"/>
-                      <field name="heart_rate" string="HR" class="sl-numeric"/>
-                      <field name="anomaly_detected" string="Result" widget="boolean_toggle"/>
-                    </tree>
-                  </field>
+                  <div style="max-height: 400px; overflow-y: auto;">
+                    <field name="recent_vital_ids" readonly="1">
+                      <tree decoration-danger="anomaly_detected==True" limit="20" class="sl-modern-tree">
+                        <field name="recorded_at" string="Time"/>
+                        <field name="patient_id" widget="many2one_avatar"/>
+                        <field name="bp_systolic" string="SYS" class="sl-numeric"/>
+                        <field name="heart_rate" string="HR" class="sl-numeric"/>
+                        <field name="anomaly_detected" string="Result" widget="boolean_toggle"/>
+                      </tree>
+                    </field>
+                  </div>
+              </div>
+            </div>
+            <!-- My Watchlist Section -->
+            <div class="mt-5 mb-5">
+              <div class="d-flex align-items-center mb-4">
+                <div class="p-2 bg-primary-subtle rounded-3 me-3">
+                  <i class="fa fa-eye text-primary fa-lg"></i>
+                </div>
+                <h3 class="mb-0 fw-bold text-dark">My Watchlist</h3>
+                <span class="ms-3 badge rounded-pill bg-light text-primary border border-primary-subtle px-3 py-2">Following</span>
+              </div>
+              
+              <div class="row g-4" invisible="not followed_patient_ids">
+                <field name="followed_patient_ids" nolabel="1">
+                  <kanban>
+                    <field name="name"/>
+                    <field name="risk_level"/>
+                    <field name="last_score"/>
+                    <templates>
+                      <t t-name="kanban-box">
+                        <div class="oe_kanban_global_click sl-watchlist-card p-3 shadow-sm border-0 mb-3" 
+                             t-attf-style="border-left: 4px solid #{record.risk_level.raw_value == 'critical' ? '#EF4444' : record.risk_level.raw_value == 'high' ? '#F59E0B' : '#64748B'}; background: #fff; border-radius: 12px; min-width: 250px;">
+                          <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong class="text-dark" style="font-size: 14px;"><field name="name"/></strong>
+                            <span t-attf-class="badge rounded-pill #{record.risk_level.raw_value == 'critical' ? 'text-bg-danger' : record.risk_level.raw_value == 'high' ? 'text-bg-warning' : 'text-bg-info'}" style="font-size: 10px;">
+                              <field name="risk_level"/>
+                            </span>
+                          </div>
+                          <div class="progress mb-1" style="height: 4px; border-radius: 2px;">
+                            <div class="progress-bar" role="progressbar" 
+                                 t-attf-style="width: #{record.last_score.raw_value || 0}%; background-color: #{record.risk_level.raw_value == 'critical' ? '#EF4444' : '#3A86FF'};" 
+                                 t-att-aria-valuenow="record.last_score.raw_value" aria-valuemin="0" aria-valuemax="100"></div>
+                          </div>
+                          <div class="d-flex justify-content-between small text-muted">
+                            <span>AI Risk</span>
+                            <span class="fw-bold"><t t-esc="Math.round(record.last_score.raw_value || 0)"/>%</span>
+                          </div>
+                        </div>
+                      </t>
+                    </templates>
+                  </kanban>
+                </field>
+              </div>
+              
+              <div class="text-center p-5 bg-light rounded-4 border border-dashed" invisible="followed_patient_ids">
+                <i class="fa fa-users text-muted fa-3x mb-3"></i>
+                <p class="text-muted mb-0">You are not following any patients yet.<br/>Click <strong>Follow</strong> on a patient record to see them here.</p>
               </div>
             </div>
           </div>
-          
         </sheet>
       </form>
     </field>

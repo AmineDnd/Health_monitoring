@@ -48,6 +48,7 @@ class HealthPatient(models.Model):
     
     last_score = fields.Float('Last AI Score', readonly=True)
     last_alert_id = fields.Many2one('health.alert', 'Latest Alert', readonly=True)
+    last_alert_state = fields.Selection(related='last_alert_id.state', string='Latest Alert Status', readonly=True)
     
     vital_record_ids = fields.One2many('health.vital.record', 'patient_id', 'Vital Records')
     alert_ids = fields.One2many('health.alert', 'patient_id', 'Alerts')
