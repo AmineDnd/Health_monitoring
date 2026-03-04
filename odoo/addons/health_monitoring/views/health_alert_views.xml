@@ -6,47 +6,61 @@
     <field name="name">health.alert.kanban</field>
     <field name="model">health.alert</field>
     <field name="arch" type="xml">
-      <kanban default_group_by="state" class="o_kanban_mobile">
+      <kanban default_group_by="state" class="o_kanban_small_column sl-kanban-pipeline" on_create="quick_create" quick_create_view="health_monitoring.view_alerts_form">
         <field name="patient_id"/>
-        <field name="severity"/>
+        <field name="severity" readonly="1"/>
         <field name="message"/>
         <field name="ai_confidence"/>
         <field name="create_date"/>
         <field name="state"/>
+        <progressbar field="severity" colors='{"critical": "danger", "high": "warning", "medium": "info", "low": "success"}'/>
         <templates>
           <t t-name="kanban-box">
-             <div t-attf-class="oe_kanban_card oe_kanban_global_click #{record.severity.raw_value == 'critical' and record.state.raw_value == 'new' ? 'sl-pulse-critical' : ''}"
-                 t-attf-style="border-left: 4px solid #{record.severity.raw_value == 'critical' ? '#EF4444' : record.severity.raw_value == 'high' ? '#F59E0B' : record.severity.raw_value == 'medium' ? '#3A86FF' : '#22C55E'};">
+             <div t-attf-class="oe_kanban_card oe_kanban_global_click sl-pipeline-card shadow-sm mb-3 #{record.severity.raw_value == 'critical' and record.state.raw_value == 'new' ? 'sl-pulse-critical' : ''}"
+                 t-attf-style="border-top: 5px solid #{record.severity.raw_value == 'critical' ? '#EF4444' : record.severity.raw_value == 'high' ? '#F59E0B' : record.severity.raw_value == 'medium' ? '#3A86FF' : '#22C55E'}; border-radius: 8px; overflow: hidden; background: #fff;">
               
-              <div class="d-flex justify-content-between mb-2 pb-2" style="border-bottom: 1px solid #F1F5F9;">
-                <strong style="font-size: 15px; color: #1E293B;"><field name="patient_id"/></strong>
-                <span t-attf-class="badge #{record.severity.raw_value == 'critical' ? 'text-bg-danger' : record.severity.raw_value == 'high' ? 'text-bg-warning' : record.severity.raw_value == 'medium' ? 'text-bg-info' : 'text-bg-success'}">
-                  <field name="severity"/>
-                </span>
-              </div>
-              
-              <div class="mb-3 text-muted" style="font-size: 13px; font-style: italic; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
-                <i class="fa fa-quote-left text-light me-1"></i>
-                <field name="message"/>
-              </div>
-              
-              <div class="d-flex justify-content-between align-items-center mb-3" style="font-size: 11px;">
-                <div class="text-muted"><i class="fa fa-clock-o me-1"></i> <field name="create_date"/></div>
-                <div style="background: #F8FAFC; padding: 4px 8px; border-radius: 4px; border: 1px solid #E2E8F0;">
-                  <strong class="text-muted">AI Conf:</strong> 
-                  <span t-attf-style="color: #{record.severity.raw_value == 'critical' ? '#EF4444' : '#3A86FF'}; font-family: 'JetBrains Mono', monospace; font-weight: bold;">
-                    <t t-esc="Math.round(record.ai_confidence.raw_value)"/>%
+              <div class="p-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <div class="d-flex align-items-center">
+                    <div class="me-2 rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" 
+                         t-attf-style="width: 32px; height: 32px; font-size: 12px; background: #{record.severity.raw_value == 'critical' ? '#EF4444' : '#64748B'};">
+                      <t t-esc="record.patient_id.value ? record.patient_id.value.substring(0, 1).toUpperCase() : 'P'"/>
+                    </div>
+                    <div>
+                      <div class="fw-bold text-dark" style="font-size: 14px; line-height: 1.2;"><field name="patient_id"/></div>
+                      <div class="text-muted small"><i class="fa fa-clock-o me-1"></i><field name="create_date"/></div>
+                    </div>
+                  </div>
+                  <span t-attf-class="badge rounded-pill #{record.severity.raw_value == 'critical' ? 'text-bg-danger' : record.severity.raw_value == 'high' ? 'text-bg-warning' : record.severity.raw_value == 'medium' ? 'text-bg-info' : 'text-bg-success'}" style="font-size: 10px; padding: 4px 8px;">
+                    <field name="severity"/>
                   </span>
                 </div>
-              </div>
-              
-              <div class="mt-2 text-end" t-if="record.state.raw_value == 'new'">
-                <button name="action_acknowledge" type="object" class="btn btn-sm btn-primary w-100"><i class="fa fa-check me-1"></i> Acknowledge</button>
-              </div>
-              <div class="mt-2 text-end" t-if="record.state.raw_value == 'investigating'">
-                <button name="action_resolve" type="object" class="btn btn-sm btn-success w-100"><i class="fa fa-flag-checkered me-1"></i> Mark Resolved</button>
-              </div>
+                
+                <div class="mt-3 mb-3 p-2 bg-light-subtle rounded border border-light" style="font-size: 11px; min-height: 45px; color: #475569; overflow: hidden;">
+                  <field name="parsed_message_html" widget="html"/>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center pt-2" style="border-top: 1px solid #F1F5F9;">
+                  <div class="d-flex align-items-center">
+                    <i class="fa fa-microchip text-primary me-1 small"></i>
+                    <span class="fw-bold text-primary" style="font-size: 11px;">AI CONF: <t t-esc="Math.round(record.ai_confidence.raw_value)"/>%</span>
+                  </div>
+                  <div class="o_kanban_record_bottom">
+                    <div class="oe_kanban_bottom_right">
+                       <field name="state" widget="label_selection" options="{'classes': {'new': 'default', 'investigating': 'info', 'resolved': 'success'}}"/>
+                    </div>
+                  </div>
+                </div>
 
+                <div class="mt-3 d-flex gap-2" t-if="record.state.raw_value != 'resolved'">
+                  <button type="object" name="action_acknowledge" class="btn btn-sm btn-outline-primary flex-grow-1 py-1" invisible="state != 'new'" style="font-size: 11px;">
+                    <i class="fa fa-check me-1"></i>Ack
+                  </button>
+                  <button type="object" name="action_resolve" class="btn btn-sm btn-success flex-grow-1 py-1" invisible="state != 'investigating'" style="font-size: 11px;">
+                    <i class="fa fa-flag-checkered me-1"></i>Resolve
+                  </button>
+                </div>
+              </div>
             </div>
           </t>
         </templates>
@@ -71,7 +85,7 @@
                decoration-info="severity=='medium'"
                decoration-success="severity=='low'"/>
         <field name="ai_confidence" string="AI Conf. %" optional="show"/>
-        <field name="message" string="AI Message"/>
+        <field name="parsed_message_html" string="AI Clinical Analysis"/>
         <field name="state" string="Status" widget="badge" 
                decoration-success="state=='resolved'" 
                decoration-info="state=='investigating'"
