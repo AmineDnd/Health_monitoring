@@ -1,6 +1,6 @@
 {
     'name': 'Health Monitoring & AI Alerts',
-    'version': '17.0.1.0.0',
+    'version': '17.0.1.0.4',
     'category': 'Healthcare',
     'summary': 'Real-time patient vitals monitoring with ML anomaly detection',
     'author': 'SmartLab 2026',

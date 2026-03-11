@@ -4,6 +4,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from analyzer import analyze, MODEL, FEATURES, WARNING_RANGES, CRITICAL_RANGES
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(levelname)s | %(message)s')
@@ -16,16 +18,26 @@ app = FastAPI(
 )
 app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_methods=['*'], allow_headers=['*'])
 
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    logger.error(f"Validation error: {exc.errors()}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "body": str(exc.body)},
+    )
+
 # ── Pydantic schemas — FastAPI validates input automatically ──
 class VitalsInput(BaseModel):
     patient_code:     str
-    bp_systolic:      float = Field(default=0, ge=0, le=300)
-    bp_diastolic:     float = Field(default=0, ge=0, le=200)
-    heart_rate:       float = Field(default=0, ge=0, le=300)
-    glucose:          float = Field(default=0, ge=0, le=1000)
-    temperature:      float = Field(default=0, ge=30,  le=45)
-    spo2:             float = Field(default=0, ge=0,   le=100)
-    respiratory_rate: float = Field(default=0, ge=0,   le=60)
+    bp_systolic:      float = Field(default=0)
+    bp_diastolic:     float = Field(default=0)
+    heart_rate:       float = Field(default=0)
+    glucose:          float = Field(default=0)
+    temperature:      float = Field(default=0)
+    spo2:             float = Field(default=0)
+    respiratory_rate: float = Field(default=0)
+    history:          Optional[list] = Field(default=[])
+    is_initial:       bool = Field(default=False)
 
 class AnalysisResult(BaseModel):
     patient_code: str; is_anomaly: bool; severity: str

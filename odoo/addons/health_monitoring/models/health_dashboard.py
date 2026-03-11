@@ -16,12 +16,10 @@ class HealthDashboard(models.TransientModel):
 
     def _compute_recent_activity(self):
         for rec in self:
-            # My Watchlist: Explicitly find patients followed by the current user
-            followed_ids = self.env['mail.followers'].search([
-                ('res_model', '=', 'health.patient'),
-                ('partner_id', '=', self.env.user.partner_id.id)
-            ]).mapped('res_id')
-            rec.followed_patient_ids = self.env['health.patient'].browse(followed_ids)
+            # My Watchlist: Find patients where the current user is in the followers
+            rec.followed_patient_ids = self.env['health.patient'].search([
+                ('message_partner_ids', 'in', [self.env.user.partner_id.id])
+            ])
 
             rec.recent_alert_ids = self.env['health.alert'].search([
                 ('state', '!=', 'resolved')
