@@ -30,6 +30,8 @@ for i in range(20):
         'gender': gender_choice,
         'risk_level': risk_choice,
     })
+    # Auto-follow for the user who generates data
+    patient.message_subscribe(partner_ids=[env.user.partner_id.id])
 
     num_vitals = 15 + (i % 10)
     for j in range(num_vitals):

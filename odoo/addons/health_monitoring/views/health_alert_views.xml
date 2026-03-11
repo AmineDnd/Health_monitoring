@@ -74,27 +74,25 @@
     <field name="model">health.alert</field>
     <field name="arch" type="xml">
       <tree decoration-danger="severity=='critical'"
-            decoration-warning="severity=='high'"
-            decoration-muted="state=='resolved'">
+            decoration-muted="state=='resolved'"
+            class="sl-clinical-grid" limit="20">
         <field name="create_date" string="Time"/>
-        <field name="patient_id" widget="many2one_avatar" string="Patient"/>
-        <field name="doctor_id" widget="many2one_avatar_user" string="Doctor" optional="show"/>
-        <field name="severity" string="Severity" widget="badge"
+        <field name="patient_id" widget="many2one_avatar" string="Patient Identity"/>
+        <field name="severity" string="Triage Level" widget="badge"
                decoration-danger="severity=='critical'"
                decoration-warning="severity=='high'"
-               decoration-info="severity=='medium'"
-               decoration-success="severity=='low'"/>
-        <field name="ai_confidence" string="AI Conf. %" optional="show"/>
-        <field name="parsed_message_html" string="AI Clinical Analysis"/>
+               decoration-muted="severity in ['medium', 'low']"/>
+        <field name="headline" string="Clinical Headline" class="fw-bold text-dark"/>
+        <field name="ai_confidence" string="IA Conf." widget="progressbar" optional="show"/>
         <field name="state" string="Status" widget="badge" 
                decoration-success="state=='resolved'" 
                decoration-info="state=='investigating'"
                decoration-muted="state=='new'"/>
         <button name="action_acknowledge" type="object"
-                string="Acknowledge" class="btn btn-sm btn-primary"
+                icon="fa-check" string="Hold" class="btn btn-sm btn-outline-primary"
                 invisible="state != 'new'"/>
         <button name="action_resolve" type="object"
-                string="Resolve" class="btn btn-sm btn-success"
+                icon="fa-flag-checkered" string="Done" class="btn btn-sm btn-success"
                 invisible="state != 'investigating'"/>
       </tree>
     </field>

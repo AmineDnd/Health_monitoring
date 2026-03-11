@@ -40,12 +40,47 @@ class HealthPatient(models.Model):
                 rec.category = 'elderly'
 
     risk_level = fields.Selection([
-        ('low', 'Low'),
-        ('medium', 'Medium'),
+        ('low', 'Normal'),
+        ('medium', 'Moderate'),
         ('high', 'High'),
-        ('critical', 'Critical')
-    ], 'Risk Level', default='low', tracking=True)
+        ('critical', 'Critical'),
+        ('handled', 'Handled')
+    ], 'Risk Level', compute='_compute_risk_level', store=True, tracking=True)
+
+    @api.depends('last_score', 'last_alert_id', 'last_alert_id.state', 'last_alert_id.severity')
+    def _compute_risk_level(self):
+        for rec in self:
+            # Check if there's an active alert being handled or already resolved
+            if rec.last_alert_id and rec.last_alert_id.state in ['investigating', 'resolved']:
+                rec.risk_level = 'handled'
+                continue
+
+            # Prioritize latest alert severity if it's still 'new'
+            if rec.last_alert_id and rec.last_alert_id.state == 'new':
+                rec.risk_level = rec.last_alert_id.severity
+                continue
+
+            # Otherwise, use AI Score thresholds as fallback
+            score = rec.last_score or 0.0
+            if score >= 80:
+                rec.risk_level = 'critical'
+            elif score >= 60:
+                rec.risk_level = 'high'
+            elif score >= 35:
+                rec.risk_level = 'medium'
+            else:
+                rec.risk_level = 'low'
     
+    dashboard_risk_score = fields.Float('Dashboard Risk %', compute='_compute_dashboard_risk_score')
+
+    @api.depends('risk_level', 'last_score')
+    def _compute_dashboard_risk_score(self):
+        for rec in self:
+            if rec.risk_level == 'handled':
+                rec.dashboard_risk_score = 0.0
+            else:
+                rec.dashboard_risk_score = rec.last_score
+
     last_score = fields.Float('Last AI Score', readonly=True)
     last_alert_id = fields.Many2one('health.alert', 'Latest Alert', readonly=True)
     last_alert_state = fields.Selection(related='last_alert_id.state', string='Latest Alert Status', readonly=True)

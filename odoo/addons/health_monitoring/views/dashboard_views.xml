@@ -122,16 +122,15 @@
                   </div>
                   <div style="max-height: 400px; overflow-y: auto;">
                     <field name="recent_alert_ids" readonly="1">
-                      <tree decoration-danger="severity=='critical'" decoration-warning="severity=='high'" limit="20" class="sl-modern-tree">
+                      <tree decoration-danger="severity=='critical'" limit="15" class="sl-clinical-grid">
                         <field name="create_date" string="Time"/>
-                        <field name="patient_id" widget="many2one_avatar"/>
-                        <field name="severity" widget="badge" 
+                        <field name="patient_id" widget="many2one_avatar" string="Patient Identity"/>
+                        <field name="severity" widget="badge" string="Level"
                                decoration-danger="severity=='critical'"
                                decoration-warning="severity=='high'"
-                               decoration-info="severity=='medium'"
-                               decoration-success="severity=='low'"/>
-                        <field name="parsed_message_html" string="Clinical Analysis" widget="html"/>
-                        <field name="state" widget="badge"
+                               decoration-muted="severity in ['medium', 'low']"/>
+                        <field name="headline" string="Clinical Headline" class="fw-bold text-dark"/>
+                        <field name="state" widget="badge" string="Status"
                                decoration-success="state=='resolved'"
                                decoration-info="state=='investigating'"
                                decoration-muted="state=='new'"/>
@@ -147,12 +146,14 @@
                   </div>
                   <div style="max-height: 400px; overflow-y: auto;">
                     <field name="recent_vital_ids" readonly="1">
-                      <tree decoration-danger="anomaly_detected==True" limit="20" class="sl-modern-tree">
-                        <field name="recorded_at" string="Time"/>
-                        <field name="patient_id" widget="many2one_avatar"/>
-                        <field name="bp_systolic" string="SYS" class="sl-numeric"/>
-                        <field name="heart_rate" string="HR" class="sl-numeric"/>
-                        <field name="anomaly_detected" string="Result" widget="boolean_toggle"/>
+                      <tree limit="15" class="sl-clinical-grid">
+                        <field name="recorded_at" string="Checked At"/>
+                        <field name="patient_id" widget="many2one_avatar" string="Patient Identity"/>
+                        <field name="heart_rate" string="Pulse" class="sl-numeric"/>
+                        <field name="bp_systolic" string="BP (Sys)" class="sl-numeric"/>
+                        <field name="spo2" string="SpO2 (%)" class="fw-bold" decoration-danger="spo2 &lt; 90" decoration-warning="spo2 &lt; 95"/>
+                        <field name="ai_score" string="AI Risk" widget="progressbar"/>
+                        <field name="anomaly_detected" invisible="1"/>
                       </tree>
                     </field>
                   </div>
@@ -173,25 +174,25 @@
                   <kanban>
                     <field name="name"/>
                     <field name="risk_level"/>
-                    <field name="last_score"/>
+                    <field name="dashboard_risk_score"/>
                     <templates>
                       <t t-name="kanban-box">
                         <div class="oe_kanban_global_click sl-watchlist-card p-3 shadow-sm border-0 mb-3" 
                              t-attf-style="border-left: 4px solid #{record.risk_level.raw_value == 'critical' ? '#EF4444' : record.risk_level.raw_value == 'high' ? '#F59E0B' : '#64748B'}; background: #fff; border-radius: 12px; min-width: 250px;">
                           <div class="d-flex justify-content-between align-items-center mb-2">
                             <strong class="text-dark" style="font-size: 14px;"><field name="name"/></strong>
-                            <span t-attf-class="badge rounded-pill #{record.risk_level.raw_value == 'critical' ? 'text-bg-danger' : record.risk_level.raw_value == 'high' ? 'text-bg-warning' : 'text-bg-info'}" style="font-size: 10px;">
+                            <span t-attf-class="badge rounded-pill #{record.risk_level.raw_value == 'critical' ? 'text-bg-danger' : record.risk_level.raw_value == 'high' ? 'text-bg-warning' : record.risk_level.raw_value == 'handled' ? 'text-bg-info' : record.risk_level.raw_value == 'medium' ? 'text-bg-primary' : 'text-bg-success'}" style="font-size: 10px;">
                               <field name="risk_level"/>
                             </span>
                           </div>
                           <div class="progress mb-1" style="height: 4px; border-radius: 2px;">
                             <div class="progress-bar" role="progressbar" 
-                                 t-attf-style="width: #{record.last_score.raw_value || 0}%; background-color: #{record.risk_level.raw_value == 'critical' ? '#EF4444' : '#3A86FF'};" 
-                                 t-att-aria-valuenow="record.last_score.raw_value" aria-valuemin="0" aria-valuemax="100"></div>
+                                 t-attf-style="width: #{record.dashboard_risk_score.raw_value || 0}%; background-color: #{record.risk_level.raw_value == 'critical' ? '#EF4444' : '#3A86FF'};" 
+                                 t-att-aria-valuenow="record.dashboard_risk_score.raw_value" aria-valuemin="0" aria-valuemax="100"></div>
                           </div>
                           <div class="d-flex justify-content-between small text-muted">
                             <span>AI Risk</span>
-                            <span class="fw-bold"><t t-esc="Math.round(record.last_score.raw_value || 0)"/>%</span>
+                            <span class="fw-bold"><t t-esc="Math.round(record.dashboard_risk_score.raw_value || 0)"/>%</span>
                           </div>
                         </div>
                       </t>
