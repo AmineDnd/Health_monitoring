@@ -11,6 +11,16 @@ logger = logging.getLogger(__name__)
 FEATURES = ['bp_systolic','bp_diastolic','heart_rate','glucose','temperature','spo2','respiratory_rate',
             'heart_rate_change', 'bp_systolic_change', 'bp_diastolic_change', 'spo2_drop_rate', 'moving_avg_hr']
 
+VITAL_DISPLAY_NAMES = {
+    'bp_systolic': 'Systolic BP',
+    'bp_diastolic': 'Diastolic BP',
+    'heart_rate': 'Heart Rate',
+    'glucose': 'Glucose',
+    'temperature': 'Temperature',
+    'spo2': 'SpO2',
+    'respiratory_rate': 'Respiratory Rate'
+}
+
 # Clinical thresholds — based on WHO/AHA/ADA guidelines
 WARNING_RANGES  = {'bp_systolic':(90,140),'bp_diastolic':(60,90),'heart_rate':(60,100),
                    'glucose':(70,140),'temperature':(36.0,37.5),'spo2':(95,100),'respiratory_rate':(12,20)}
@@ -18,14 +28,27 @@ CRITICAL_RANGES = {'bp_systolic':(70,180),'bp_diastolic':(40,120),'heart_rate':(
                    'glucose':(50,300),'temperature':(35.0,39.5),'spo2':(90,100),'respiratory_rate':(8,30)}
 
 def compute_derived_features(data: dict, history: list) -> dict:
-    """Compute temporal features based on previous readings."""
+    """Compute temporal features for all vitals."""
     prev = history[0] if history else None
     
+    # Core features for ML
     data['heart_rate_change'] = round(data['heart_rate'] - prev['heart_rate'], 2) if prev else 0.0
     data['bp_systolic_change'] = round(data['bp_systolic'] - prev['bp_systolic'], 2) if prev else 0.0
     data['bp_diastolic_change'] = round(data['bp_diastolic'] - prev['bp_diastolic'], 2) if prev else 0.0
     data['spo2_drop_rate'] = round(max(0, prev['spo2'] - data['spo2']), 2) if prev else 0.0
     
+    # Generic changes for all vitals to be used in Trends
+    if prev:
+        data['glucose_change'] = round(data['glucose'] - prev['glucose'], 2)
+        data['temperature_change'] = round(data['temperature'] - prev['temperature'], 2)
+        data['respiratory_rate_change'] = round(data['respiratory_rate'] - prev['respiratory_rate'], 2)
+        data['spo2_change'] = round(data['spo2'] - prev['spo2'], 2)
+    else:
+        data['glucose_change'] = 0.0
+        data['temperature_change'] = 0.0
+        data['respiratory_rate_change'] = 0.0
+        data['spo2_change'] = 0.0
+
     # Moving average HR (last 3 readings including current)
     hr_values = [data['heart_rate']]
     for h in history[:2]:
@@ -116,23 +139,49 @@ def analyze(input_data: dict) -> dict:
 
     # Layer 3: Trend & Change Detection
     significant_changes = []
+    dangerous_trends = []
+    trend_map = {} # Map vital name to trend string for headline building
     prev = history[0] if history else None
     
     if prev:
-        hr_change = data.get('heart_rate_change', 0)
-        if prev.get('heart_rate', 0) > 0 and data.get('heart_rate', 0) > 0 and abs(hr_change) >= 15:
-            dir_str = "increased" if hr_change > 0 else "decreased"
-            significant_changes.append(f"Heart Rate {dir_str} by {abs(hr_change):.0f} bpm")
+        # Define thresholds for reporting changes
+        thresholds = {
+            'heart_rate': 10,
+            'bp_systolic': 15,
+            'spo2': 2,
+            'glucose': 30,
+            'temperature': 0.5,
+            'respiratory_rate': 4
+        }
         
-        bp_change = data.get('bp_systolic_change', 0)
-        if prev.get('bp_systolic', 0) > 0 and data.get('bp_systolic', 0) > 0 and abs(bp_change) >= 20:
-            dir_str = "increased" if bp_change > 0 else "decreased"
-            significant_changes.append(f"Systolic BP {dir_str} by {abs(bp_change):.0f} mmHg")
-
-        spo2_prev = prev.get('spo2', 0)
-        spo2_curr = data.get('spo2', 0)
-        if spo2_prev > 0 and spo2_curr > 0 and (spo2_prev - spo2_curr) >= 3:
-            significant_changes.append(f"SpO2 dropped by {(spo2_prev - spo2_curr):.1f}%")
+        for vital, threshold in thresholds.items():
+            change_key = f"{vital}_change" if vital != 'spo2' else 'spo2_change'
+            change = data.get(change_key, 0)
+            
+            if prev.get(vital, 0) > 0 and data.get(vital, 0) > 0 and abs(change) >= threshold:
+                # Check if it was abnormal before and is normal now (Improvement)
+                lo, hi = WARNING_RANGES.get(vital, (0, 1000))
+                prev_val = prev[vital]
+                curr_val = data[vital]
+                prev_abnormal = prev_val < lo or prev_val > hi
+                curr_normal = lo <= curr_val <= hi
+                
+                is_improvement = prev_abnormal and curr_normal
+                
+                dir_str = "increased" if change > 0 else "decreased"
+                if vital == 'spo2' and change < 0: dir_str = "dropped"
+                
+                unit = "bpm" if vital in ['heart_rate', 'respiratory_rate'] else "mmHg" if "bp" in vital else "mg/dL" if vital == "glucose" else "°C" if vital == "temperature" else "%"
+                v_display = VITAL_DISPLAY_NAMES.get(vital, vital.replace('_', ' ').title())
+                
+                if is_improvement:
+                    status_str = f"STABILIZING: {v_display} improved to {curr_val} {unit} (Normal range: {lo}-{hi})"
+                    significant_changes.append(status_str)
+                else:
+                    trend_str = f"{v_display} {dir_str} by {abs(change):.1f} {unit}"
+                    significant_changes.append(trend_str)
+                    dangerous_trends.append(trend_str)
+                    trend_map[vital] = f"({dir_str.title()} by {abs(change):.1f} {unit})"
 
     # Layer 2: Isolation Forest ML scoring
     run_ml = len(missing) <= 1
@@ -157,6 +206,9 @@ def analyze(input_data: dict) -> dict:
     if ml_flagged and not violations:
         violations.append(f'ML detected multivariate anomaly (score={anomaly_score:.1f})')
         if severity == 'normal': severity = 'warning'
+
+    if significant_changes and severity == 'normal':
+        severity = 'warning'
 
     # Layer 4: Clinical Narrative & System Grouping
     systems = {
@@ -186,7 +238,7 @@ def analyze(input_data: dict) -> dict:
             if 0 < (hi - val) / rng < 0.12: trends[vital] = f'approaching upper limit ({val}/{hi})'
             elif 0 < (val - lo) / rng < 0.12: trends[vital] = f'approaching lower limit ({val}/{lo})'
 
-    is_anomaly = bool(violations or ml_base > 50)
+    is_anomaly = bool(violations or dangerous_trends or ml_base > 50)
     
     # Generate Narrative
     narrative = []
@@ -194,9 +246,27 @@ def analyze(input_data: dict) -> dict:
     # 1. Headline
     headline = ""
     if severity == 'critical':
-        headline = "CRITICAL PATHWAY: Immediate Clinical Review Required"
+        prefix = "CRITICAL"
     elif severity == 'warning':
-        headline = "WARNING: System Physiological Instability Detected"
+        prefix = "WARNING"
+    else:
+        prefix = "STABILIZING" if (significant_changes and not dangerous_trends) else "INFO"
+
+    if violations:
+        # Get the first (primary) violation
+        prim_vio = violations[0]
+        v_name = prim_vio.split('=')[0]
+        v_val = prim_vio.split('=')[1].split(' ')[0]
+        v_display = VITAL_DISPLAY_NAMES.get(v_name, v_name.replace('_', ' ').title())
+        trend_clause = f" {trend_map[v_name]}" if v_name in trend_map else ""
+        headline = f"{prefix}: {v_display} {v_val}{trend_clause}"
+    elif dangerous_trends:
+        headline = f"{prefix}: {dangerous_trends[0]}"
+    elif significant_changes:
+        # If we reach here with no violations/danger, it's an improvement
+        headline = f"{significant_changes[0]}"
+    elif ml_base > 50:
+        headline = f"ANOMALY: Physiological Pattern Deviation (Score: {anomaly_score:.1f})"
     
     if headline:
         narrative.append(f"SUMMARY:{headline}")

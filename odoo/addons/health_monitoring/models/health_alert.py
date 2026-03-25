@@ -67,7 +67,8 @@ class HealthAlert(models.Model):
                 elif part.startswith('TREND:'):
                     # Trend Alert
                     trend_text = part.replace('TREND:', '')
-                    html += f"<div class='d-flex align-items-center mb-1 text-primary'><i class='fa fa-arrow-trend-up me-2 small'></i><span style='font-size: 0.9em;'>{trend_text}</span></div>"
+                    icon = "fa-arrow-trend-up" if "increase" in trend_text.lower() else "fa-arrow-trend-down" if "decrease" in trend_text.lower() or "drop" in trend_text.lower() else "fa-chart-line"
+                    html += f"<div class='d-flex align-items-center mb-1 text-primary'><i class='fa {icon} me-2 small'></i><span style='font-size: 0.9em;'>{trend_text}</span></div>"
                 
                 elif ':' in part:
                     # Individual Vital Violation

@@ -75,23 +75,32 @@ class HealthVitalRecord(models.Model):
                 rec.parsed_clinical_hints = "<div class='text-success'><i class='fa fa-check-circle me-2'></i>All vitals within normal range.</div>"
                 continue
             
-            # Professional medical formatting
-            html = "<ul class='list-unstyled mb-0'>"
+            html = "<div class='sl-clinical-narrative'>"
             parts = [p.strip() for p in hints.split('|')]
             for part in parts:
-                icon = "fa-warning text-warning"
-                if "CRITICAL" in part.upper(): icon = "fa-exclamation-triangle text-danger"
+                if part.startswith('SUMMARY:'):
+                    headline = part.replace('SUMMARY:', '')
+                    html += f"<div class='alert alert-info border-0 shadow-sm mb-3 py-2' style='border-radius:8px; font-size:0.9em;'><i class='fa fa-info-circle me-2'></i>{headline}</div>"
                 
-                # Highlight the vital name
-                if "=" in part:
-                    vital_name = part.split('=')[0].replace('_', ' ').title()
-                    the_rest = part.split('=', 1)[1]
-                    part_html = f"<b>{vital_name}</b>: {the_rest}"
+                elif part.startswith('SYSTEM:'):
+                    system_name = part.replace('SYSTEM:', '')
+                    icon = "fa-lungs" if "Respiratory" in system_name else "fa-heartbeat" if "Cardiovascular" in system_name else "fa-microscope" if "Metabolic" in system_name else "fa-chart-line"
+                    html += f"<h6 class='text-uppercase fw-bold text-muted small mt-2 mb-1' style='font-size: 0.75em;'><i class='fa {icon} me-2'></i>{system_name}</h6>"
+                
+                elif part.startswith('TREND:'):
+                    trend_text = part.replace('TREND:', '')
+                    icon = "fa-arrow-trend-up" if "increase" in trend_text.lower() else "fa-arrow-trend-down" if "decrease" in trend_text.lower() or "drop" in trend_text.lower() else "fa-chart-line"
+                    html += f"<div class='d-flex align-items-center mb-1 text-primary' style='font-size: 0.85em;'><i class='fa {icon} me-2'></i><span>{trend_text}</span></div>"
+                
+                elif ':' in part:
+                    label, val = part.split(':', 1)
+                    icon = "fa-warning text-warning"
+                    if "CRITICAL" in val.upper(): icon = "fa-exclamation-triangle text-danger"
+                    html += f"<div class='d-flex align-items-start mb-1' style='font-size: 0.85em;'><i class='fa {icon} mt-1 me-2' style='width:15px;'></i><b>{label}</b>: {val}</div>"
                 else:
-                    part_html = part
-                
-                html += f"<li class='mb-2 d-flex align-items-start'><i class='fa {icon} mt-1 me-2' style='width: 20px;'></i><span>{part_html}</span></li>"
-            html += "</ul>"
+                    html += f"<div class='mb-1' style='font-size: 0.85em;'>{part}</div>"
+            
+            html += "</div>"
             rec.parsed_clinical_hints = html
     
     @api.depends('type')
@@ -162,40 +171,39 @@ class HealthVitalRecord(models.Model):
         # Check if this is the first record for this patient
         is_first = not bool(latest_recs)
         
-        # Fetch history (last 5 readings for this patient, excluding current)
-        history_recs = latest_recs[:5]
-        history = []
-        for h in history_recs:
-            history.append({
-                'bp_systolic': h.bp_systolic or (h.value if h.type == 'blood_pressure' else 0.0),
-                'bp_diastolic': h.bp_diastolic or (h.value2 if h.type == 'blood_pressure' else 0.0),
-                'heart_rate': h.heart_rate or (h.value if h.type == 'heart_rate' else 0.0),
-                'glucose': h.glucose or (h.value if h.type == 'glucose' else 0.0),
-                'temperature': h.temperature or (h.value if h.type == 'temperature' else 0.0),
-                'spo2': h.spo2 or (h.value if h.type == 'oxygen' else 0.0),
-                'respiratory_rate': h.respiratory_rate or (h.value if h.type == 'respiratory_rate' else 0.0),
-            })
-
-        # Build a robust baseline by finding the MOST RECENT non-zero value for EACH vital
-        baseline = {}
+        # Build a robust state history (last 5 states)
         v_fields = ['bp_systolic', 'bp_diastolic', 'heart_rate', 'glucose', 'temperature', 'spo2', 'respiratory_rate']
+        history = []
         
-        for r in latest_recs:
+        # We want to build 5 snapshots. 
+        # For each of the last 5 records, what was the FULL patient state?
+        for i in range(min(5, len(latest_recs))):
+            snapshot = {}
+            # Look at this record and all records older than it
+            for r in latest_recs[i:]:
+                if len(snapshot) == len(v_fields): break
+                for f in v_fields:
+                    if f not in snapshot:
+                        val = getattr(r, f)
+                        # Fallback to generic value fields
+                        if not val:
+                            if f == 'bp_systolic' and r.type == 'blood_pressure': val = r.value
+                            elif f == 'bp_diastolic' and r.type == 'blood_pressure': val = r.value2
+                            elif f == 'heart_rate' and r.type == 'heart_rate': val = r.value
+                            elif f == 'glucose' and r.type == 'glucose': val = r.value
+                            elif f == 'temperature' and r.type == 'temperature': val = r.value
+                            elif f == 'spo2' and r.type == 'oxygen': val = r.value
+                            elif f == 'respiratory_rate' and r.type == 'respiratory_rate': val = r.value
+                        
+                        if val: snapshot[f] = val
+            
+            # Fill remaining with 0.0
             for f in v_fields:
-                if f not in baseline:
-                    val = getattr(r, f)
-                    # Fallback to generic value fields if type matches
-                    if not val:
-                        if f == 'bp_systolic' and r.type == 'blood_pressure': val = r.value
-                        elif f == 'bp_diastolic' and r.type == 'blood_pressure': val = r.value2
-                        elif f == 'heart_rate' and r.type == 'heart_rate': val = r.value
-                        elif f == 'glucose' and r.type == 'glucose': val = r.value
-                        elif f == 'temperature' and r.type == 'temperature': val = r.value
-                        elif f == 'spo2' and r.type == 'oxygen': val = r.value
-                        elif f == 'respiratory_rate' and r.type == 'respiratory_rate': val = r.value
-                    
-                    if val: baseline[f] = val
-            if len(baseline) == len(v_fields): break
+                if f not in snapshot: snapshot[f] = 0.0
+            history.append(snapshot)
+
+        # Baseline for the CURRENT reading (snapshot of everything BEFORE current)
+        baseline = history[0] if history else {f: 0.0 for f in v_fields}
 
         payload = {
             'patient_code': str(patient.id),
@@ -256,6 +264,17 @@ class HealthVitalRecord(models.Model):
                     'state': 'new'
                 })
                 patient.write({'last_alert_id': alert.id})
+            elif "STABILIZING" in result.get('message', ''):
+                # Auto-resolve active alerts if the patient is returning to normal
+                active_alerts = self.env['health.alert'].search([
+                    ('patient_id', '=', patient.id),
+                    ('state', 'in', ['new', 'acknowledged'])
+                ])
+                if active_alerts:
+                    active_alerts.write({
+                        'state': 'resolved',
+                        'resolution_notes': _("System: Patient vitals returned to normal range (Verified by AI in Vital Record #%s)") % self.id
+                    })
 
         except Exception as e:
             _logger.error(f'AI service error: {e}')

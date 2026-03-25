@@ -50,18 +50,24 @@ class HealthPatient(models.Model):
     @api.depends('last_score', 'last_alert_id', 'last_alert_id.state', 'last_alert_id.severity')
     def _compute_risk_level(self):
         for rec in self:
-            # Check if there's an active alert being handled or already resolved
-            if rec.last_alert_id and rec.last_alert_id.state in ['investigating', 'resolved']:
-                rec.risk_level = 'handled'
+            score = rec.last_score or 0.0
+            
+            # 1. If the current physiological state is stable (low score), it's NORMAL
+            if score < 35:
+                rec.risk_level = 'low'
                 continue
 
-            # Prioritize latest alert severity if it's still 'new'
+            # 2. If there's an active NEW alert, prioritize its clinical severity
             if rec.last_alert_id and rec.last_alert_id.state == 'new':
                 rec.risk_level = rec.last_alert_id.severity
                 continue
 
-            # Otherwise, use AI Score thresholds as fallback
-            score = rec.last_score or 0.0
+            # 3. If there's an alert that is being investigated or resolved, and the score hasn't dropped < 35 yet
+            if rec.last_alert_id and rec.last_alert_id.state in ['investigating', 'resolved']:
+                rec.risk_level = 'handled'
+                continue
+
+            # 4. Use AI score thresholds for baseline risks
             if score >= 80:
                 rec.risk_level = 'critical'
             elif score >= 60:

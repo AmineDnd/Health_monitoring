@@ -16,7 +16,7 @@ services:
       - smartlab_net
     healthcheck:
       # Odoo will NOT start until this passes
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER}']
+      test: [ 'CMD-SHELL', 'pg_isready -U ${POSTGRES_USER}' ]
       interval: 5s
       retries: 10
 
@@ -26,7 +26,7 @@ services:
     restart: unless-stopped
     depends_on:
       db:
-        condition: service_healthy   # waits until PostgreSQL is ready
+        condition: service_healthy # waits until PostgreSQL is ready
     environment:
       HOST: db
       USER: ${POSTGRES_USER}
@@ -38,9 +38,10 @@ services:
       - ./odoo/addons:/mnt/extra-addons
       - odoo_web_data:/var/lib/odoo
     ports:
-      - '8069:8069'    # http://localhost:8069
+      - '8069:8069' # http://localhost:8069
     networks:
       - smartlab_net
+    command: odoo -d smartlab_db
 
   # ── 3. FastAPI AI Service ───────────────────────────────────
   ai_service:
@@ -48,9 +49,9 @@ services:
       context: ./ai_service
     restart: unless-stopped
     volumes:
-      - ./ai_service:/app   # hot reload: edit code, uvicorn reloads instantly
+      - ./ai_service:/app # hot reload: edit code, uvicorn reloads instantly
     ports:
-      - '8000:8000'    # http://localhost:8000/docs (Swagger UI)
+      - '8000:8000' # http://localhost:8000/docs (Swagger UI)
     environment:
       - PYTHONUNBUFFERED=1
     networks:
@@ -59,6 +60,7 @@ services:
 volumes:
   postgres_data:
   odoo_web_data:
+
 
 networks:
   smartlab_net:
