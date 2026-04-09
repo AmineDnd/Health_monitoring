@@ -1,4 +1,5 @@
 from odoo import models, fields, api
+from odoo.exceptions import AccessError
 
 class HealthPatientTag(models.Model):
     _name = 'health.patient.tag'
@@ -24,6 +25,23 @@ class HealthPatient(models.Model):
     tag_ids = fields.Many2many('health.patient.tag', string='Tags')
     
     doctor_id = fields.Many2one('res.users', 'Assigned Doctor', tracking=True)
+    
+    status = fields.Selection([
+        ('draft', 'Draft'),
+        ('active', 'Active')
+    ], 'Status', default='draft', tracking=True)
+    
+    is_doctor = fields.Boolean(compute='_compute_is_doctor')
+
+    def _compute_is_doctor(self):
+        for rec in self:
+            rec.is_doctor = self.env.user.has_group('health_monitoring.group_health_doctor')
+
+    def action_validate(self):
+        for rec in self:
+            if not self.env.user.has_group('health_monitoring.group_health_doctor'):
+                raise AccessError("Only doctors can validate patient records.")
+            rec.status = 'active'
     
     @api.depends('age')
     def _compute_category(self):

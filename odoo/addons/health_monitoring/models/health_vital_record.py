@@ -229,14 +229,14 @@ class HealthVitalRecord(models.Model):
             ai_sev = result.get('severity', 'normal')
             record_severity = ai_sev if ai_sev in ['normal', 'warning', 'critical'] else 'normal'
             
-            self.with_context(no_ai=True).write({
+            self.sudo().with_context(no_ai=True).write({
                 'ai_score': score,
                 'ai_severity': record_severity,
                 'anomaly_detected': is_anomaly,
                 'clinical_hints': result.get('message', '')
             })
             
-            patient.write({
+            patient.sudo().write({
                 'last_score': score
             })
 
@@ -255,7 +255,7 @@ class HealthVitalRecord(models.Model):
                 if is_anomaly and alert_severity == 'low':
                     alert_severity = 'medium'
 
-                alert = self.env['health.alert'].create({
+                alert = self.env['health.alert'].sudo().create({
                     'patient_id': patient.id,
                     'vital_record_id': self.id,
                     'severity': alert_severity,
@@ -263,15 +263,15 @@ class HealthVitalRecord(models.Model):
                     'ai_confidence': score, 
                     'state': 'new'
                 })
-                patient.write({'last_alert_id': alert.id})
+                patient.sudo().write({'last_alert_id': alert.id})
             elif "STABILIZING" in result.get('message', ''):
                 # Auto-resolve active alerts if the patient is returning to normal
-                active_alerts = self.env['health.alert'].search([
+                active_alerts = self.env['health.alert'].sudo().search([
                     ('patient_id', '=', patient.id),
                     ('state', 'in', ['new', 'acknowledged'])
                 ])
                 if active_alerts:
-                    active_alerts.write({
+                    active_alerts.sudo().write({
                         'state': 'resolved',
                         'resolution_notes': _("System: Patient vitals returned to normal range (Verified by AI in Vital Record #%s)") % self.id
                     })

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Add to main Users form for Administrators -->
+    <record id="view_users_form_telegram" model="ir.ui.view">
+        <field name="name">res.users.form.telegram</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form"/>
+        <field name="arch" type="xml">
+            <notebook position="inside">
+                <page string="Telegram Notifications">
+                    <group>
+                        <field name="telegram_chat_id" placeholder="e.g., 123456789"/>
+                    </group>
+                </page>
+            </notebook>
+        </field>
+    </record>
+    
+    <!-- Add to personal Preferences form for individual Doctors -->
+    <record id="res_users_preferences_form_telegram" model="ir.ui.view">
+        <field name="name">res.users.preferences.form.telegram</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form_simple_modif"/>
+        <field name="arch" type="xml">
+            <group name="preferences" position="inside">
+                <group string="Telegram Integration">
+                    <field name="telegram_chat_id" string="Telegram Chat ID" placeholder="e.g., 123456789"/>
+                </group>
+            </group>
+        </field>
+    </record>
+</odoo>

@@ -21,9 +21,13 @@ class HealthDashboard(models.TransientModel):
                 ('message_partner_ids', 'in', [self.env.user.partner_id.id])
             ])
 
-            rec.recent_alert_ids = self.env['health.alert'].search([
-                ('state', '!=', 'resolved')
-            ], order='create_date desc', limit=10)
+            if self.env['health.alert'].check_access_rights('read', raise_exception=False):
+                rec.recent_alert_ids = self.env['health.alert'].search([
+                    ('state', '!=', 'resolved')
+                ], order='create_date desc', limit=10)
+            else:
+                rec.recent_alert_ids = False
+                
             rec.recent_vital_ids = self.env['health.vital.record'].search([], order='recorded_at desc', limit=10)
 
     def _compute_kpis(self):
@@ -32,9 +36,13 @@ class HealthDashboard(models.TransientModel):
 
     def _compute_kpi_values(self):
         for rec in self:
-            alerts = self.env['health.alert'].search([('state', '!=', 'resolved')])
-            rec.active_alerts = len(alerts)
-            rec.critical_alerts = len(alerts.filtered(lambda a: a.severity == 'critical'))
+            if self.env['health.alert'].check_access_rights('read', raise_exception=False):
+                alerts = self.env['health.alert'].search([('state', '!=', 'resolved')])
+                rec.active_alerts = len(alerts)
+                rec.critical_alerts = len(alerts.filtered(lambda a: a.severity == 'critical'))
+            else:
+                rec.active_alerts = 0
+                rec.critical_alerts = 0
             
             patients = self.env['health.patient'].search([('last_score', '>', 0)])
             valid_scores = [float(s) for s in patients.mapped('last_score') if s]

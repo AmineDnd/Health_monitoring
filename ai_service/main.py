@@ -16,7 +16,22 @@ app = FastAPI(
     description='ML patient vitals anomaly detection using Isolation Forest',
     version='1.0.0'
 )
-app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_methods=['*'], allow_headers=['*'])
+
+environment = os.environ.get('ENVIRONMENT', 'production')
+allowed_origins_str = os.environ.get('ALLOWED_ORIGINS', 'http://localhost:8069')
+
+if environment == 'development':
+    origins = ["*"]
+    logger.warning("CORS: Allowing all origins because ENVIRONMENT=development")
+else:
+    origins = [origin.strip() for origin in allowed_origins_str.split(',') if origin.strip()]
+
+app.add_middleware(
+    CORSMiddleware, 
+    allow_origins=origins, 
+    allow_methods=['*'], 
+    allow_headers=['*']
+)
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):

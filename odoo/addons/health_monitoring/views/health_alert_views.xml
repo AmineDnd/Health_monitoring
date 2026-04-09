@@ -123,10 +123,13 @@
                          decoration-warning="severity=='high'"
                          decoration-info="severity=='medium'"
                          decoration-success="severity=='low'"/>
+                  <field name="status" widget="badge" decoration-warning="status=='pending'" decoration-success="status=='handled'" decoration-danger="status=='escalated'"/>
                   <field name="vital_record_id" readonly="1"/>
-                  <field name="create_date" readonly="1" string="Triggered At"/>
+                  <field name="created_at" readonly="1" string="Triggered At"/>
+                  <field name="handled_at" readonly="1" invisible="status != 'handled'"/>
                   <field name="ai_confidence" widget="percentpie" string="AI Confidence"/>
-                  <field name="doctor_id" widget="many2one_avatar_user" readonly="1"/>
+                  <field name="assigned_doctor_id" widget="many2one_avatar_user"/>
+                  <field name="escalation_level" invisible="status != 'escalated'"/>
                 </group>
               </div>
             </div>

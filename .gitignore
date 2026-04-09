@@ -1,1 +1,37 @@
+# Environment Variables & Secrets
 .env
+*.env
+.env.*
+
+# Python & AI Cache Artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+isolation_forest.joblib
+scaler.joblib
+training_data.csv
+
+# Odoo Test Outputs & Logs
+*.log
+*.txt
+dump_logs.py
+test_tg.py
+force_tg.py
+trigger_cron.py
+
+# Docker Configurations (Optional exclusions)
+# Keep docker-compose.yml but exclude local mounts
+odoo_web_data/
+odoo_db_data/
+
+# IDE Files
+.vscode/
+.idea/
+
+# OS Specific
+.DS_Store
+Thumbs.db

@@ -89,5 +89,7 @@ if __name__ == "__main__":
         # Check if service is up
         requests.get(f"{AI_URL}/", timeout=2)
         test_anomaly_with_history()
-    except:
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"Error: AI Service not found at {AI_URL}. Is Docker running?")

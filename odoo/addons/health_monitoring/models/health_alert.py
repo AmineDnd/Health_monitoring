@@ -1,4 +1,9 @@
 from odoo import models, fields, api
+from markupsafe import Markup
+import requests
+import logging
+
+_logger = logging.getLogger(__name__)
 
 class HealthAlert(models.Model):
     _name = 'health.alert'
@@ -16,6 +21,17 @@ class HealthAlert(models.Model):
         ('high', 'High'),
         ('critical', 'Critical')
     ], 'Severity', required=True, tracking=True)
+    
+    status = fields.Selection([
+        ('pending', 'Pending'),
+        ('handled', 'Handled'),
+        ('escalated', 'Escalated')
+    ], 'Status', default='pending', tracking=True)
+    
+    created_at = fields.Datetime('Created At', default=fields.Datetime.now, readonly=True)
+    handled_at = fields.Datetime('Handled At', readonly=True)
+    assigned_doctor_id = fields.Many2one('res.users', 'Assigned Doctor')
+    escalation_level = fields.Integer('Escalation Level', default=0)
     
     headline = fields.Char('Alert Headline', compute='_compute_headline', store=True)
     
@@ -100,5 +116,86 @@ class HealthAlert(models.Model):
         
     def action_resolve(self):
         self.write({
-            'state': 'resolved'
+            'state': 'resolved',
+            'status': 'handled',
+            'handled_at': fields.Datetime.now()
         })
+
+    def _send_telegram(self, chat_id, message):
+        if not chat_id: return
+        # Securely pull the bot token from Odoo's internal configuration parameters
+        token = self.env['ir.config_parameter'].sudo().get_param('health_monitoring.telegram_bot_token')
+        if not token: 
+            _logger.warning("Telegram Bot Token missing. Add 'health_monitoring.telegram_bot_token' to System Parameters.")
+            return
+            
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        payload = {'chat_id': chat_id, 'text': message, 'parse_mode': 'HTML'}
+        try:
+            requests.post(url, json=payload, timeout=5)
+        except Exception as e:
+            _logger.error(f"Telegram Delivery Failed: {e}")
+
+    @api.model
+    def _cron_escalate_alerts(self):
+        pending_alerts = self.search([('status', '=', 'pending')])
+        now = fields.Datetime.now()
+        
+        for alert in pending_alerts:
+            start_time = alert.created_at or alert.create_date
+            if not start_time:
+                continue
+                
+            elapsed_mins = (now - start_time).total_seconds() / 60.0
+            
+            if elapsed_mins > 30 and alert.escalation_level < 3:
+                alert.write({
+                    'escalation_level': 3,
+                    'status': 'escalated'
+                })
+                alert.message_post(
+                    body=Markup("<span class='text-danger fw-bold'>CRITICAL ESCALATION:</span> Alert unresolved for over 30 minutes. Status transition to Escalated."),
+                    message_type="notification"
+                )
+                
+            elif elapsed_mins > 15 and alert.escalation_level < 2:
+                alert.write({'escalation_level': 2})
+                boss_group = self.env.ref('health_monitoring.group_health_admin', raise_if_not_found=False)
+                boss_users = boss_group.users if boss_group else self.env['res.users']
+                if boss_users:
+                    mentions = ", ".join([f"<a href='#' data-oe-model='res.users' data-oe-id='{u.id}'>@{u.name}</a>" for u in boss_users])
+                    alert.message_post(
+                        body=Markup(f"<span class='text-warning fw-bold'>ESCALATION LEVEL 2:</span> Alert unresolved for over 15 minutes. Notifying Administrators: {mentions}"),
+                        partner_ids=boss_users.mapped('partner_id').ids,
+                        message_type="notification"
+                    )
+                    # Trigger Telegram Pipeline for all Admins
+                    for boss in boss_users:
+                        if boss.telegram_chat_id:
+                            tg_msg = f"⚠️ <b>LEVEL 2 ESCALATION</b> ⚠️\n\nPatient: {alert.patient_id.name}\nAlert: {alert.headline}\nDelay: 15+ Minutes!\n\n<i>This alert was ignored by the assigned doctor and has routed to Administration.</i>"
+                            alert._send_telegram(boss.telegram_chat_id, tg_msg)
+                else:
+                    alert.message_post(
+                        body=Markup("<span class='text-warning fw-bold'>ESCALATION LEVEL 2:</span> Alert unresolved for over 15 minutes. (No administrators found to notify)."),
+                        message_type="notification"
+                    )
+            
+            elif elapsed_mins > 5 and alert.escalation_level < 1:
+                alert.write({'escalation_level': 1})
+                doc = alert.assigned_doctor_id or alert.doctor_id
+                if doc:
+                    mention = f"<a href='#' data-oe-model='res.users' data-oe-id='{doc.id}'>@{doc.name}</a>"
+                    alert.message_post(
+                        body=Markup(f"<span class='text-info fw-bold'>ESCALATION LEVEL 1:</span> Alert unresolved for over 5 minutes. Notifying Doctor: {mention}"),
+                        partner_ids=doc.partner_id.ids,
+                        message_type="notification"
+                    )
+                    # Trigger Telegram Pipeline for the Doctor
+                    if doc.telegram_chat_id:
+                        tg_msg = f"🚨 <b>LEVEL 1 ESCALATION</b> 🚨\n\nPatient: {alert.patient_id.name}\nAlert: {alert.headline}\nDelay: 5+ Minutes!\n\n<i>Immediate clinical review required on the dashboard!</i>"
+                        alert._send_telegram(doc.telegram_chat_id, tg_msg)
+                else:
+                    alert.message_post(
+                        body=Markup("<span class='text-info fw-bold'>ESCALATION LEVEL 1:</span> Alert unresolved for over 5 minutes. (No specific doctor to notify)."),
+                        message_type="notification"
+                    )

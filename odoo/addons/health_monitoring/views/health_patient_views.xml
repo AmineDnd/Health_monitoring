@@ -8,6 +8,8 @@
     <field name="arch" type="xml">
       <form>
         <header>
+          <button name="action_validate" type="object" string="Validate Patient" class="oe_highlight btn-success" invisible="status == 'active'" groups="health_monitoring.group_health_doctor"/>
+          <field name="status" widget="statusbar" statusbar_visible="draft,active"/>
           <field name="risk_level" widget="statusbar" statusbar_visible="low,medium,high,critical"/>
         </header>
         <sheet>
@@ -16,10 +18,10 @@
             <button class="oe_stat_button" type="action" name="%(action_patient_vitals)d" icon="fa-heartbeat">
               <field string="Vitals" name="vitals_count" widget="statinfo"/>
             </button>
-            <button class="oe_stat_button" type="action" name="%(action_patient_alerts)d" icon="fa-bell">
+            <button class="oe_stat_button" type="action" name="%(action_patient_alerts)d" icon="fa-bell" groups="health_monitoring.group_health_doctor">
               <field string="Total Alerts" name="alerts_count" widget="statinfo"/>
             </button>
-            <button class="oe_stat_button" type="action" name="%(action_patient_critical_alerts)d" icon="fa-exclamation-triangle" context="{'search_default_critical': 1}">
+            <button class="oe_stat_button" type="action" name="%(action_patient_critical_alerts)d" icon="fa-exclamation-triangle" context="{'search_default_critical': 1}" groups="health_monitoring.group_health_doctor">
               <div class="o_stat_info o_text_danger">
                 <span class="o_stat_value"><field name="critical_alerts_count"/></span>
                 <span class="o_stat_text">Critical</span>
@@ -59,8 +61,9 @@
               <div class="sl-card shadow-sm p-4 bg-white rounded border-0">
                   <h3 class="o_horizontal_separator text-primary mb-3"><i class="fa fa-stethoscope me-2"></i>Medical Context</h3>
                   <group>
-                    <field name="doctor_id" widget="many2one_avatar_user" options="{'no_create': True}"/>
-                    <field name="tag_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
+                    <field name="is_doctor" invisible="1"/>
+                    <field name="doctor_id" widget="many2one_avatar_user" options="{'no_create': True}" readonly="not is_doctor"/>
+                    <field name="tag_ids" widget="many2many_tags" options="{'color_field': 'color'}" readonly="not is_doctor"/>
                   </group>
               </div>
             </div>
@@ -148,7 +151,7 @@
             <page string="Vitals" name="vitals">
               <field name="vital_record_ids"/>
             </page>
-            <page string="Alerts" name="alerts">
+            <page string="Alerts" name="alerts" groups="health_monitoring.group_health_doctor">
               <field name="alert_ids"/>
             </page>
           </notebook>

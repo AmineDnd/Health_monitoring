@@ -79,5 +79,5 @@ action = {
     </field>
   </record>
 
-  <menuitem id="menu_generate_demo" name="Generate Demo Data" parent="menu_health_root" action="action_generate_demo_data" sequence="99"/>
+  <menuitem id="menu_generate_demo" name="Generate Demo Data" parent="menu_health_root" action="action_generate_demo_data" sequence="99" groups="health_monitoring.group_health_admin"/>
 </odoo>

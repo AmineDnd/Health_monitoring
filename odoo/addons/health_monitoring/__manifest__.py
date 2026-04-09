@@ -14,6 +14,7 @@
         'views/health_patient_views.xml',
         'views/dashboard_views.xml',
         'views/menus.xml',
+        'views/res_users_views.xml',
         'data/cron.xml',
         'data/demo_action.xml',
         'reports/patient_history_report.xml',

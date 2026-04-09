@@ -140,11 +140,12 @@ def analyze(input_data: dict) -> dict:
     # Layer 3: Trend & Change Detection
     significant_changes = []
     dangerous_trends = []
+    informational_trends = []
     trend_map = {} # Map vital name to trend string for headline building
     prev = history[0] if history else None
     
     if prev:
-        # Define thresholds for reporting changes
+        # Define thresholds for reporting changes as DANGEROUS/SIGNIFICANT
         thresholds = {
             'heart_rate': 10,
             'bp_systolic': 15,
@@ -154,19 +155,13 @@ def analyze(input_data: dict) -> dict:
             'respiratory_rate': 4
         }
         
-        for vital, threshold in thresholds.items():
+        for vital, (lo, hi) in WARNING_RANGES.items():
             change_key = f"{vital}_change" if vital != 'spo2' else 'spo2_change'
             change = data.get(change_key, 0)
             
-            if prev.get(vital, 0) > 0 and data.get(vital, 0) > 0 and abs(change) >= threshold:
-                # Check if it was abnormal before and is normal now (Improvement)
-                lo, hi = WARNING_RANGES.get(vital, (0, 1000))
+            if prev.get(vital, 0) > 0 and data.get(vital, 0) > 0 and change != 0:
                 prev_val = prev[vital]
                 curr_val = data[vital]
-                prev_abnormal = prev_val < lo or prev_val > hi
-                curr_normal = lo <= curr_val <= hi
-                
-                is_improvement = prev_abnormal and curr_normal
                 
                 dir_str = "increased" if change > 0 else "decreased"
                 if vital == 'spo2' and change < 0: dir_str = "dropped"
@@ -174,14 +169,21 @@ def analyze(input_data: dict) -> dict:
                 unit = "bpm" if vital in ['heart_rate', 'respiratory_rate'] else "mmHg" if "bp" in vital else "mg/dL" if vital == "glucose" else "°C" if vital == "temperature" else "%"
                 v_display = VITAL_DISPLAY_NAMES.get(vital, vital.replace('_', ' ').title())
                 
-                if is_improvement:
-                    status_str = f"STABILIZING: {v_display} improved to {curr_val} {unit} (Normal range: {lo}-{hi})"
-                    significant_changes.append(status_str)
+                is_improvement = (prev_val < lo or prev_val > hi) and (lo <= curr_val <= hi)
+                
+                if abs(change) >= thresholds.get(vital, 5) or is_improvement:
+                    if is_improvement:
+                        status_str = f"STABILIZING: {v_display} improved to {curr_val} {unit} (Normal range: {lo}-{hi})"
+                        significant_changes.append(status_str)
+                    else:
+                        trend_str = f"{v_display} {dir_str} by {abs(change):.1f} {unit}"
+                        significant_changes.append(trend_str)
+                        dangerous_trends.append(trend_str)
+                        trend_map[vital] = f"({dir_str.title()} by {abs(change):.1f} {unit})"
                 else:
-                    trend_str = f"{v_display} {dir_str} by {abs(change):.1f} {unit}"
-                    significant_changes.append(trend_str)
-                    dangerous_trends.append(trend_str)
-                    trend_map[vital] = f"({dir_str.title()} by {abs(change):.1f} {unit})"
+                    # Provide an explicitly detailed informational breakdown for all other recorded changes
+                    trend_str = f"{v_display} {dir_str} by {abs(change):.1f} {unit} (Currently: {curr_val} {unit})"
+                    informational_trends.append(trend_str)
 
     # Layer 2: Isolation Forest ML scoring
     run_ml = len(missing) <= 1
@@ -259,7 +261,9 @@ def analyze(input_data: dict) -> dict:
         v_val = prim_vio.split('=')[1].split(' ')[0]
         v_display = VITAL_DISPLAY_NAMES.get(v_name, v_name.replace('_', ' ').title())
         trend_clause = f" {trend_map[v_name]}" if v_name in trend_map else ""
-        headline = f"{prefix}: {v_display} {v_val}{trend_clause}"
+        
+        multi_clause = f" (+{len(violations)-1} other anomalies)" if len(violations) > 1 else ""
+        headline = f"{prefix}: {v_display} {v_val}{trend_clause}{multi_clause}"
     elif dangerous_trends:
         headline = f"{prefix}: {dangerous_trends[0]}"
     elif significant_changes:
@@ -282,9 +286,11 @@ def analyze(input_data: dict) -> dict:
                 narrative.append(f"{clean_v}: {details}")
 
     # 3. Trends
-    if significant_changes:
-        narrative.append("SYSTEM:Trend Analysis")
+    if significant_changes or informational_trends:
+        narrative.append("SYSTEM:Chronological Trend Analysis")
         for change in significant_changes:
+            narrative.append(f"TREND:{change}")
+        for change in informational_trends:
             narrative.append(f"TREND:{change}")
 
     if not narrative:
