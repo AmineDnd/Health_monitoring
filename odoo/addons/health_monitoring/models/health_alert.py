@@ -96,6 +96,14 @@ class HealthAlert(models.Model):
             html += "</div>"
             rec.parsed_message_html = html
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
+        for rec in records:
+            if rec.severity in ['high', 'critical'] and rec.patient_id.doctor_id:
+                rec.patient_id.message_subscribe(partner_ids=rec.patient_id.doctor_id.partner_id.ids)
+        return records
+
     acknowledged = fields.Boolean('Acknowledged', default=False, tracking=True)
     acknowledged_by = fields.Many2one('res.users', 'Acknowledged By')
     acknowledged_at = fields.Datetime('Acknowledged At')

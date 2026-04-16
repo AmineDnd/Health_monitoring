@@ -261,4 +261,7 @@
 
 ::-webkit-scrollbar-thumb:hover {
     background: #94A3B8;
-}
+}. r i b b o n   s p a n   {   f o n t - s i z e :   1 1 p x   ! i m p o r t a n t ;   p a d d i n g :   2 p x   2 5 p x   ! i m p o r t a n t ;   }  
+ .ribbon { transform: scale(0.65) !important; transform-origin: top right !important; }
+
+.ribbon { zoom: 0.60 !important; } .ribbon-inner { zoom: 0.60 !important; }
