@@ -44,6 +44,10 @@ async def validation_exception_handler(request, exc):
 # ── Pydantic schemas — FastAPI validates input automatically ──
 class VitalsInput(BaseModel):
     patient_code:     str
+    age:              int = Field(default=0)
+    gender:           str = Field(default='unknown')
+    category:         str = Field(default='unknown')
+    lifestyle_profile:str = Field(default='standard')
     bp_systolic:      float = Field(default=0)
     bp_diastolic:     float = Field(default=0)
     heart_rate:       float = Field(default=0)

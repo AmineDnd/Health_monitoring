@@ -16,7 +16,7 @@
         <record id="group_health_doctor" model="res.groups">
             <field name="name">Doctor</field>
             <field name="category_id" ref="module_category_health_monitoring"/>
-            <field name="implied_ids" eval="[(4, ref('group_health_nurse'))]"/>
+            <field name="implied_ids" eval="[(6, 0, [ref('base.group_user')])]"/>
         </record>
         
         <record id="group_health_admin" model="res.groups">

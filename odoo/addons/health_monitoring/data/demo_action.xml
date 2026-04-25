@@ -28,41 +28,33 @@ for i in range(20):
         'name': f"{first_names[r_idx]} {last_names[r_idx2]}",
         'age': 25 + (i * 17 % 60),
         'gender': gender_choice,
-        'risk_level': risk_choice,
     })
     # Auto-follow for the user who generates data
     patient.message_subscribe(partner_ids=[env.user.partner_id.id])
 
-    num_vitals = 15 + (i % 10)
+    num_vitals = 2 + (i % 3)
     for j in range(num_vitals):
-        v_idx = (i + j) % len(vital_types)
-        v_type = vital_types[v_idx]
-        val2 = 0.0
-        
-        # Pseudo-random ranges
         pseudo_val = (i * 11 + j * 7) % 100
         
-        if v_type == 'blood_pressure':
-            val = 90 + pseudo_val
-            val2 = 60 + (pseudo_val / 2)
-        elif v_type == 'heart_rate':
-            val = 60 + (pseudo_val * 0.7)
-        elif v_type == 'glucose':
-            val = 70 + (pseudo_val * 1.8)
-        elif v_type == 'temperature':
-            val = 36.0 + (pseudo_val * 0.035)
-        elif v_type == 'oxygen':
-            val = 88 + (pseudo_val * 0.12)
-        else:
-            val = 12 + (pseudo_val * 0.18)
+        hr = 60 + (pseudo_val * 0.7)
+        bps = 90 + pseudo_val
+        bpd = 60 + (pseudo_val / 2)
+        glu = 70 + (pseudo_val * 1.8)
+        temp = 36.0 + (pseudo_val * 0.035)
+        o2 = 88 + (pseudo_val * 0.12)
+        resp = 12 + (pseudo_val * 0.18)
             
         rec_time = now - datetime.timedelta(hours=(j * 12 + i))
             
         vital = Vital.create({
             'patient_id': patient.id,
-            'type': v_type,
-            'value': round(val, 1),
-            'value2': round(val2, 1),
+            'heart_rate': round(hr, 1),
+            'bp_systolic': round(bps, 1),
+            'bp_diastolic': round(bpd, 1),
+            'glucose': round(glu, 1),
+            'temperature': round(temp, 1),
+            'spo2': round(o2, 1),
+            'respiratory_rate': round(resp, 1),
             'recorded_at': rec_time,
         })
 

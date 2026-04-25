@@ -1,5 +1,5 @@
 from odoo import models, fields, api
-from odoo.exceptions import AccessError
+from odoo.exceptions import AccessError, ValidationError
 
 class HealthPatientTag(models.Model):
     _name = 'health.patient.tag'
@@ -14,8 +14,8 @@ class HealthPatient(models.Model):
     _inherit = ['mail.thread', 'mail.activity.mixin']
 
     name = fields.Char('Patient Name', required=True, tracking=True)
-    age = fields.Integer('Age')
-    gender = fields.Selection([('male', 'Male'), ('female', 'Female'), ('other', 'Other')], 'Gender')
+    age = fields.Integer('Age', required=True, default=0)
+    gender = fields.Selection([('male', 'Male'), ('female', 'Female'), ('other', 'Other')], 'Gender', required=True)
     category = fields.Selection([
         ('child', 'Child'),
         ('teen', 'Teen'),
@@ -24,12 +24,66 @@ class HealthPatient(models.Model):
     ], 'Category', compute='_compute_category')
     tag_ids = fields.Many2many('health.patient.tag', string='Tags')
     
+    ward_id = fields.Many2one('health.ward', string='Ward / Service', tracking=True)
+    lifestyle_profile = fields.Selection([
+        ('standard', 'Standard'),
+        ('athlete', 'Athlete'),
+        ('sedentary', 'Sedentary'),
+        ('pregnant', 'Pregnant')
+    ], string='Clinical Profile (Internal)', default='standard', tracking=True)
+
+    profile_male = fields.Selection([
+        ('standard', 'Standard'),
+        ('athlete', 'Athlete'),
+        ('sedentary', 'Sedentary')
+    ], string='Clinical Profile', compute='_compute_profile', inverse='_inverse_profile')
+
+    profile_female = fields.Selection([
+        ('standard', 'Standard'),
+        ('athlete', 'Athlete'),
+        ('sedentary', 'Sedentary'),
+        ('pregnant', 'Pregnant')
+    ], string='Clinical Profile', compute='_compute_profile', inverse='_inverse_profile')
+
+    @api.depends('lifestyle_profile')
+    def _compute_profile(self):
+        for rec in self:
+            rec.profile_male = rec.lifestyle_profile if rec.lifestyle_profile != 'pregnant' else 'standard'
+            rec.profile_female = rec.lifestyle_profile
+
+    def _inverse_profile(self):
+        for rec in self:
+            if rec.gender == 'female':
+                rec.lifestyle_profile = rec.profile_female
+            else:
+                rec.lifestyle_profile = rec.profile_male
+
+    @api.onchange('gender')
+    def _onchange_gender(self):
+        if self.gender != 'female' and self.lifestyle_profile == 'pregnant':
+            self.lifestyle_profile = 'standard'
+
+    @api.constrains('age')
+    def _check_age(self):
+        for rec in self:
+            if rec.age < 0 or rec.age > 130:
+                raise odoo.exceptions.ValidationError("Age must be between 0 and 130.")
+    
     doctor_id = fields.Many2one('res.users', 'Assigned Doctor', tracking=True)
     
     status = fields.Selection([
         ('draft', 'Draft'),
         ('active', 'Active')
     ], 'Status', default='draft', tracking=True)
+    
+    admission_status = fields.Selection([
+        ('triage', 'In Triage (ER)'),
+        ('admitted', 'Admitted to Ward'),
+        ('discharged', 'Discharged')
+    ], string='Admission Status', default='triage', tracking=True)
+    
+    ai_recommended_ward_id = fields.Many2one('health.ward', string='AI Recommended Ward', tracking=True)
+    ai_recommendation_msg = fields.Char('AI Recommendation Message', tracking=True)
     
     is_doctor = fields.Boolean(compute='_compute_is_doctor')
 
@@ -42,6 +96,20 @@ class HealthPatient(models.Model):
             if not self.env.user.has_group('health_monitoring.group_health_doctor'):
                 raise AccessError("Only doctors can validate patient records.")
             rec.status = 'active'
+            
+    def action_admit(self):
+        for rec in self:
+            if not rec.ward_id:
+                raise AccessError("Please select a Ward before admitting the patient.")
+            rec.admission_status = 'admitted'
+            rec.message_post(body=f"Patient officially admitted to {rec.ward_id.name}.")
+
+    def action_admit_ai(self):
+        for rec in self:
+            if not rec.ai_recommended_ward_id:
+                raise AccessError("No AI Recommended Ward to admit to.")
+            rec.ward_id = rec.ai_recommended_ward_id
+            rec.action_admit()
     
     @api.depends('age')
     def _compute_category(self):
@@ -115,6 +183,7 @@ class HealthPatient(models.Model):
     vitals_count = fields.Integer(compute='_compute_vitals_count', string='Vitals Count')
     alerts_count = fields.Integer(compute='_compute_alerts_count', string='Alerts Count')
     critical_alerts_count = fields.Integer(compute='_compute_alerts_count', string='Critical Alerts Count')
+
 
     @api.depends('vital_record_ids')
     def _compute_vitals_count(self):

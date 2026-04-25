@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Doctors -->
+        <record id="demo_doctor_chen" model="res.users">
+            <field name="name">Dr. Sarah Chen</field>
+            <field name="login">sarah.chen@hospital.local</field>
+            <field name="password">doctor</field>
+            <field name="groups_id" eval="[(4, ref('health_monitoring.group_health_doctor')), (4, ref('base.group_user'))]"/>
+        </record>
+        
+        <record id="demo_doctor_house" model="res.users">
+            <field name="name">Dr. Gregory House</field>
+            <field name="login">gregory.house@hospital.local</field>
+            <field name="password">doctor</field>
+            <field name="groups_id" eval="[(4, ref('health_monitoring.group_health_doctor')), (4, ref('base.group_user'))]"/>
+        </record>
+        
+        <record id="demo_doctor_wilson" model="res.users">
+            <field name="name">Dr. James Wilson</field>
+            <field name="login">james.wilson@hospital.local</field>
+            <field name="password">doctor</field>
+            <field name="groups_id" eval="[(4, ref('health_monitoring.group_health_doctor')), (4, ref('base.group_user'))]"/>
+        </record>
+
+        <!-- Wards -->
+        <record id="demo_ward_icu" model="health.ward">
+            <field name="name">Intensive Care Unit (ICU)</field>
+            <field name="description">Main intensive care unit for critical patients requiring 24/7 monitoring.</field>
+            <field name="ward_type">icu</field>
+            <field name="capacity">10</field>
+            <field name="floor_number">3rd Floor, North Wing</field>
+            <field name="contact_extension">Ext. 9911</field>
+            <field name="doctor_ids" eval="[(4, ref('demo_doctor_house'))]"/>
+        </record>
+        
+        <record id="demo_ward_cardio" model="health.ward">
+            <field name="name">Cardiology Department</field>
+            <field name="description">Specialized ward for patients with cardiovascular diseases.</field>
+            <field name="ward_type">cardiology</field>
+            <field name="capacity">25</field>
+            <field name="floor_number">2nd Floor, East Wing</field>
+            <field name="contact_extension">Ext. 4055</field>
+            <field name="doctor_ids" eval="[(4, ref('demo_doctor_chen'))]"/>
+        </record>
+        
+        <record id="demo_ward_general" model="health.ward">
+            <field name="name">General Admission</field>
+            <field name="description">Standard ward for recovering and non-critical patients.</field>
+            <field name="ward_type">general</field>
+            <field name="capacity">50</field>
+            <field name="floor_number">1st Floor, Main Building</field>
+            <field name="contact_extension">Ext. 1000</field>
+            <field name="doctor_ids" eval="[(4, ref('demo_doctor_wilson'))]"/>
+        </record>
+    </data>
+</odoo>

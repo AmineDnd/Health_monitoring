@@ -207,6 +207,10 @@ class HealthVitalRecord(models.Model):
 
         payload = {
             'patient_code': str(patient.id),
+            'age': patient.age or 0,
+            'gender': patient.gender or 'unknown',
+            'category': patient.category or 'unknown',
+            'lifestyle_profile': patient.lifestyle_profile or 'standard',
             'bp_systolic': self.bp_systolic or baseline.get('bp_systolic', 0.0),
             'bp_diastolic': self.bp_diastolic or baseline.get('bp_diastolic', 0.0),
             'heart_rate': self.heart_rate or baseline.get('heart_rate', 0.0),
@@ -255,6 +259,19 @@ class HealthVitalRecord(models.Model):
                 if is_anomaly and alert_severity == 'low':
                     alert_severity = 'medium'
 
+                # AI Ward Recommendation
+                icu_ward = self.env['health.ward'].sudo().search([('ward_type', '=', 'icu')], limit=1)
+                gen_ward = self.env['health.ward'].sudo().search([('ward_type', '=', 'general')], limit=1)
+                
+                rec_ward = icu_ward if alert_severity == 'critical' else gen_ward
+                rec_msg = "Critical Situation. AI explicitly recommends ICU." if alert_severity == 'critical' else "Patient requires attention. AI Recommends General Admission."
+                
+                patient.sudo().write({
+                    'last_alert_id': False, # Will be set below
+                    'ai_recommended_ward_id': rec_ward.id if rec_ward else False,
+                    'ai_recommendation_msg': rec_msg
+                })
+
                 alert = self.env['health.alert'].sudo().create({
                     'patient_id': patient.id,
                     'vital_record_id': self.id,
@@ -275,6 +292,20 @@ class HealthVitalRecord(models.Model):
                         'state': 'resolved',
                         'resolution_notes': _("System: Patient vitals returned to normal range (Verified by AI in Vital Record #%s)") % self.id
                     })
+                
+                # Update stable recommendation
+                gen_ward = self.env['health.ward'].sudo().search([('ward_type', '=', 'general')], limit=1)
+                patient.sudo().write({
+                    'ai_recommended_ward_id': gen_ward.id if gen_ward else False,
+                    'ai_recommendation_msg': "Patient Stable. AI Recommends General Admission."
+                })
+            else:
+                # If normal and no stabilizing needed
+                gen_ward = self.env['health.ward'].sudo().search([('ward_type', '=', 'general')], limit=1)
+                patient.sudo().write({
+                    'ai_recommended_ward_id': gen_ward.id if gen_ward else False,
+                    'ai_recommendation_msg': "Patient Stable. AI Recommends General Admission."
+                })
 
         except Exception as e:
             _logger.error(f'AI service error: {e}')

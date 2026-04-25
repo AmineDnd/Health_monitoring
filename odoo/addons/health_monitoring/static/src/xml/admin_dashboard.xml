@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+  <t t-name="health_monitoring.AdminDashboardTemplate" owl="1">
+    <div class="sl-dashboard-container sl-admin-dashboard">
+
+      <!-- Dark Header bar -->
+      <div class="sl-admin-header">
+        <div>
+          <h1 class="sl-title">Hospital Operations</h1>
+          <p class="sl-subtitle">SmartLab Control Center · Real-time analytics</p>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+          <div class="d-flex gap-2">
+            <button class="sl-btn-ghost" style="color:#94A3B8;border-color:#1E2D45" t-on-click="() => this.setRange('today')">Today</button>
+            <button class="sl-btn-ghost" style="color:#94A3B8;border-color:#1E2D45" t-on-click="() => this.setRange('week')">This Week</button>
+            <button class="sl-btn-ghost" style="color:#94A3B8;border-color:#1E2D45" t-on-click="() => this.setRange('month')">Month</button>
+          </div>
+          <span class="sl-live-badge"><span class="sl-live-dot"/>Live</span>
+        </div>
+      </div>
+
+      <!-- Scrollable body -->
+      <div class="sl-admin-body">
+
+        <!-- KPI Row -->
+        <div class="sl-kpi-row">
+          <div class="sl-kpi-card kpi-patients" style="cursor:pointer" t-on-click="openAllPatients">
+            <div class="sl-kpi-icon" style="background:rgba(59,130,246,0.12);color:#3B82F6"><i class="fa fa-users"/></div>
+            <div class="sl-kpi-label">Active Patients</div>
+            <div class="sl-kpi-value"><t t-esc="state.kpi.activePatients"/></div>
+            <div class="sl-kpi-delta up">&#8593; <t t-esc="state.kpi.activeDelta"/> since yesterday</div>
+          </div>
+          <div class="sl-kpi-card kpi-critical" style="cursor:pointer" t-on-click="openAllAlerts">
+            <div class="sl-kpi-icon" style="background:rgba(239,68,68,0.12);color:#EF4444"><i class="fa fa-exclamation-triangle"/></div>
+            <div class="sl-kpi-label">Critical Alerts</div>
+            <div class="sl-kpi-value" style="color:#EF4444"><t t-esc="state.kpi.criticalAlerts"/></div>
+            <div class="sl-kpi-delta down">&#8593; <t t-esc="state.kpi.criticalDelta"/> in last hour</div>
+          </div>
+          <div class="sl-kpi-card kpi-response">
+            <div class="sl-kpi-icon" style="background:rgba(16,185,129,0.12);color:#10B981"><i class="fa fa-clock-o"/></div>
+            <div class="sl-kpi-label">Avg Response Time</div>
+            <div class="sl-kpi-value" style="color:#10B981"><t t-esc="state.kpi.avgResponse"/></div>
+            <div class="sl-kpi-delta">from alert to resolution</div>
+          </div>
+          <div class="sl-kpi-card kpi-anomalies">
+            <div class="sl-kpi-icon" style="background:rgba(245,158,11,0.12);color:#F59E0B"><i class="fa fa-bolt"/></div>
+            <div class="sl-kpi-label">AI Anomalies Today</div>
+            <div class="sl-kpi-value" style="color:#F59E0B"><t t-esc="state.kpi.aiAnomalies"/></div>
+            <div class="sl-kpi-delta">alerts triggered today</div>
+          </div>
+        </div>
+
+        <!-- Row 2: Ward Heatmap + Donut + Leaderboard -->
+        <div class="row mb-4">
+          <!-- Ward Capacity Heatmap -->
+          <div class="col-md-5 mb-3 pe-2">
+            <div class="sl-glass-card h-100">
+              <div class="sl-card-title"><i class="fa fa-bed text-primary"/> Ward Capacity</div>
+              <div class="sl-scrollable-list" style="max-height:280px">
+                <t t-foreach="state.wards" t-as="ward" t-key="ward.id">
+                  <div class="sl-ward-bar-row">
+                    <span class="sl-ward-label" t-att-title="ward.name"><t t-esc="ward.name"/></span>
+                    <div class="sl-ward-track">
+                      <div t-attf-class="sl-ward-fill #{ward.fillClass}"
+                           t-attf-style="width:#{ward.pct}%"/>
+                    </div>
+                    <span t-attf-class="sl-ward-pct #{ward.pctClass}">
+                      <t t-esc="ward.pct"/>%
+                    </span>
+                  </div>
+                </t>
+                <t t-if="!state.wards or state.wards.length === 0">
+                  <div class="text-center text-muted py-4 small">No ward data available.</div>
+                </t>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-3 mb-3 px-2">
+            <div class="sl-glass-card h-100 d-flex flex-column">
+              <div class="sl-card-title"><i class="fa fa-pie-chart text-primary"/> Patient Status</div>
+              <div class="flex-grow-1 position-relative" style="min-height:180px">
+                <canvas t-ref="statusChart"/>
+              </div>
+              <div class="d-flex justify-content-around text-center pb-2 pt-1" style="border-top:1px solid #F1F5F9;margin-top:8px">
+                <div>
+                  <div style="font-size:18px;font-weight:600;color:#10B981"><t t-esc="state.patientStatus.stable"/></div>
+                  <div style="font-size:9px;color:#94A3B8;text-transform:uppercase;letter-spacing:0.06em">Stable</div>
+                </div>
+                <div>
+                  <div style="font-size:18px;font-weight:600;color:#F59E0B"><t t-esc="state.patientStatus.warning"/></div>
+                  <div style="font-size:9px;color:#94A3B8;text-transform:uppercase;letter-spacing:0.06em">Warning</div>
+                </div>
+                <div>
+                  <div style="font-size:18px;font-weight:600;color:#EF4444"><t t-esc="state.patientStatus.critical"/></div>
+                  <div style="font-size:9px;color:#94A3B8;text-transform:uppercase;letter-spacing:0.06em">Critical</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-4 mb-3 ps-2">
+            <div class="sl-glass-card h-100 d-flex flex-column">
+              <div class="sl-card-title"><i class="fa fa-trophy text-warning"/> Doctor Performance</div>
+              <div class="sl-scrollable-list flex-grow-1" style="max-height:280px">
+                <t t-foreach="state.leaderboard" t-as="doc" t-key="doc.id">
+                  <div class="sl-lb-row" style="cursor:pointer" t-on-click="() => this.openDoctorAlerts(doc.id, doc.name)">
+                    <div>
+                      <div class="sl-lb-name"><t t-esc="doc.name"/></div>
+                      <div class="small text-muted mt-1"><t t-esc="doc.total"/> handled</div>
+                    </div>
+                    <div class="sl-lb-stats">
+                      <span class="sl-badge sl-badge-stable"><t t-esc="doc.resolved"/> resolved</span>
+                      <span class="sl-badge sl-badge-critical"><t t-esc="doc.critical"/> critical</span>
+                    </div>
+                  </div>
+                </t>
+                <t t-if="state.leaderboard.length === 0">
+                  <div class="text-center text-muted py-3 small">No performance data yet.</div>
+                </t>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 3: Alert Trend Chart -->
+        <div class="row mb-4">
+          <div class="col-md-8 mb-3">
+            <div class="sl-glass-card">
+              <div class="sl-card-title"><i class="fa fa-line-chart text-primary"/> Alert Trend · 7 days</div>
+              <div style="height:160px;position:relative">
+                <canvas t-ref="trendChart"/>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4 mb-3">
+            <div class="sl-glass-card h-100 d-flex flex-column">
+              <div class="sl-card-title"><i class="fa fa-lightbulb-o text-warning"/> AI Insights</div>
+              <div class="sl-scrollable-list flex-grow-1" style="max-height:160px">
+                <t t-foreach="state.insights" t-as="insight" t-key="insight">
+                  <div class="mb-2 p-2 rounded" style="background:#FFFBEB;border-left:3px solid #F59E0B;font-size:12px;color:#1E293B">
+                    <t t-esc="insight"/>
+                  </div>
+                </t>
+                <t t-if="!state.insights or state.insights.length === 0">
+                  <div class="text-muted small text-center py-3">Collecting data...</div>
+                </t>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sl-glass-card">
+          <div class="sl-card-title"><i class="fa fa-fire text-danger"/> Recent Escalations</div>
+          <div class="sl-scrollable-list" style="max-height:220px">
+            <div class="row">
+              <t t-foreach="state.escalations" t-as="esc" t-key="esc.id">
+                <div class="col-md-4 mb-2">
+                  <div class="sl-escalation-item" style="cursor:pointer" t-on-click="() => this.openAlert(esc.id)">
+                    <span class="sl-esc-dot"/>
+                    <div style="flex:1">
+                      <div class="sl-esc-text"><t t-esc="esc.headline"/></div>
+                      <div class="sl-esc-meta d-flex align-items-center gap-2 mt-1">
+                        <span><t t-esc="esc.timeAgo"/></span>
+                        <span t-if="esc.patient_id" style="color:#2563EB;text-decoration:underline;cursor:pointer"
+                              t-on-click.stop="() => this.openPatient(esc.patient_id[0])">
+                          <i class="fa fa-user me-1"/><t t-esc="esc.patient_id[1]"/>
+                        </span>
+                      </div>
+                    </div>
+                    <span t-attf-class="sl-badge sl-badge-#{esc.severity}" style="flex-shrink:0">
+                      <t t-esc="esc.severity"/>
+                    </span>
+                  </div>
+                </div>
+              </t>
+              <t t-if="state.escalations.length === 0">
+                <div class="col-12 text-center py-4 text-muted small">
+                  <i class="fa fa-shield fa-2x mb-2 d-block text-success"/>
+                  No recent critical escalations.
+                </div>
+              </t>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- end sl-admin-body -->
+    </div>
+  </t>
+</templates>

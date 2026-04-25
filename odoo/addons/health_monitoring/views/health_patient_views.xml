@@ -8,8 +8,10 @@
     <field name="arch" type="xml">
       <form>
         <header>
-          <button name="action_validate" type="object" string="Validate Patient" class="oe_highlight btn-success" invisible="status == 'active'" groups="health_monitoring.group_health_doctor"/>
+          <button name="action_admit" type="object" string="Admit to Ward" class="btn-primary" invisible="admission_status != 'triage'"/>
+          <button name="action_validate" type="object" string="Validate Patient" class="btn-success" invisible="status == 'active'" groups="health_monitoring.group_health_doctor"/>
           <field name="status" widget="statusbar" statusbar_visible="draft,active"/>
+          <field name="admission_status" widget="statusbar" statusbar_visible="triage,admitted,discharged"/>
           <field name="risk_level" widget="statusbar" statusbar_visible="low,medium,high,critical"/>
         </header>
         <sheet>
@@ -41,6 +43,46 @@
                      class="align-self-center ms-2" style="font-size: 14px; font-weight: bold;"/>
             </h1>
           </div>
+          
+          <!-- AI Admission Recommendation Banner Section -->
+          <div class="row" invisible="not ai_recommendation_msg or admission_status != 'triage'">
+             <div class="col-12 mb-4">
+                 <!-- Critical Banner -->
+                 <div class="alert shadow-sm border" invisible="risk_level != 'critical'" style="background-color: #ffffff; border-left: 4px solid #DC2626 !important; border-radius: 8px;">
+                     <div class="d-flex justify-content-between align-items-center flex-wrap">
+                         <div class="d-flex align-items-center mb-2 mb-md-0">
+                             <i class="fa fa-exclamation-circle text-danger fa-2x me-3"></i>
+                             <div>
+                                 <h5 class="mb-0 fw-bold text-dark">ICU Admission Recommended</h5>
+                                 <div class="text-muted small"><field name="ai_recommendation_msg" readonly="1" nolabel="1"/></div>
+                             </div>
+                         </div>
+                         <div class="d-flex align-items-center gap-2">
+                             <span class="text-muted small me-2">Target: <field name="ai_recommended_ward_id" readonly="1" nolabel="1" options="{'no_open': True}" class="fw-bold text-dark"/></span>
+                             <button name="action_admit_ai" type="object" string="Admit Patient" class="btn btn-sm btn-danger fw-bold"/>
+                         </div>
+                     </div>
+                 </div>
+
+                 <!-- Stable Banner -->
+                 <div class="alert shadow-sm border" invisible="risk_level == 'critical'" style="background-color: #ffffff; border-left: 4px solid #10B981 !important; border-radius: 8px;">
+                     <div class="d-flex justify-content-between align-items-center flex-wrap">
+                         <div class="d-flex align-items-center mb-2 mb-md-0">
+                             <i class="fa fa-check-circle text-success fa-2x me-3"></i>
+                             <div>
+                                 <h5 class="mb-0 fw-bold text-dark">General Admission Recommended</h5>
+                                 <div class="text-muted small"><field name="ai_recommendation_msg" readonly="1" nolabel="1"/></div>
+                             </div>
+                         </div>
+                         <div class="d-flex align-items-center gap-2">
+                             <span class="text-muted small me-2">Target: <field name="ai_recommended_ward_id" readonly="1" nolabel="1" options="{'no_open': True}" class="fw-bold text-dark"/></span>
+                             <button name="action_admit_ai" type="object" string="Admit Patient" class="btn btn-sm btn-success fw-bold"/>
+                         </div>
+                     </div>
+                 </div>
+             </div>
+          </div>
+
 
           <!-- Structured Layout -->
           <div class="row sl-card-container">
@@ -55,6 +97,9 @@
                            decoration-warning="category=='elderly'"
                            decoration-success="category=='adult'"
                            decoration-primary="category=='teen'"/>
+                    <field name="lifestyle_profile" invisible="1"/>
+                    <field name="profile_male" invisible="gender == 'female'" required="1"/>
+                    <field name="profile_female" invisible="gender != 'female'" required="1"/>
                   </group>
               </div>
             </div>
@@ -63,6 +108,7 @@
                   <h3 class="o_horizontal_separator text-primary mb-3"><i class="fa fa-stethoscope me-2"></i>Medical Context</h3>
                   <group>
                     <field name="is_doctor" invisible="1"/>
+                    <field name="ward_id" options="{'no_create': True}" placeholder="Select Ward for Admission"/>
                     <field name="doctor_id" widget="many2one_avatar_user" options="{'no_create': True}" readonly="not is_doctor"/>
                     <field name="tag_ids" widget="many2many_tags" options="{'color_field': 'color'}" readonly="not is_doctor"/>
                   </group>
@@ -177,6 +223,10 @@
     <field name="arch" type="xml">
       <tree decoration-danger="risk_level=='critical'" class="sl-clinical-grid" limit="20">
         <field name="name" string="Patient Identity" decoration-bf="1" class="text-primary"/>
+        <field name="admission_status" widget="badge" string="Admission"
+               decoration-info="admission_status=='triage'"
+               decoration-success="admission_status=='admitted'"
+               decoration-muted="admission_status=='discharged'"/>
         <field name="risk_level" widget="badge" string="Triage Level"
                decoration-danger="risk_level=='critical'"
                decoration-warning="risk_level=='high'"
@@ -198,6 +248,7 @@
       <kanban>
         <field name="id"/>
         <field name="name"/>
+        <field name="admission_status"/>
         <field name="risk_level"/>
         <field name="dashboard_risk_score"/>
         <field name="doctor_id"/>
@@ -216,9 +267,14 @@
                     <div style="font-size: 12px; color: #64748B;"><field name="doctor_id"/></div>
                   </div>
                 </div>
-                <span t-attf-class="badge #{record.risk_level.raw_value == 'critical' ? 'text-bg-danger' : record.risk_level.raw_value == 'high' ? 'text-bg-warning' : record.risk_level.raw_value == 'handled' ? 'text-bg-info' : record.risk_level.raw_value == 'medium' ? 'text-bg-primary' : 'text-bg-success'}">
-                  <field name="risk_level"/>
-                </span>
+                <div class="d-flex gap-1">
+                  <span t-attf-class="badge #{record.admission_status.raw_value == 'triage' ? 'text-bg-info' : record.admission_status.raw_value == 'admitted' ? 'text-bg-success' : 'text-bg-secondary'}">
+                    <field name="admission_status"/>
+                  </span>
+                  <span t-attf-class="badge #{record.risk_level.raw_value == 'critical' ? 'text-bg-danger' : record.risk_level.raw_value == 'high' ? 'text-bg-warning' : record.risk_level.raw_value == 'handled' ? 'text-bg-info' : record.risk_level.raw_value == 'medium' ? 'text-bg-primary' : 'text-bg-success'}">
+                    <field name="risk_level"/>
+                  </span>
+                </div>
               </div>
               
               <div class="mt-3 bg-light p-2 rounded">

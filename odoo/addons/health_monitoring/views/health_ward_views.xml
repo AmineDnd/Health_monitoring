@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_health_ward_tree" model="ir.ui.view">
+        <field name="name">health.ward.tree</field>
+        <field name="model">health.ward</field>
+        <field name="arch" type="xml">
+            <tree string="Wards">
+                <field name="name"/>
+                <field name="ward_type"/>
+                <field name="floor_number"/>
+                <field name="current_occupancy"/>
+                <field name="capacity"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_health_ward_form" model="ir.ui.view">
+        <field name="name">health.ward.form</field>
+        <field name="model">health.ward</field>
+        <field name="arch" type="xml">
+            <form string="Ward">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="e.g. ICU Wing A"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Ward Information">
+                            <field name="ward_type"/>
+                            <field name="floor_number"/>
+                            <field name="contact_extension"/>
+                        </group>
+                        <group string="Capacity &amp; Personnel">
+                            <field name="capacity"/>
+                            <field name="current_occupancy"/>
+                            <field name="doctor_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="description"/>
+                    </group>
+                    <notebook>
+                        <page string="Patients in Ward">
+                            <field name="patient_ids" readonly="1">
+                                <tree>
+                                    <field name="name"/>
+                                    <field name="age"/>
+                                    <field name="gender"/>
+                                    <field name="risk_level" widget="badge" decoration-danger="risk_level == 'critical'" decoration-warning="risk_level == 'high'" decoration-info="risk_level == 'medium'" decoration-success="risk_level == 'low'"/>
+                                    <field name="status"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_health_ward_kanban" model="ir.ui.view">
+        <field name="name">health.ward.kanban</field>
+        <field name="model">health.ward</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_dashboard">
+                <field name="name"/>
+                <field name="ward_type"/>
+                <field name="current_occupancy"/>
+                <field name="capacity"/>
+                <field name="floor_number"/>
+                <field name="contact_extension"/>
+                <field name="active_alert_count"/>
+                <field name="unclaimed_alert_count"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div t-attf-class="oe_kanban_global_click oe_kanban_card">
+                            <div class="o_kanban_record_top mb-2">
+                                <div class="o_kanban_record_headings">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                  <div class="fw-bold fs-5 text-dark"><field name="name"/></div>
+                  <div class="d-flex gap-1">
+                    <span t-if="record.unclaimed_alert_count.raw_value &gt; 0" class="badge bg-danger rounded-pill shadow-sm" title="Unclaimed Alerts">
+                      <i class="fa fa-bell me-1"></i><field name="unclaimed_alert_count"/> Unclaimed
+                    </span>
+                    <span t-if="record.active_alert_count.raw_value &gt; 0" class="badge bg-warning text-dark border border-warning-subtle rounded-pill shadow-sm" title="Active Alerts">
+                      <i class="fa fa-exclamation-triangle me-1"></i><field name="active_alert_count"/> Active
+                    </span>
+                    <span t-else="" class="badge bg-success bg-opacity-10 text-success border border-success-subtle rounded-pill" style="font-size: 0.75rem;">
+                      <i class="fa fa-check-circle me-1"></i>All Clear
+                    </span>
+                  </div>
+                </div>
+                                    <div class="text-muted small">
+                                        <field name="ward_type"/> - <field name="floor_number"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="o_kanban_record_body">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="text-muted">Occupancy</span>
+                                    <strong><t t-esc="record.current_occupancy.raw_value"/> / <t t-esc="record.capacity.raw_value"/></strong>
+                                </div>
+                                <div class="progress" style="height: 6px;">
+                                    <t t-set="occ_pct" t-value="record.capacity.raw_value ? (record.current_occupancy.raw_value / record.capacity.raw_value) * 100 : 0"/>
+                                    <div t-attf-class="progress-bar #{occ_pct &gt; 90 ? 'bg-danger' : (occ_pct &gt; 75 ? 'bg-warning' : 'bg-success')}" 
+                                         role="progressbar" 
+                                         t-attf-style="width: #{occ_pct}%" 
+                                         aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            </div>
+                            <div class="o_kanban_record_bottom mt-3">
+                                <div class="oe_kanban_bottom_left">
+                                    <span title="Nurse Station"><i class="fa fa-phone me-1"></i> <field name="contact_extension"/></span>
+                                </div>
+                                <div class="oe_kanban_bottom_right">
+                                    <field name="doctor_ids" widget="many2many_avatar_user"/>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="action_health_ward" model="ir.actions.act_window">
+        <field name="name">Wards / Services</field>
+        <field name="res_model">health.ward</field>
+        <field name="view_mode">kanban,tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create the first hospital ward
+            </p>
+            <p>
+                Manage hospital wings, intensive care units, and specialized departments.
+            </p>
+        </field>
+    </record>
+</odoo>

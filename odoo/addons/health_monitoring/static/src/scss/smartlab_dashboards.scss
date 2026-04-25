@@ -1,0 +1,574 @@
+// =============================================================================
+// SmartLab Dashboard Styles — Professional Medical SaaS
+// =============================================================================
+
+$sl-bg:          #F4F6FB;
+$sl-card:        #FFFFFF;
+$sl-border:      #EAEEf6;
+$sl-text:        #0F172A;
+$sl-body:        #334155;
+$sl-muted:       #64748B;
+$sl-subtle:      #94A3B8;
+$sl-green:       #10B981;
+$sl-amber:       #F59E0B;
+$sl-red:         #EF4444;
+$sl-blue:        #2563EB;
+$sl-dark-from:   #0F172A;
+$sl-dark-to:     #1E2D45;
+
+// =============================================================================
+// SHARED
+// =============================================================================
+.sl-dashboard-container {
+  background: $sl-bg;
+  min-height: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: $sl-text;
+  display: flex;
+  flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 4px;
+    &:hover { background: #94A3B8; }
+  }
+}
+
+.sl-scrollable-list {
+  overflow-y: auto;
+  padding-right: 4px;
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; &:hover { background: #94A3B8; } }
+}
+
+// Typography
+.sl-title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 20px;
+  color: $sl-text;
+  margin-bottom: 2px;
+  line-height: 1.2;
+  letter-spacing: -0.3px;
+}
+
+.sl-subtitle {
+  font-size: 12px;
+  color: $sl-muted;
+  font-weight: 400;
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.sl-section-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: $sl-subtle;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 10px;
+}
+
+// Cards
+.sl-card {
+  background: $sl-card;
+  border: 1px solid $sl-border;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+  transition: box-shadow 0.2s ease;
+  &:hover { box-shadow: 0 4px 16px rgba(15, 23, 42, 0.07); }
+}
+
+.sl-glass-card {
+  background: $sl-card;
+  border: 1px solid $sl-border;
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+  transition: box-shadow 0.2s ease;
+  &:hover { box-shadow: 0 4px 16px rgba(15, 23, 42, 0.07); }
+}
+
+.sl-card-title {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 11px;
+  color: $sl-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #F1F5F9;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+// Avatar
+.sl-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  color: white;
+  flex-shrink: 0;
+  &-low, &-normal, &-stable { background: $sl-green; }
+  &-medium, &-moderate      { background: $sl-blue; }
+  &-high                    { background: #F59E0B; }
+  &-critical                { background: $sl-red; }
+}
+
+// Severity badges — refined, less aggressive
+.sl-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+
+  &-critical { background: #FEF2F2; color: #DC2626; border-color: #FECACA; }
+  &-high     { background: #FEF2F2; color: #DC2626; border-color: #FECACA; }
+  &-warning  { background: #FFFBEB; color: #D97706; border-color: #FDE68A; }
+  &-medium   { background: #FFFBEB; color: #D97706; border-color: #FDE68A; }
+  &-low      { background: #F0FDF4; color: #16A34A; border-color: #BBF7D0; }
+  &-stable   { background: #F0FDF4; color: #16A34A; border-color: #BBF7D0; }
+  &-info     { background: #EFF6FF; color: #2563EB; border-color: #BFDBFE; }
+}
+
+// Pulse animation
+@keyframes sl-pulse-red {
+  0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.35); }
+  70%  { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+  100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+}
+.sl-critical-pulse { animation: sl-pulse-red 2s infinite; }
+
+// KPI Cards
+.sl-kpi-card {
+  background: $sl-card;
+  border: 1px solid $sl-border;
+  border-radius: 14px;
+  padding: 20px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+  transition: box-shadow 0.2s ease;
+  &:hover { box-shadow: 0 6px 20px rgba(15, 23, 42, 0.07); }
+
+  .sl-kpi-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 8px; font-size: 15px;
+  }
+  .sl-kpi-label {
+    font-size: 10px; font-weight: 600; color: $sl-subtle;
+    text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px;
+  }
+  .sl-kpi-value {
+    font-family: 'Outfit', sans-serif;
+    font-size: 32px; font-weight: 600; line-height: 1; color: $sl-text;
+  }
+  .sl-kpi-delta {
+    font-size: 11px; color: $sl-subtle; margin-top: 6px;
+    &.up   { color: $sl-green; }
+    &.down { color: $sl-red; }
+  }
+}
+
+// Global buttons
+.sl-btn-primary {
+  background: $sl-blue; color: white; border: none;
+  padding: 7px 16px; border-radius: 8px; font-size: 12px;
+  font-weight: 500; letter-spacing: 0.01em; cursor: pointer;
+  transition: opacity 0.15s ease;
+  &:hover { opacity: 0.88; }
+}
+.sl-btn-ghost {
+  background: transparent; border: 1px solid #E2E8F0; color: #475569;
+  padding: 6px 13px; border-radius: 8px; font-size: 12px;
+  font-weight: 500; cursor: pointer;
+  &:hover { background: #F8FAFC; border-color: #CBD5E1; }
+}
+
+// =============================================================================
+// ADMIN DASHBOARD
+// =============================================================================
+.sl-admin-dashboard {
+  background: $sl-bg;
+
+  .sl-admin-header {
+    background: linear-gradient(135deg, #0F172A 0%, #1E2D45 100%);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    padding: 20px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+
+    .sl-title {
+      color: #F1F5F9;
+      font-size: 18px;
+      letter-spacing: -0.3px;
+    }
+    .sl-subtitle { color: #94A3B8; }
+
+    .sl-live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16,185,129,0.12);
+      color: $sl-green;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(16,185,129,0.25);
+
+      .sl-live-dot {
+        width: 6px; height: 6px; border-radius: 50%; background: $sl-green;
+        animation: sl-blink 1.5s infinite;
+      }
+    }
+  }
+
+  @keyframes sl-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+  .sl-admin-body {
+    padding: 20px 24px; flex: 1; overflow-y: auto;
+    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+  }
+
+  .sl-kpi-row {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 14px; margin-bottom: 20px;
+  }
+  .sl-kpi-card {
+    border-left: 2px solid transparent;
+    &.kpi-patients  { border-left-color: $sl-blue; }
+    &.kpi-critical  { border-left-color: $sl-red; }
+    &.kpi-response  { border-left-color: $sl-green; }
+    &.kpi-anomalies { border-left-color: #F59E0B; }
+  }
+
+  // Ward bars
+  .sl-ward-bar-row {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+    .sl-ward-label {
+      font-size: 12px; color: $sl-body; font-weight: 400;
+      width: 140px; flex-shrink: 0; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    .sl-ward-track {
+      flex: 1; background: #F1F5F9; border-radius: 4px; height: 8px; overflow: hidden;
+      .sl-ward-fill {
+        height: 100%; border-radius: 4px; transition: width 0.6s ease;
+        &.fill-green { background: $sl-green; }
+        &.fill-amber { background: #F59E0B; }
+        &.fill-red   { background: $sl-red; }
+      }
+    }
+    .sl-ward-pct {
+      font-size: 11px; font-weight: 600; width: 36px; text-align: right;
+      &.pct-green { color: $sl-green; }
+      &.pct-amber { color: #F59E0B; }
+      &.pct-red   { color: $sl-red; }
+    }
+  }
+
+  // Leaderboard
+  .sl-lb-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid #F1F5F9;
+    &:last-child { border-bottom: none; }
+    .sl-lb-name { font-size: 13px; font-weight: 500; color: #1E293B; }
+    .sl-lb-stats { display: flex; gap: 6px; }
+  }
+
+  // Escalations
+  .sl-escalation-item {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 8px 10px;
+    background: rgba(239,68,68,0.03);
+    border-left: 2px solid $sl-red;
+    border-radius: 0 6px 6px 0;
+    margin-bottom: 8px;
+
+    .sl-esc-dot {
+      width: 7px; height: 7px; border-radius: 50%; background: $sl-red;
+      flex-shrink: 0; margin-top: 4px;
+    }
+    .sl-esc-text { font-size: 12px; color: $sl-body; line-height: 1.5; }
+    .sl-esc-meta { font-size: 10px; color: $sl-subtle; margin-top: 2px; }
+  }
+}
+
+// =============================================================================
+// DOCTOR DASHBOARD
+// =============================================================================
+.sl-doctor-dashboard {
+  background: $sl-bg;
+
+  .sl-doctor-header { padding: 16px 24px 0; flex-shrink: 0; background: $sl-bg; }
+
+  .sl-doctor-body {
+    display: grid; grid-template-columns: 300px 1fr;
+    gap: 16px; padding: 16px 24px 24px;
+    flex: 1; overflow: hidden; min-height: 0;
+  }
+
+  .sl-queue-pane { display: flex; flex-direction: column; gap: 12px; overflow: hidden; min-height: 0; }
+
+  .sl-queue-section {
+    background: $sl-card; border: 1px solid $sl-border;
+    border-radius: 14px; padding: 14px;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+    display: flex; flex-direction: column; overflow: hidden; min-height: 0;
+    &.unclaimed { flex: 1.6; } &.claimed { flex: 1; }
+  }
+
+  .sl-queue-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px; flex-shrink: 0;
+    .sl-queue-title {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.07em; color: $sl-muted;
+    }
+    .sl-queue-count {
+      background: #DC2626; color: white; font-size: 11px; font-weight: 700;
+      padding: 2px 8px; border-radius: 20px; min-width: 22px; text-align: center;
+      &.blue { background: $sl-blue; }
+    }
+  }
+
+  .sl-alert-queue-card {
+    background: #FAFBFF; border: 1px solid $sl-border;
+    border-left: 2px solid $sl-red;
+    border-radius: 10px; padding: 11px 13px; margin-bottom: 8px;
+    transition: box-shadow 0.15s ease;
+    &:hover { box-shadow: 0 3px 12px rgba(15, 23, 42, 0.07); }
+    &:last-child { margin-bottom: 0; }
+    &.claimed-card { border-left-color: $sl-blue; background: #F8FBFF; }
+
+    .sl-aqc-name {
+      font-size: 13px; font-weight: 600; color: #1E293B; margin-bottom: 2px;
+    }
+    .sl-aqc-meta {
+      font-size: 11px; color: $sl-muted; margin-bottom: 8px; line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .sl-aqc-actions { display: flex; gap: 6px; }
+  }
+
+  .sl-btn-claim {
+    flex: 1; padding: 4px 10px; font-size: 11px; font-weight: 500;
+    border: 1px solid rgba(220,38,38,0.4); background: rgba(220,38,38,0.06); color: #DC2626;
+    border-radius: 7px; cursor: pointer;
+    &:hover { background: rgba(220,38,38,0.12); }
+  }
+  .sl-btn-trends {
+    padding: 4px 10px; font-size: 11px; font-weight: 500;
+    border: 1px solid #E2E8F0; background: white; color: $sl-muted;
+    border-radius: 7px; cursor: pointer; &:hover { background: #F8FAFC; }
+  }
+  .sl-btn-resolve {
+    flex: 1; padding: 4px 10px; font-size: 11px; font-weight: 500;
+    border: 1px solid rgba(16,163,74,0.35); background: rgba(16,163,74,0.07); color: #16A34A;
+    border-radius: 7px; cursor: pointer; &:hover { background: rgba(16,163,74,0.13); }
+  }
+  .sl-btn-analyze {
+    flex: 1; padding: 4px 10px; font-size: 11px; font-weight: 500;
+    border: 1px solid rgba(37,99,235,0.3); background: rgba(37,99,235,0.06); color: #2563EB;
+    border-radius: 7px; cursor: pointer; &:hover { background: rgba(37,99,235,0.12); }
+  }
+
+  .sl-analysis-pane {
+    display: flex; flex-direction: column; gap: 14px; overflow-y: auto; min-height: 0;
+    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+  }
+
+  .sl-patient-header-card {
+    background: $sl-card; border: 1px solid $sl-border; border-radius: 14px;
+    padding: 16px 20px; display: flex; justify-content: space-between;
+    align-items: center; flex-shrink: 0;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+  }
+
+  .sl-vitals-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; flex-shrink: 0;
+    .sl-vital-tile {
+      background: $sl-card; border: 1px solid $sl-border; border-radius: 10px;
+      padding: 12px; text-align: center;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+      .sl-vital-val {
+        font-family: 'Outfit', sans-serif; font-size: 24px; font-weight: 600;
+        color: $sl-text; line-height: 1;
+        &.danger { color: $sl-red; }
+      }
+      .sl-vital-label {
+        font-size: 10px; color: $sl-subtle; text-transform: uppercase;
+        letter-spacing: 0.05em; margin-top: 4px;
+      }
+    }
+  }
+
+  .sl-empty-state {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: $sl-card; border: 1px solid $sl-border; border-radius: 14px;
+    padding: 40px; text-align: center; color: $sl-subtle;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+    i { font-size: 36px; margin-bottom: 16px; opacity: 0.3; }
+    h4 { font-size: 15px; font-weight: 500; color: $sl-muted; margin-bottom: 8px; }
+    p { font-size: 13px; color: $sl-subtle; }
+  }
+}
+
+// =============================================================================
+// NURSE DASHBOARD
+// =============================================================================
+.sl-nurse-dashboard {
+  background: $sl-bg;
+
+  .sl-nurse-header {
+    background: white; border-bottom: 1px solid $sl-border;
+    padding: 14px 24px; display: flex;
+    justify-content: space-between; align-items: center; flex-shrink: 0;
+  }
+
+  .sl-nurse-body {
+    padding: 16px 24px 24px; flex: 1; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 16px;
+    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+  }
+
+  // Stats bar
+  .sl-stats-bar {
+    display: flex; gap: 10px;
+    .sl-stat-pill {
+      background: #FFFFFF; border: 1px solid $sl-border; border-radius: 12px;
+      padding: 12px 16px; flex: 1; text-align: center;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+      .sl-stat-num {
+        font-family: 'Outfit', sans-serif; font-size: 26px;
+        font-weight: 600; line-height: 1; color: $sl-text;
+      }
+      .sl-stat-label {
+        font-size: 10px; font-weight: 500; color: $sl-subtle;
+        text-transform: uppercase; letter-spacing: 0.07em; margin-top: 4px;
+      }
+      &.stat-critical .sl-stat-num  { color: $sl-red; }
+      &.stat-overdue  .sl-stat-num  { color: $sl-red; }
+      &.stat-due-soon .sl-stat-num  { color: #F59E0B; }
+      &.stat-ok       .sl-stat-num  { color: $sl-green; }
+    }
+  }
+
+  // Bed grid
+  .sl-bed-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px;
+  }
+
+  // Patient card
+  .sl-patient-card {
+    background: $sl-card; border: 1px solid $sl-border; border-radius: 12px;
+    border-top: 3px solid $sl-border; padding: 13px;
+    display: flex; flex-direction: column; gap: 10px;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+    transition: box-shadow 0.2s ease;
+    &:hover { box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08); cursor: pointer; }
+
+    &.sl-status-overdue    { border-top-color: $sl-red; }
+    &.sl-status-due_soon   { border-top-color: #F59E0B; }
+    &.sl-status-up_to_date { border-top-color: $sl-green; }
+    &.sl-status-ok         { border-top-color: $sl-green; }
+
+    .sl-pc-header { display: flex; justify-content: space-between; align-items: flex-start; }
+    .sl-pc-name { font-size: 13px; font-weight: 600; color: $sl-text; }
+    .sl-pc-meta { font-size: 11px; color: $sl-muted; margin-top: 1px; }
+
+    .sl-vitals-banner {
+      padding: 6px 10px; border-radius: 6px;
+      display: flex; justify-content: space-between;
+      align-items: center; font-size: 11px; font-weight: 600;
+      &.sl-banner-overdue   { background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; }
+      &.sl-banner-due_soon  { background: #FFFBEB; color: #D97706; border: 1px solid #FDE68A; }
+      &.sl-banner-up_to_date,
+      &.sl-banner-ok        { background: #F0FDF4; color: #16A34A; border: 1px solid #BBF7D0; }
+    }
+
+    .sl-sparkline-wrap {
+      height: 32px; width: 100%;
+      canvas { width: 100% !important; height: 32px !important; }
+    }
+
+    .sl-vitals-chips {
+      display: flex; gap: 5px; flex-wrap: wrap;
+      .sl-chip {
+        font-size: 10px; font-weight: 600; padding: 3px 7px;
+        border-radius: 5px; background: #F1F5F9; color: $sl-muted;
+        &.chip-danger { background: #FEF2F2; color: #DC2626; }
+        &.chip-warn   { background: #FFFBEB; color: #D97706; }
+        &.chip-ok     { background: #F0FDF4; color: #16A34A; }
+      }
+    }
+
+    .sl-log-btn {
+      width: 100%; padding: 6px; font-size: 11px; font-weight: 500;
+      border: 1px solid #E2E8F0; background: #F8FAFC; border-radius: 7px;
+      color: $sl-muted; cursor: pointer; text-align: center;
+      transition: all 0.15s ease; margin-top: auto;
+      &:hover { background: rgba(37,99,235,0.05); border-color: rgba(37,99,235,0.25); color: #2563EB; }
+    }
+  }
+
+  // Bottom row
+  .sl-bottom-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; flex-shrink: 0; }
+
+  .sl-schedule-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid #F1F5F9; font-size: 12px; color: $sl-text;
+    &:last-child { border-bottom: none; }
+  }
+
+  .sl-activity-item {
+    display: flex; gap: 10px; align-items: flex-start; margin-bottom: 10px;
+    .sl-act-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+    .sl-act-text { font-size: 12px; color: $sl-body; line-height: 1.4; }
+    .sl-act-time { font-size: 10px; color: $sl-subtle; }
+  }
+
+  // Handoff modal
+  .sl-modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1050;
+    display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);
+  }
+  .sl-modal {
+    background: white; border-radius: 16px; padding: 24px; width: 500px; max-width: 92%;
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18); max-height: 80vh; overflow-y: auto;
+  }
+}

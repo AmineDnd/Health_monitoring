@@ -95,10 +95,110 @@ def _load_or_train():
 # Load model ONCE
 MODEL, SCALER = _load_or_train()
 
+def get_dynamic_thresholds(profile: str, age: int) -> tuple:
+    """Generate dynamic clinical ranges based on patient lifestyle and age."""
+    # Copy baseline ranges
+    warning = {k: list(v) for k, v in WARNING_RANGES.items()}
+    critical = {k: list(v) for k, v in CRITICAL_RANGES.items()}
+    
+    profile = profile.lower() if profile else 'standard'
+    
+    # --- Lifestyle Adjustments ---
+    if profile == 'athlete':
+        warning['heart_rate'][0] = 45   # Athletes have lower resting HR
+        critical['heart_rate'][0] = 35
+        warning['bp_systolic'][0] = 85  # Slightly lower BP tolerance
+    elif profile == 'pregnant':
+        warning['heart_rate'][1] = 110  # Higher resting HR is normal
+        warning['bp_systolic'][1] = 135 # Stricter high BP limit (Preeclampsia risk)
+    elif profile == 'sedentary':
+        warning['heart_rate'][1] = 95   # Less tolerance for high resting HR
+    
+    # --- Age Adjustments ---
+    if 0 < age < 13: # Child
+        warning['heart_rate'][1] = 120
+        critical['heart_rate'][1] = 140
+        warning['respiratory_rate'][1] = 25
+        critical['respiratory_rate'][1] = 35
+    elif age >= 65: # Elderly
+        warning['bp_systolic'][1] = 150 # Higher systolic BP tolerance
+        warning['spo2'][0] = 93         # Slightly lower SpO2 tolerance
+
+    # Convert back to tuples
+    return {k: tuple(v) for k, v in warning.items()}, {k: tuple(v) for k, v in critical.items()}
+
+def calculate_news2(data: dict) -> tuple:
+    """Calculates the National Early Warning Score (NEWS2) based on standard clinical tables."""
+    score = 0
+    breakdown = []
+    
+    # 1. Respiration Rate
+    rr = data.get('respiratory_rate', 0)
+    if rr > 0:
+        if rr <= 8: s = 3
+        elif 9 <= rr <= 11: s = 1
+        elif 12 <= rr <= 20: s = 0
+        elif 21 <= rr <= 24: s = 2
+        else: s = 3
+        score += s
+        if s > 0: breakdown.append(f"RR:{s}")
+
+    # 2. SpO2
+    spo2 = data.get('spo2', 0)
+    if spo2 > 0:
+        if spo2 <= 91: s = 3
+        elif 92 <= spo2 <= 93: s = 2
+        elif 94 <= spo2 <= 95: s = 1
+        else: s = 0
+        score += s
+        if s > 0: breakdown.append(f"SpO2:{s}")
+
+    # 3. Systolic BP
+    sbp = data.get('bp_systolic', 0)
+    if sbp > 0:
+        if sbp <= 90: s = 3
+        elif 91 <= sbp <= 100: s = 2
+        elif 101 <= sbp <= 110: s = 1
+        elif 111 <= sbp <= 219: s = 0
+        else: s = 3
+        score += s
+        if s > 0: breakdown.append(f"SBP:{s}")
+
+    # 4. Heart Rate
+    hr = data.get('heart_rate', 0)
+    if hr > 0:
+        if hr <= 40: s = 3
+        elif 41 <= hr <= 50: s = 1
+        elif 51 <= hr <= 90: s = 0
+        elif 91 <= hr <= 110: s = 1
+        elif 111 <= hr <= 130: s = 2
+        else: s = 3
+        score += s
+        if s > 0: breakdown.append(f"HR:{s}")
+
+    # 5. Temperature
+    temp = data.get('temperature', 0)
+    if temp > 0:
+        if temp <= 35.0: s = 3
+        elif 35.1 <= temp <= 36.0: s = 1
+        elif 36.1 <= temp <= 38.0: s = 0
+        elif 38.1 <= temp <= 39.0: s = 1
+        else: s = 2
+        score += s
+        if s > 0: breakdown.append(f"Temp:{s}")
+
+    return score, breakdown
+
 def analyze(input_data: dict) -> dict:
     """Full analysis with missing data handling."""
     history = input_data.get('history', [])
     is_initial = input_data.get('is_initial', False)
+    
+    # Extract profile data
+    profile = input_data.get('lifestyle_profile', 'standard')
+    age = input_data.get('age', 0)
+    dynamic_warnings, dynamic_criticals = get_dynamic_thresholds(profile, age)
+    
     data = compute_derived_features(input_data.copy(), history)
     
     # Check for missing data (0.0)
@@ -120,7 +220,7 @@ def analyze(input_data: dict) -> dict:
         }
 
     # Layer 1: Rule-based threshold checks
-    for vital, (lo, hi) in CRITICAL_RANGES.items():
+    for vital, (lo, hi) in dynamic_criticals.items():
         val = data.get(vital, 0)
         if val > 0 and (val < lo or val > hi):
             severity = 'critical'
@@ -129,7 +229,7 @@ def analyze(input_data: dict) -> dict:
             dist = max(lo - val, val - hi)
             clinical_risk_factor = max(clinical_risk_factor, 0.85 + (dist / (hi if dist > 0 else 1.0) * 0.15))
 
-    for vital, (lo, hi) in WARNING_RANGES.items():
+    for vital, (lo, hi) in dynamic_warnings.items():
         val = data.get(vital, 0)
         already = any(v.startswith(vital) for v in violations)
         if val > 0 and not already and (val < lo or val > hi):
@@ -155,7 +255,7 @@ def analyze(input_data: dict) -> dict:
             'respiratory_rate': 4
         }
         
-        for vital, (lo, hi) in WARNING_RANGES.items():
+        for vital, (lo, hi) in dynamic_warnings.items():
             change_key = f"{vital}_change" if vital != 'spo2' else 'spo2_change'
             change = data.get(change_key, 0)
             
@@ -199,6 +299,15 @@ def analyze(input_data: dict) -> dict:
         ml_base = float(np.clip((0.5 - ml_score) * 70, 0, 70))
         ml_pred = MODEL.predict(X_scaled)[0]
         ml_flagged = (ml_pred == -1)
+        
+        # CLINICAL ML DISCOUNT: The Isolation Forest was trained on Standard Adults.
+        # It will naturally flag Athletes (low HR) or Children (high HR) as anomalous.
+        # If there are NO rule-based violations for these profiles, we must suppress the ML false positive.
+        if profile != 'standard' or (0 < age < 13):
+            if not violations:  # If the dynamic clinical rules say it's fine, trust the rules over the standard ML model
+                ml_flagged = False
+                ml_base = min(ml_base, 30.0) # Cap score below the 35.0 warning threshold
+                
         # Final consolidated score
         anomaly_score = max(ml_base, clinical_risk_factor * 100)
     else:
@@ -232,7 +341,7 @@ def analyze(input_data: dict) -> dict:
 
     # Trend warnings: flag vitals approaching their limit
     trends = {}
-    for vital, (lo, hi) in WARNING_RANGES.items():
+    for vital, (lo, hi) in dynamic_warnings.items():
         val = data.get(vital, 0)
         if val <= 0: continue
         rng = hi - lo
@@ -245,6 +354,21 @@ def analyze(input_data: dict) -> dict:
     # Generate Narrative
     narrative = []
     
+    # NEW: Calculate NEWS2 Score
+    news2_score, news2_breakdown = calculate_news2(data)
+    
+    # Clinical Recommendations based on NEWS2
+    if news2_score >= 7:
+        recommendation = "EMERGENCY: Immediate clinical review required. Recommend ICU Transfer."
+        if severity != 'critical': severity = 'critical'
+    elif news2_score >= 5 or any("3" in b for b in news2_breakdown):
+        recommendation = "URGENT: Ward-based medical review required within 1 hour."
+        if severity == 'normal': severity = 'warning'
+    elif news2_score >= 1:
+        recommendation = "MONITOR: Increase vital monitoring frequency."
+    else:
+        recommendation = "ROUTINE: Continue standard ward monitoring."
+
     # 1. Headline
     headline = ""
     if severity == 'critical':
@@ -275,7 +399,13 @@ def analyze(input_data: dict) -> dict:
     if headline:
         narrative.append(f"SUMMARY:{headline}")
 
-    # 2. System Groups
+    # 2. NEWS2 Score
+    if news2_score > 0:
+        narrative.append(f"SYSTEM:Clinical Scoring")
+        narrative.append(f"NEWS2 Score: {news2_score} (Breakdown: {', '.join(news2_breakdown)})")
+        narrative.append(f"Action: {recommendation}")
+
+    # 3. System Groups
     for sys, vios in system_violations.items():
         if vios:
             narrative.append(f"SYSTEM:{sys}")
@@ -285,7 +415,7 @@ def analyze(input_data: dict) -> dict:
                 details = v.split('=', 1)[1] if '=' in v else v
                 narrative.append(f"{clean_v}: {details}")
 
-    # 3. Trends
+    # 4. Trends
     if significant_changes or informational_trends:
         narrative.append("SYSTEM:Chronological Trend Analysis")
         for change in significant_changes:

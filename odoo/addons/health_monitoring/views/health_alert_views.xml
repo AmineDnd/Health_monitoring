@@ -13,6 +13,7 @@
         <field name="ai_confidence"/>
         <field name="create_date"/>
         <field name="state"/>
+        <field name="assigned_doctor_id"/>
         <progressbar field="severity" colors='{"critical": "danger", "high": "warning", "medium": "info", "low": "success"}'/>
         <templates>
           <t t-name="kanban-box">
@@ -53,12 +54,21 @@
                 </div>
 
                 <div class="mt-3 d-flex gap-2" t-if="record.state.raw_value != 'resolved'">
-                  <button type="object" name="action_acknowledge" class="btn btn-sm btn-outline-primary flex-grow-1 py-1" invisible="state != 'new'" style="font-size: 11px;">
+                  <button type="object" name="action_claim_alert" class="btn btn-sm btn-primary flex-grow-1 py-1" invisible="assigned_doctor_id != False" style="font-size: 11px;">
+                    <i class="fa fa-hand-paper-o me-1"></i>Claim Alert
+                  </button>
+                  <button type="object" name="action_acknowledge" class="btn btn-sm btn-outline-primary flex-grow-1 py-1" invisible="state != 'new' or assigned_doctor_id == False" style="font-size: 11px;">
                     <i class="fa fa-check me-1"></i>Ack
                   </button>
-                  <button type="object" name="action_resolve" class="btn btn-sm btn-success flex-grow-1 py-1" invisible="state != 'investigating'" style="font-size: 11px;">
+                  <button type="object" name="action_resolve" class="btn btn-sm btn-success flex-grow-1 py-1" invisible="state != 'investigating' or assigned_doctor_id == False" style="font-size: 11px;">
                     <i class="fa fa-flag-checkered me-1"></i>Resolve
                   </button>
+                </div>
+                <div t-if="record.assigned_doctor_id.raw_value" class="mt-2 text-center text-muted" style="font-size: 10px;">
+                  <i class="fa fa-user-md me-1"></i> <field name="assigned_doctor_id"/>
+                </div>
+                <div t-else="" class="mt-2 text-center text-danger fw-bold" style="font-size: 10px;">
+                  <i class="fa fa-exclamation-circle me-1"></i> UNCLAIMED
                 </div>
               </div>
             </div>
@@ -88,12 +98,16 @@
                decoration-success="state=='resolved'" 
                decoration-info="state=='investigating'"
                decoration-muted="state=='new'"/>
+        <field name="assigned_doctor_id" widget="many2one_avatar_user" string="Claimed By"/>
+        <button name="action_claim_alert" type="object"
+                icon="fa-hand-paper-o" string="Claim" class="btn btn-sm btn-primary"
+                invisible="assigned_doctor_id != False"/>
         <button name="action_acknowledge" type="object"
                 icon="fa-check" string="Hold" class="btn btn-sm btn-outline-primary"
-                invisible="state != 'new'"/>
+                invisible="state != 'new' or assigned_doctor_id == False"/>
         <button name="action_resolve" type="object"
                 icon="fa-flag-checkered" string="Done" class="btn btn-sm btn-success"
-                invisible="state != 'investigating'"/>
+                invisible="state != 'investigating' or assigned_doctor_id == False"/>
       </tree>
     </field>
   </record>
@@ -105,8 +119,9 @@
     <field name="arch" type="xml">
       <form>
         <header>
-          <button name="action_acknowledge" type="object" string="Acknowledge Alert" class="oe_highlight" invisible="state != 'new'"/>
-          <button name="action_resolve" type="object" string="Mark Resolved" class="btn-success" invisible="state != 'investigating'"/>
+          <button name="action_claim_alert" type="object" string="Claim Alert" class="oe_highlight btn-primary" invisible="assigned_doctor_id != False"/>
+          <button name="action_acknowledge" type="object" string="Acknowledge Alert" class="oe_highlight" invisible="state != 'new' or assigned_doctor_id == False"/>
+          <button name="action_resolve" type="object" string="Mark Resolved" class="btn-success" invisible="state != 'investigating' or assigned_doctor_id == False"/>
           <field name="state" widget="statusbar" statusbar_visible="new,investigating,resolved"/>
         </header>
         <sheet>
@@ -148,7 +163,7 @@
           <div class="row mt-3">
             <div class="col-12">
               <div class="sl-card shadow-sm p-4 bg-white rounded border-0">
-                <h3 class="o_horizontal_separator text-danger mb-3"><i class="fa fa-exclamation-triangle me-2"></i>AI Clinical Analysis</h3>
+                <h3 class="o_horizontal_separator text-danger mb-3"><i class="fa fa-brain me-2"></i>SmartLab AI Analysis &amp; Clinical Context</h3>
                 <field name="parsed_message_html" nolabel="1" readonly="1"/>
               </div>
             </div>
@@ -199,11 +214,22 @@
   </record>
 
   <record id="action_alerts" model="ir.actions.act_window">
-    <field name="name">SaaS Alert Pipeline</field>
+    <field name="name">Doctor Inbox Zero</field>
     <field name="res_model">health.alert</field>
     <field name="view_mode">kanban,tree,form,pivot</field>
     <field name="search_view_id" ref="view_alerts_search"/>
     <field name="context">{'search_default_active': 1}</field>
+    <field name="help" type="html">
+      <div class="text-center w-100 p-5 mt-5">
+        <div style="font-size: 80px; color: #22C55E; margin-bottom: 20px;">
+          <i class="fa fa-check-circle-o"></i>
+        </div>
+        <h2 class="text-success fw-bold" style="font-size: 32px; letter-spacing: -1px;">Inbox Zero Achieved</h2>
+        <p class="text-muted" style="font-size: 18px; max-width: 600px; margin: 0 auto;">
+          All patients are currently stable. There are no active clinical anomalies or AI alerts requiring your immediate attention. Excellent work!
+        </p>
+      </div>
+    </field>
   </record>
   
   <record id="action_all_alerts" model="ir.actions.act_window">

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="health_monitoring.DashboardRouterTemplate" owl="1">
+        <div class="sl-dashboard-router h-100">
+            <t t-if="state.loading">
+                <div class="d-flex justify-content-center align-items-center h-100">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </t>
+            <t t-elif="state.activeComponent">
+                <t t-component="state.activeComponent" />
+            </t>
+            <t t-else="">
+                <div class="d-flex justify-content-center align-items-center h-100 text-muted flex-column">
+                    <i class="fa fa-lock fa-4x mb-3 text-light"></i>
+                    <h3>Access Denied</h3>
+                    <p>You do not have the required role to view any dashboard.</p>
+                </div>
+            </t>
+        </div>
+    </t>
+</templates>
