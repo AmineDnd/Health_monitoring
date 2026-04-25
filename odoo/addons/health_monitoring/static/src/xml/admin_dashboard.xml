@@ -7,13 +7,19 @@
       <div class="sl-admin-header">
         <div>
           <h1 class="sl-title">Hospital Operations</h1>
-          <p class="sl-subtitle">SmartLab Control Center · Real-time analytics</p>
+          <p class="sl-subtitle">SmartLab Control Center · Real-time analytics · <t t-esc="state.currentTime"/></p>
         </div>
         <div class="d-flex align-items-center gap-3">
           <div class="d-flex gap-2">
-            <button class="sl-btn-ghost" style="color:#94A3B8;border-color:#1E2D45" t-on-click="() => this.setRange('today')">Today</button>
-            <button class="sl-btn-ghost" style="color:#94A3B8;border-color:#1E2D45" t-on-click="() => this.setRange('week')">This Week</button>
-            <button class="sl-btn-ghost" style="color:#94A3B8;border-color:#1E2D45" t-on-click="() => this.setRange('month')">Month</button>
+            <button t-att-class="state.dateRange === 'today' ? 'sl-btn-ghost active' : 'sl-btn-ghost'" 
+                    style="color:#94A3B8;border-color:#1E2D45" 
+                    t-on-click="() => this.setRange('today')">Today</button>
+            <button t-att-class="state.dateRange === 'week' ? 'sl-btn-ghost active' : 'sl-btn-ghost'" 
+                    style="color:#94A3B8;border-color:#1E2D45" 
+                    t-on-click="() => this.setRange('week')">This Week</button>
+            <button t-att-class="state.dateRange === 'month' ? 'sl-btn-ghost active' : 'sl-btn-ghost'" 
+                    style="color:#94A3B8;border-color:#1E2D45" 
+                    t-on-click="() => this.setRange('month')">Month</button>
           </div>
           <span class="sl-live-badge"><span class="sl-live-dot"/>Live</span>
         </div>
@@ -22,33 +28,50 @@
       <!-- Scrollable body -->
       <div class="sl-admin-body">
 
-        <!-- KPI Row -->
-        <div class="sl-kpi-row">
-          <div class="sl-kpi-card kpi-patients" style="cursor:pointer" t-on-click="openAllPatients">
-            <div class="sl-kpi-icon" style="background:rgba(59,130,246,0.12);color:#3B82F6"><i class="fa fa-users"/></div>
-            <div class="sl-kpi-label">Active Patients</div>
-            <div class="sl-kpi-value"><t t-esc="state.kpi.activePatients"/></div>
-            <div class="sl-kpi-delta up">&#8593; <t t-esc="state.kpi.activeDelta"/> since yesterday</div>
+        <!-- Loading State -->
+        <t t-if="state.isLoading">
+          <div class="sl-kpi-row">
+            <div class="sl-kpi-card sl-skeleton" style="height: 140px;"><div class="sl-skeleton-shimmer"/></div>
+            <div class="sl-kpi-card sl-skeleton" style="height: 140px;"><div class="sl-skeleton-shimmer"/></div>
+            <div class="sl-kpi-card sl-skeleton" style="height: 140px;"><div class="sl-skeleton-shimmer"/></div>
+            <div class="sl-kpi-card sl-skeleton" style="height: 140px;"><div class="sl-skeleton-shimmer"/></div>
           </div>
-          <div class="sl-kpi-card kpi-critical" style="cursor:pointer" t-on-click="openAllAlerts">
-            <div class="sl-kpi-icon" style="background:rgba(239,68,68,0.12);color:#EF4444"><i class="fa fa-exclamation-triangle"/></div>
-            <div class="sl-kpi-label">Critical Alerts</div>
-            <div class="sl-kpi-value" style="color:#EF4444"><t t-esc="state.kpi.criticalAlerts"/></div>
-            <div class="sl-kpi-delta down">&#8593; <t t-esc="state.kpi.criticalDelta"/> in last hour</div>
+          <div class="row mb-4">
+            <div class="col-md-5 mb-3"><div class="sl-glass-card sl-skeleton" style="height: 280px;"/></div>
+            <div class="col-md-3 mb-3"><div class="sl-glass-card sl-skeleton" style="height: 280px;"/></div>
+            <div class="col-md-4 mb-3"><div class="sl-glass-card sl-skeleton" style="height: 280px;"/></div>
           </div>
-          <div class="sl-kpi-card kpi-response">
-            <div class="sl-kpi-icon" style="background:rgba(16,185,129,0.12);color:#10B981"><i class="fa fa-clock-o"/></div>
-            <div class="sl-kpi-label">Avg Response Time</div>
-            <div class="sl-kpi-value" style="color:#10B981"><t t-esc="state.kpi.avgResponse"/></div>
-            <div class="sl-kpi-delta">from alert to resolution</div>
+        </t>
+
+        <!-- Content -->
+        <t t-else="">
+          <!-- KPI Row -->
+          <div class="sl-kpi-row">
+            <div class="sl-kpi-card kpi-patients sl-animate-in" style="cursor:pointer" t-on-click="openAllPatients">
+              <div class="sl-kpi-icon"><i class="fa fa-users"/></div>
+              <div class="sl-kpi-label">Active Patients</div>
+              <div class="sl-kpi-value"><t t-esc="state.kpi.activePatients"/></div>
+              <div class="sl-kpi-delta up"><t t-esc="state.kpi.activeDelta"/> since yesterday</div>
+            </div>
+            <div class="sl-kpi-card kpi-critical sl-animate-in" style="cursor:pointer; animation-delay: 0.05s;" t-on-click="openAllAlerts">
+              <div class="sl-kpi-icon"><i class="fa fa-exclamation-triangle"/></div>
+              <div class="sl-kpi-label">Critical Alerts</div>
+              <div class="sl-kpi-value"><t t-esc="state.kpi.criticalAlerts"/></div>
+              <div class="sl-kpi-delta down"><t t-esc="state.kpi.criticalDelta"/> in last hour</div>
+            </div>
+            <div class="sl-kpi-card kpi-response sl-animate-in" style="animation-delay: 0.1s;">
+              <div class="sl-kpi-icon"><i class="fa fa-clock-o"/></div>
+              <div class="sl-kpi-label">Avg Response Time</div>
+              <div class="sl-kpi-value"><t t-esc="state.kpi.avgResponse"/></div>
+              <div class="sl-kpi-delta">from alert to resolution</div>
+            </div>
+            <div class="sl-kpi-card kpi-anomalies sl-animate-in" style="animation-delay: 0.15s;">
+              <div class="sl-kpi-icon"><i class="fa fa-bolt"/></div>
+              <div class="sl-kpi-label">AI Anomalies Today</div>
+              <div class="sl-kpi-value"><t t-esc="state.kpi.aiAnomalies"/></div>
+              <div class="sl-kpi-delta">alerts triggered today</div>
+            </div>
           </div>
-          <div class="sl-kpi-card kpi-anomalies">
-            <div class="sl-kpi-icon" style="background:rgba(245,158,11,0.12);color:#F59E0B"><i class="fa fa-bolt"/></div>
-            <div class="sl-kpi-label">AI Anomalies Today</div>
-            <div class="sl-kpi-value" style="color:#F59E0B"><t t-esc="state.kpi.aiAnomalies"/></div>
-            <div class="sl-kpi-delta">alerts triggered today</div>
-          </div>
-        </div>
 
         <!-- Row 2: Ward Heatmap + Donut + Leaderboard -->
         <div class="row mb-4">
@@ -183,6 +206,9 @@
             </div>
           </div>
         </div>
+
+        </div><!-- end content -->
+      </t>
 
       </div><!-- end sl-admin-body -->
     </div>

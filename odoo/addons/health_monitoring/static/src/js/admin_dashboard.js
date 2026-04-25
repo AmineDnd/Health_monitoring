@@ -1,19 +1,23 @@
 /** @odoo-module **/
 
 import { registry } from "@web/core/registry";
-import { Component, onWillStart, onMounted, onWillDestroy, useState, useRef } from "@odoo/owl";
+import { Component, onWillStart, onMounted, onWillDestroy, useState, useRef, useEffect } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
+import { loadJS } from "@web/core/assets";
 
 export class AdminDashboard extends Component {
     setup() {
         this.orm = useService("orm");
         this.action = useService("action");
+        this.notification = useService("notification");
 
         this.trendChartRef = useRef("trendChart");
         this.statusChartRef = useRef("statusChart");
         this.charts = {};
+        this.chartLoaded = false;
 
         this.state = useState({
+            isLoading: true,
             currentTime: new Date().toLocaleTimeString(),
             dateRange: 'week',
             kpi: {
@@ -32,14 +36,28 @@ export class AdminDashboard extends Component {
         });
 
         onWillStart(async () => {
+            // Load Chart.js first
+            try {
+                await loadJS("https://cdn.jsdelivr.net/npm/chart.js");
+                this.chartLoaded = true;
+            } catch (e) {
+                console.warn("Chart.js load failed:", e);
+            }
             await this.fetchAll();
         });
 
         onMounted(() => {
-            this.renderCharts();
+            // Delay chart rendering to ensure DOM is ready
+            setTimeout(() => {
+                this.renderCharts();
+            }, 100);
+            
             this.refreshInterval = setInterval(() => {
-                this.fetchAll().then(() => this.renderCharts());
-            }, 15000);
+                this.fetchAll().then(() => {
+                    setTimeout(() => this.renderCharts(), 50);
+                });
+            }, 30000); // 30 seconds
+            
             this.clockInterval = setInterval(() => {
                 this.state.currentTime = new Date().toLocaleTimeString();
             }, 1000);
@@ -129,6 +147,7 @@ export class AdminDashboard extends Component {
 
     // --- Data ---
     async fetchAll() {
+        this.state.isLoading = true;
         try {
             // KPI: Active Patients
             const activePatients = await this.orm.searchCount("health.patient", [['status', '=', 'active']]);
@@ -258,11 +277,15 @@ export class AdminDashboard extends Component {
             this._trendData = await this.orm.searchRead("health.alert", this.getDateDomain('create_date'), ['create_date', 'severity']);
         } catch (e) {
             console.error("Admin dashboard fetch error:", e);
+            this.notification.add("Failed to load dashboard data", { type: 'warning' });
+        } finally {
+            this.state.isLoading = false;
         }
     }
 
     // --- Charts ---
     renderCharts() {
+        if (this.state.isLoading || !this.chartLoaded) return;
         if (!window.Chart) return;
         Object.values(this.charts).forEach(c => c && c.destroy());
         this.charts = {};
