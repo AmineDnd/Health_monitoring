@@ -226,7 +226,7 @@ export class DoctorDashboard extends Component {
                 const bpRisk = Math.min(100, Math.max(0, (bp - 120) * 2));
                 const feverRisk = Math.min(100, Math.max(0, (temp - 37) * 40));
 
-                const riskColor = (v) => v > 60 ? '#ef4444' : v > 30 ? '#f59e0b' : '#10b981';
+                const riskColor = (v) => v > 60 ? '#F87171' : v > 30 ? '#FBBF24' : '#34D399';
 
                 this.state.risk = {
                     arrhythmia: arrRisk, arrhythmiaColor: riskColor(arrRisk),
@@ -258,11 +258,14 @@ export class DoctorDashboard extends Component {
         });
         const hrValues = data.map(v => v.heart_rate || 0);
 
-        // Color each bar based on value
-        const barColors = hrValues.map(v => {
-            if (v > 100 || v < 55) return '#ef4444';
-            if (v > 90 || v < 60) return '#f59e0b';
-            return '#3b82f6';
+        // Color each bar as a gradient based on index (old to new)
+        const barColors = hrValues.map((v, i) => {
+            const pct = i / Math.max(1, hrValues.length - 1);
+            // blend #1E3A5F and #F87171
+            const r = Math.round(30 + pct * (248 - 30));
+            const g = Math.round(58 + pct * (113 - 58));
+            const b = Math.round(95 + pct * (113 - 95));
+            return `rgb(${r}, ${g}, ${b})`;
         });
 
         this.charts.trend = new Chart(this.trendChartRef.el, {

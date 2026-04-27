@@ -3,167 +3,184 @@
   <t t-name="health_monitoring.DoctorDashboardTemplate" owl="1">
     <div class="sl-dashboard-container sl-doctor-dashboard">
 
-      <!-- Header -->
+      <!-- White header -->
       <div class="sl-doctor-header">
-        <div class="d-flex justify-content-between align-items-center pb-3 border-bottom">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
           <div>
-            <h1 class="sl-title">Triage &amp; Analysis</h1>
-            <p class="sl-subtitle">
-              Dr. <t t-esc="state.doctorName"/> · <t t-esc="state.wardName"/> ·
-              <strong style="color:#EF4444"><t t-esc="state.unclaimedAlerts.length"/> unclaimed</strong>
+            <h1 style="font-size:17px;font-weight:600;color:#0F172A;margin:0;letter-spacing:-0.3px;">Triage &amp; Analysis</h1>
+            <p style="font-size:12px;color:#64748B;margin:3px 0 0;">
+              Dr. <t t-esc="state.doctorName"/> ·
+              <t t-esc="state.wardName"/> ·
+              <strong style="color:#A32D2D;font-weight:500;">
+                <t t-esc="state.unclaimedAlerts.length"/> unclaimed
+              </strong>
             </p>
           </div>
-          <button class="sl-btn-primary" t-on-click="onRefresh">
-            <i class="fa fa-refresh me-1"/>Refresh Queue
-          </button>
+          <button class="sl-btn-primary" t-on-click="onRefresh">Refresh queue</button>
         </div>
       </div>
 
-      <!-- Split-pane body -->
+      <!-- Split body -->
       <div class="sl-doctor-body">
 
-        <!-- LEFT: Queue pane -->
+        <!-- LEFT queue panel -->
         <div class="sl-queue-pane">
 
           <!-- Unclaimed section -->
           <div class="sl-queue-section unclaimed">
             <div class="sl-queue-header">
-              <span class="sl-queue-title">Unclaimed</span>
-              <span class="sl-queue-count"><t t-esc="state.unclaimedAlerts.length"/></span>
+              <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#94A3B8;">Unclaimed</span>
+              <span style="background:#FCEBEB;color:#A32D2D;border:0.5px solid #F7C1C1;font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;">
+                <t t-esc="state.unclaimedAlerts.length"/>
+              </span>
             </div>
-            <div class="sl-scrollable-list flex-grow-1">
+            <div class="sl-scrollable-list" style="flex:1;overflow-y:auto;">
               <t t-foreach="state.unclaimedAlerts" t-as="alert" t-key="alert.id">
-                <div class="sl-alert-queue-card" t-on-click="() => this.onViewPatient(alert)">
-                  <div class="d-flex justify-content-between align-items-start mb-1">
-                    <div class="sl-aqc-name" style="cursor:pointer"
-                         t-on-click.stop="() => this.openPatientForm(alert.patient_id[0])">
+                <div t-attf-class="sl-alert-card unclaimed-card #{alert.severity === 'high' ? 'severity-high' : ''}"
+                     t-on-click="() => this.onViewPatient(alert)">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
+                    <span style="font-size:13px;font-weight:500;color:#185FA5;text-decoration:underline;text-underline-offset:2px;cursor:pointer;"
+                          t-on-click.stop="() => this.openPatientForm(alert.patient_id[0])">
                       <t t-esc="alert.patient_id[1]"/>
-                      <i class="fa fa-external-link ms-1" style="font-size:9px;opacity:0.5"/>
-                    </div>
-                    <span t-attf-class="sl-badge sl-badge-#{alert.severity}"><t t-esc="alert.severity"/></span>
+                    </span>
+                    <span t-attf-class="sl-badge-#{alert.severity === 'high' ? 'warning' : alert.severity}">
+                      <t t-esc="alert.severity"/>
+                    </span>
                   </div>
-                  <div class="sl-aqc-meta" style="cursor:pointer"
+                  <div style="font-size:11px;color:#64748B;margin:4px 0 8px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;"
                        t-on-click.stop="() => this.openAlertForm(alert.id)">
                     <t t-esc="alert.headline || 'Anomaly detected'"/>
                   </div>
-                  <div class="sl-aqc-actions">
-                    <button class="sl-btn-claim" t-on-click.stop="() => this.onClaimAlert(alert.id)">
-                      <i class="fa fa-hand-paper-o me-1"/>Claim
+                  <div style="display:flex;gap:6px;">
+                    <button style="flex:1;padding:5px 10px;font-size:10px;font-weight:500;background:#FCEBEB;color:#A32D2D;border:0.5px solid #F7C1C1;border-radius:7px;cursor:pointer;font-family:inherit;transition:background 0.15s;"
+                            onmouseover="this.style.background='#F7C1C1'"
+                            onmouseout="this.style.background='#FCEBEB'"
+                            t-on-click.stop="() => this.onClaimAlert(alert.id)">
+                      Claim
                     </button>
-                    <button class="sl-btn-trends" t-on-click.stop="() => this.onViewPatient(alert)">
+                    <button style="padding:5px 10px;font-size:10px;font-weight:500;background:transparent;border:1px solid #E2E8F0;color:#64748B;border-radius:7px;cursor:pointer;font-family:inherit;transition:background 0.15s;"
+                            onmouseover="this.style.background='#F1F5F9'"
+                            onmouseout="this.style.background='transparent'"
+                            t-on-click.stop="() => this.onViewPatient(alert)">
                       Trends
                     </button>
                   </div>
                 </div>
               </t>
               <t t-if="state.unclaimedAlerts.length === 0">
-                <div class="text-center py-4 text-muted small">
-                  <i class="fa fa-check-circle fa-2x d-block mb-2 text-success"/>
-                  Inbox Zero! All alerts claimed.
-                </div>
+                <div style="text-align:center;color:#94A3B8;padding:24px;font-size:12px;">Inbox Zero! All alerts claimed.</div>
               </t>
             </div>
           </div>
 
-          <!-- My cases section -->
+          <!-- My Cases section -->
           <div class="sl-queue-section claimed">
             <div class="sl-queue-header">
-              <span class="sl-queue-title" style="color:#2563EB">My Cases</span>
-              <span class="sl-queue-count blue"><t t-esc="state.myActiveAlerts.length"/></span>
+              <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#94A3B8;">My Cases</span>
+              <span style="background:#E6F1FB;color:#0C447C;border:0.5px solid #B5D4F4;font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;">
+                <t t-esc="state.myActiveAlerts.length"/>
+              </span>
             </div>
-            <div class="sl-scrollable-list flex-grow-1">
+            <div class="sl-scrollable-list" style="flex:1;overflow-y:auto;">
               <t t-foreach="state.myActiveAlerts" t-as="alert" t-key="alert.id">
-                <div class="sl-alert-queue-card claimed-card" t-on-click="() => this.onViewPatient(alert)">
-                  <div class="d-flex justify-content-between align-items-start mb-1">
-                    <div class="sl-aqc-name" style="cursor:pointer"
-                         t-on-click.stop="() => this.openPatientForm(alert.patient_id[0])">
+                <div class="sl-alert-card claimed-card" t-on-click="() => this.onViewPatient(alert)">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
+                    <span style="font-size:13px;font-weight:500;color:#185FA5;text-decoration:underline;text-underline-offset:2px;cursor:pointer;"
+                          t-on-click.stop="() => this.openPatientForm(alert.patient_id[0])">
                       <t t-esc="alert.patient_id[1]"/>
-                      <i class="fa fa-external-link ms-1" style="font-size:9px;opacity:0.5"/>
-                    </div>
-                    <span class="sl-badge sl-badge-info">In Progress</span>
+                    </span>
+                    <span class="sl-badge-info">In Progress</span>
                   </div>
-                  <div class="sl-aqc-meta" style="cursor:pointer"
+                  <div style="font-size:11px;color:#64748B;margin:4px 0 8px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;"
                        t-on-click.stop="() => this.openAlertForm(alert.id)">
-                    <t t-esc="alert.headline || 'Investigating'"/>
+                    <t t-esc="alert.headline || 'Under investigation'"/>
                   </div>
-                  <div class="sl-aqc-actions">
-                    <button class="sl-btn-resolve" t-on-click.stop="() => this.onResolveAlert(alert.id)">
-                      <i class="fa fa-check me-1"/>Resolve
-                    </button>
-                    <button class="sl-btn-analyze" t-on-click.stop="() => this.onViewPatient(alert)">
-                      Analyze
-                    </button>
-                  </div>
+                  <button style="width:100%;padding:6px;font-size:11px;font-weight:500;background:#E6F1FB;color:#0C447C;border:0.5px solid #B5D4F4;border-radius:7px;cursor:pointer;font-family:inherit;transition:background 0.15s;"
+                          onmouseover="this.style.background='#B5D4F4'"
+                          onmouseout="this.style.background='#E6F1FB'"
+                          t-on-click.stop="() => this.onResolveAlert(alert.id)">
+                    Resolve case
+                  </button>
                 </div>
               </t>
               <t t-if="state.myActiveAlerts.length === 0">
-                <div class="text-center py-3 text-muted small">No active investigations.</div>
+                <div style="text-align:center;color:#94A3B8;padding:16px;font-size:12px;">No active cases.</div>
               </t>
             </div>
           </div>
 
         </div><!-- end queue pane -->
 
-        <!-- RIGHT: Analysis pane -->
+        <!-- RIGHT analysis pane -->
         <div class="sl-analysis-pane">
 
-          <!-- Empty state when no patient selected -->
+          <!-- Empty state -->
           <t t-if="!state.selectedPatient">
             <div class="sl-empty-state">
-              <i class="fa fa-bar-chart"/>
-              <h4>Select a Patient to Analyze</h4>
-              <p>Click "Analyze" or "Trends" from the queue on the left to load AI-powered charts and risk analysis here.</p>
-              <div class="d-flex gap-3 mt-3 text-center">
-                <div class="px-4 py-3 rounded" style="background:#FEF2F2;border:1px solid #FECACA;flex:1">
-                  <div style="font-size:24px;font-weight:600;color:#DC2626"><t t-esc="state.unclaimedAlerts.length"/></div>
-                  <div style="font-size:11px;color:#94A3B8;text-transform:uppercase;letter-spacing:0.06em">Unclaimed</div>
+              <div style="width:52px;height:52px;border-radius:14px;background:#E6F1FB;display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
+                <span style="font-size:22px;">&#128203;</span>
+              </div>
+              <h4 style="color:#0F172A;font-size:15px;font-weight:600;margin:0 0 8px;">Select a Patient</h4>
+              <p style="color:#64748B;font-size:13px;max-width:240px;line-height:1.5;margin:0 0 20px;">
+                Click "Trends" on any alert in the queue to load charts and risk analysis here.
+              </p>
+              <div style="display:flex;gap:10px;">
+                <div style="background:#FCEBEB;border:1px solid #F7C1C1;border-radius:10px;padding:14px 18px;text-align:center;min-width:80px;">
+                  <div style="font-size:22px;font-weight:700;color:#A32D2D;"><t t-esc="state.unclaimedAlerts.length"/></div>
+                  <div style="font-size:9px;color:#64748B;text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;">Unclaimed</div>
                 </div>
-                <div class="px-4 py-3 rounded" style="background:#EFF6FF;border:1px solid #BFDBFE;flex:1">
-                  <div style="font-size:24px;font-weight:600;color:#2563EB"><t t-esc="state.myActiveAlerts.length"/></div>
-                  <div style="font-size:11px;color:#94A3B8;text-transform:uppercase;letter-spacing:0.06em">My Cases</div>
+                <div style="background:#E6F1FB;border:1px solid #B5D4F4;border-radius:10px;padding:14px 18px;text-align:center;min-width:80px;">
+                  <div style="font-size:22px;font-weight:700;color:#0C447C;"><t t-esc="state.myActiveAlerts.length"/></div>
+                  <div style="font-size:9px;color:#64748B;text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;">My Cases</div>
                 </div>
               </div>
             </div>
           </t>
 
-          <t t-if="state.selectedPatient">
+          <!-- Patient detail -->
+          <div t-if="state.selectedPatient" class="sl-animate-in">
 
-            <!-- Patient profile header -->
+            <!-- Patient header card -->
             <div class="sl-patient-header-card">
-              <div class="d-flex align-items-center gap-3">
-                <div t-attf-class="sl-avatar sl-avatar-#{state.selectedPatient.risk_level}" style="width:48px;height:48px;font-size:18px">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <div style="width:44px;height:44px;border-radius:12px;background:#E6F1FB;color:#0C447C;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px;flex-shrink:0;">
                   <t t-esc="state.selectedPatient.initials"/>
                 </div>
                 <div>
-                  <div style="font-size:16px;font-weight:700;color:#0F172A"><t t-esc="state.selectedPatient.name"/></div>
-                  <div class="text-muted" style="font-size:12px">
+                  <div style="font-size:16px;font-weight:600;color:#0F172A;letter-spacing:-0.2px;"><t t-esc="state.selectedPatient.name"/></div>
+                  <div style="font-size:12px;color:#64748B;margin-top:2px;">
                     Age <t t-esc="state.selectedPatient.age"/> ·
                     <t t-esc="state.selectedPatient.gender"/> ·
                     <t t-esc="state.wardName"/>
                   </div>
                 </div>
               </div>
-              <span t-attf-class="sl-badge sl-badge-#{state.selectedPatient.risk_level}" style="font-size:12px;padding:5px 14px">
-                <t t-esc="(state.selectedPatient.risk_level || 'normal').toUpperCase()"/>
-              </span>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span t-attf-class="sl-badge-#{state.selectedPatient.risk_level === 'high' ? 'warning' : (state.selectedPatient.risk_level || 'stable')}">
+                  <t t-esc="(state.selectedPatient.risk_level || 'normal').toUpperCase()"/>
+                </span>
+                <button class="sl-btn-primary" style="padding:7px 16px;font-size:12px;" t-on-click="onOpenPatientRecord">
+                  Open record
+                </button>
+              </div>
             </div>
 
-            <!-- Vitals tiles -->
+            <!-- Vitals grid -->
             <div class="sl-vitals-grid">
-              <div class="sl-vital-tile">
-                <div t-attf-class="sl-vital-val #{state.vitals.hr_abnormal ? 'danger' : ''}">
+              <div class="sl-vital-box">
+                <div t-attf-class="sl-vital-val #{state.vitals.hr_abnormal ? 'abnormal' : ''}">
                   <t t-esc="state.vitals.heart_rate || '—'"/>
                 </div>
                 <div class="sl-vital-label">Heart Rate</div>
               </div>
-              <div class="sl-vital-tile">
-                <div t-attf-class="sl-vital-val #{state.vitals.spo2_abnormal ? 'danger' : ''}">
+              <div class="sl-vital-box">
+                <div t-attf-class="sl-vital-val #{state.vitals.spo2_abnormal ? 'abnormal' : ''}">
                   <t t-esc="state.vitals.spo2 || '—'"/>%
                 </div>
-                <div class="sl-vital-label">SpO₂</div>
+                <div class="sl-vital-label">SpO&#8322;</div>
               </div>
-              <div class="sl-vital-tile">
-                <div t-attf-class="sl-vital-val #{state.vitals.bp_abnormal ? 'danger' : ''}">
+              <div class="sl-vital-box">
+                <div t-attf-class="sl-vital-val #{state.vitals.bp_abnormal ? 'abnormal' : ''}">
                   <t t-if="state.vitals.bp_systolic">
                     <t t-esc="state.vitals.bp_systolic"/>/<t t-esc="state.vitals.bp_diastolic"/>
                   </t>
@@ -171,62 +188,54 @@
                 </div>
                 <div class="sl-vital-label">Blood Pressure</div>
               </div>
-              <div class="sl-vital-tile">
-                <div t-attf-class="sl-vital-val #{state.vitals.temp_abnormal ? 'danger' : ''}">
+              <div class="sl-vital-box">
+                <div t-attf-class="sl-vital-val #{state.vitals.temp_abnormal ? 'abnormal' : ''}">
                   <t t-esc="state.vitals.temperature || '—'"/>°
                 </div>
                 <div class="sl-vital-label">Temperature</div>
               </div>
             </div>
 
-            <!-- Trend Chart -->
-            <div class="sl-glass-card" style="flex-shrink:0">
-              <div class="sl-card-title"><i class="fa fa-bar-chart text-primary me-1"/> Heart Rate — Last 12 Readings</div>
-              <div style="height:180px;position:relative">
+            <!-- Heart rate trend chart -->
+            <div class="sl-glass-card" style="margin-bottom:12px;">
+              <div class="sl-card-title">Heart Rate — Last 12 Readings</div>
+              <div style="height:180px;position:relative;">
                 <canvas t-ref="trendChart"/>
               </div>
             </div>
 
-            <!-- Risk factors grid -->
-            <div class="sl-glass-card" style="flex-shrink:0">
-              <div class="sl-card-title"><i class="fa fa-bullseye text-danger me-1"/> Risk Factors</div>
-              <div class="row">
-                <div class="col-6 mb-2">
-                  <div class="d-flex align-items-center gap-2">
-                    <span style="font-size:12px;font-weight:600;color:#0F172A;width:90px;flex-shrink:0">Arrhythmia</span>
-                    <div style="flex:1;height:8px;background:#F1F5F9;border-radius:4px;overflow:hidden">
-                      <div t-attf-style="width:#{state.risk.arrhythmia}%;height:100%;border-radius:4px;background:#{state.risk.arrhythmiaColor};transition:width 0.4s"/>
-                    </div>
+            <!-- Risk factors -->
+            <div class="sl-glass-card">
+              <div class="sl-card-title">Risk Factors</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div style="background:#FFFFFF;border:1px solid #EEF2F7;border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
+                  <span style="font-size:12px;color:#334155;">Arrhythmia</span>
+                  <div style="width:80px;height:4px;background:#F1F5F9;border-radius:3px;overflow:hidden;">
+                    <div t-attf-style="width:#{state.risk.arrhythmia}%;height:100%;border-radius:3px;background:#{state.risk.arrhythmiaColor};transition:width 0.5s;"/>
                   </div>
                 </div>
-                <div class="col-6 mb-2">
-                  <div class="d-flex align-items-center gap-2">
-                    <span style="font-size:12px;font-weight:600;color:#0F172A;width:90px;flex-shrink:0">Hypertension</span>
-                    <div style="flex:1;height:8px;background:#F1F5F9;border-radius:4px;overflow:hidden">
-                      <div t-attf-style="width:#{state.risk.hypertension}%;height:100%;border-radius:4px;background:#{state.risk.hypertensionColor};transition:width 0.4s"/>
-                    </div>
+                <div style="background:#FFFFFF;border:1px solid #EEF2F7;border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
+                  <span style="font-size:12px;color:#334155;">Hypertension</span>
+                  <div style="width:80px;height:4px;background:#F1F5F9;border-radius:3px;overflow:hidden;">
+                    <div t-attf-style="width:#{state.risk.hypertension}%;height:100%;border-radius:3px;background:#{state.risk.hypertensionColor};transition:width 0.5s;"/>
                   </div>
                 </div>
-                <div class="col-6 mb-2">
-                  <div class="d-flex align-items-center gap-2">
-                    <span style="font-size:12px;font-weight:600;color:#0F172A;width:90px;flex-shrink:0">Hypoxia</span>
-                    <div style="flex:1;height:8px;background:#F1F5F9;border-radius:4px;overflow:hidden">
-                      <div t-attf-style="width:#{state.risk.hypoxia}%;height:100%;border-radius:4px;background:#{state.risk.hypoxiaColor};transition:width 0.4s"/>
-                    </div>
+                <div style="background:#FFFFFF;border:1px solid #EEF2F7;border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
+                  <span style="font-size:12px;color:#334155;">Hypoxia</span>
+                  <div style="width:80px;height:4px;background:#F1F5F9;border-radius:3px;overflow:hidden;">
+                    <div t-attf-style="width:#{state.risk.hypoxia}%;height:100%;border-radius:3px;background:#{state.risk.hypoxiaColor};transition:width 0.5s;"/>
                   </div>
                 </div>
-                <div class="col-6 mb-2">
-                  <div class="d-flex align-items-center gap-2">
-                    <span style="font-size:12px;font-weight:600;color:#0F172A;width:90px;flex-shrink:0">Bradycardia</span>
-                    <div style="flex:1;height:8px;background:#F1F5F9;border-radius:4px;overflow:hidden">
-                      <div t-attf-style="width:#{state.risk.fever}%;height:100%;border-radius:4px;background:#{state.risk.feverColor};transition:width 0.4s"/>
-                    </div>
+                <div style="background:#FFFFFF;border:1px solid #EEF2F7;border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
+                  <span style="font-size:12px;color:#334155;">Bradycardia</span>
+                  <div style="width:80px;height:4px;background:#F1F5F9;border-radius:3px;overflow:hidden;">
+                    <div t-attf-style="width:#{state.risk.fever}%;height:100%;border-radius:3px;background:#{state.risk.feverColor};transition:width 0.5s;"/>
                   </div>
                 </div>
               </div>
             </div>
 
-          </t><!-- end selectedPatient -->
+          </div><!-- end selected patient -->
         </div><!-- end analysis pane -->
       </div><!-- end doctor body -->
     </div>

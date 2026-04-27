@@ -323,3 +323,8 @@ class HealthVitalRecord(models.Model):
             if not rec.anomaly_detected:
                 rec._call_ai_service()
         _logger.info(f'Cron: reanalyzed {len(recent)} recent vital records')
+
+    @api.model
+    def cron_process_unanalysed_vitals(self):
+        """Dummy method to satisfy old cron job and prevent tracebacks"""
+        pass

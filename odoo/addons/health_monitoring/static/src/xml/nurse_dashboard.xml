@@ -3,32 +3,29 @@
   <t t-name="health_monitoring.NurseDashboardTemplate" owl="1">
     <div class="sl-dashboard-container sl-nurse-dashboard">
 
-      <!-- Header -->
+      <!-- White header -->
       <div class="sl-nurse-header">
         <div>
-          <h1 class="sl-title">Central Monitor</h1>
-          <p class="sl-subtitle">
+          <h1 style="font-size:17px;font-weight:600;color:#0F172A;margin:0;letter-spacing:-0.2px;">Central Monitor</h1>
+          <p style="font-size:12px;color:#64748B;margin:3px 0 0;">
             <t t-esc="state.wardName"/> · Nurse <t t-esc="state.nurseName"/> · <t t-esc="state.patients.length"/> patients assigned
           </p>
         </div>
-        <div class="d-flex gap-2">
-          <button class="sl-btn-ghost" t-on-click="onOpenHandoffModal">
-            <i class="fa fa-file-text-o me-1"/>Handoff
-          </button>
-          <button class="sl-btn-primary" t-on-click="onRefresh">
-            <i class="fa fa-refresh me-1"/>Refresh
-          </button>
+        <div style="display:flex;gap:8px;">
+          <button class="sl-btn-ghost" t-on-click="onOpenHandoffModal">Handoff</button>
+          <button class="sl-btn-primary" t-on-click="onRefresh">Refresh</button>
         </div>
       </div>
 
-      <!-- Scrollable body -->
+      <!-- Body -->
       <div class="sl-nurse-body">
 
         <!-- Stats bar -->
         <div class="sl-stats-bar">
-          <div class="sl-stat-pill">
+          <div class="sl-stat-pill" style="cursor:pointer;"
+               t-on-click="() => this.action.doAction('health_monitoring.action_patients')">
             <div class="sl-stat-num"><t t-esc="state.patients.length"/></div>
-            <div class="sl-stat-label">Total Patients</div>
+            <div class="sl-stat-label">Total</div>
           </div>
           <div class="sl-stat-pill stat-critical">
             <div class="sl-stat-num"><t t-esc="state.stats.critical"/></div>
@@ -36,7 +33,7 @@
           </div>
           <div class="sl-stat-pill stat-overdue">
             <div class="sl-stat-num"><t t-esc="state.stats.overdue"/></div>
-            <div class="sl-stat-label">Overdue Vitals</div>
+            <div class="sl-stat-label">Overdue</div>
           </div>
           <div class="sl-stat-pill stat-due-soon">
             <div class="sl-stat-num"><t t-esc="state.stats.dueSoon"/></div>
@@ -48,47 +45,62 @@
           </div>
         </div>
 
-        <!-- Bed grid -->
+        <!-- Patient card grid -->
         <div class="sl-bed-grid">
           <t t-foreach="state.patients" t-as="patient" t-key="patient.id">
             <div t-attf-class="sl-patient-card sl-status-#{patient.vitalsStatus} #{patient.risk_level === 'critical' ? 'sl-critical-pulse' : ''}">
 
-              <!-- Card top row -->
-              <div class="sl-pc-header">
-                <div class="d-flex align-items-center gap-2">
-                  <div t-attf-class="sl-avatar sl-avatar-#{patient.risk_level}">
-                    <t t-esc="patient.name.substring(0,1).toUpperCase()"/>
+              <!-- Card header -->
+              <div class="sl-pc-inner">
+                <div class="sl-pc-header">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <div class="sl-avatar">
+                      <t t-esc="patient.name.substring(0,1).toUpperCase()"/>
+                    </div>
+                    <div>
+                      <div class="sl-pc-name"
+                           t-on-click.stop="() => this.action.doAction({
+                             type: 'ir.actions.act_window',
+                             res_model: 'health.patient',
+                             res_id: patient.id,
+                             views: [[false,'form']],
+                             target: 'current'
+                           })">
+                        <t t-esc="patient.name"/>
+                      </div>
+                      <div class="sl-pc-meta"><t t-esc="patient.timeSinceVitals"/></div>
+                    </div>
                   </div>
-                  <div>
-                    <div class="sl-pc-name"><t t-esc="patient.name"/></div>
-                    <div class="sl-pc-meta"><t t-esc="patient.timeSinceVitals"/></div>
+                  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
+                    <span t-attf-class="sl-badge-#{patient.risk_level === 'high' ? 'warning' : (patient.risk_level || 'stable')}">
+                      <t t-esc="(patient.risk_level || 'LOW').toUpperCase()"/>
+                    </span>
+                    <t t-if="patient.admission_status === 'admission_recommended'">
+                      <span class="sl-badge-warning" style="font-size:9px;">Admit</span>
+                    </t>
                   </div>
                 </div>
-                <span t-attf-class="sl-badge sl-badge-#{patient.risk_level}">
-                  <t t-esc="(patient.risk_level || 'low').toUpperCase()"/>
-                </span>
-              </div>
+              </div><!-- end pc-inner -->
 
-              <!-- Vitals status banner -->
+              <!-- Vitals status banner (full-width) -->
               <div t-attf-class="sl-vitals-banner sl-banner-#{patient.vitalsStatus}">
                 <span>
-                  <i class="fa fa-clock-o me-1"/>
                   <t t-if="patient.vitalsStatus === 'overdue'">OVERDUE</t>
-                  <t t-elif="patient.vitalsStatus === 'due_soon'">Due Soon</t>
-                  <t t-else="">Up to Date</t>
+                  <t t-elif="patient.vitalsStatus === 'due_soon'">DUE SOON</t>
+                  <t t-else="">UP TO DATE</t>
                 </span>
-                <span>
+                <span style="font-weight:400;opacity:0.85;">
                   <t t-if="patient.hoursSort != 999"><t t-esc="Math.round(patient.hoursSort * 10) / 10"/>h ago</t>
                   <t t-else="">No Vitals Yet</t>
                 </span>
               </div>
 
-              <!-- Sparkline canvas — fixed height -->
+              <!-- Sparkline -->
               <div class="sl-sparkline-wrap">
                 <canvas t-att-id="'sparkline_' + patient.id"/>
               </div>
 
-              <!-- Vital chips with color coding -->
+              <!-- Vital chips -->
               <div class="sl-vitals-chips" t-if="patient.latestHR">
                 <span t-attf-class="sl-chip #{patient.hrAbnormal ? 'chip-danger' : patient.hrWarn ? 'chip-warn' : 'chip-ok'}">
                   HR <t t-esc="patient.latestHR"/>
@@ -104,58 +116,54 @@
                 <span class="sl-chip chip-warn">No vitals recorded</span>
               </div>
 
-              <!-- Log vitals button -->
+              <!-- Log Vitals button -->
               <button class="sl-log-btn" t-on-click.stop="() => this.onLogVitals(patient.id)">
-                <i class="fa fa-plus me-1"/>Log Vitals
+                + Log Vitals
               </button>
 
-            </div>
+            </div><!-- end patient card -->
           </t>
-          <t t-if="state.patients.length === 0">
-            <div class="text-center py-5 text-muted" style="grid-column:1/-1">
-              <i class="fa fa-bed fa-2x d-block mb-2"/>
-              <p>No admitted patients found in this ward.</p>
-            </div>
-          </t>
-        </div>
 
-        <!-- Bottom row: Schedule + Activity -->
+          <t t-if="state.patients.length === 0">
+            <div style="grid-column:1/-1;text-align:center;color:#94A3B8;padding:48px;font-size:14px;">
+              No patients assigned to your ward.
+            </div>
+          </t>
+        </div><!-- end bed grid -->
+
+        <!-- Bottom row -->
         <div class="sl-bottom-row">
 
           <!-- Vitals schedule -->
           <div class="sl-glass-card">
-            <div class="sl-card-title"><i class="fa fa-calendar-check-o text-primary me-1"/>Vitals Schedule</div>
-            <div class="sl-scrollable-list" style="max-height:200px">
+            <div class="sl-card-title">Vitals Schedule</div>
+            <div class="sl-scrollable-list" style="max-height:200px;">
               <t t-foreach="state.schedule" t-as="patient" t-key="patient.id">
                 <div class="sl-schedule-item">
-                  <span style="font-size:13px;font-weight:500"><t t-esc="patient.name"/></span>
-                  <div class="d-flex align-items-center gap-2">
-                    <t t-if="patient.vitalsStatus === 'overdue'">
-                      <span class="sl-badge sl-badge-critical"><t t-esc="patient.dueLabel"/></span>
-                    </t>
-                    <t t-elif="patient.vitalsStatus === 'due_soon'">
-                      <span class="sl-badge sl-badge-warning">Due soon</span>
-                    </t>
-                    <t t-else="">
-                      <span class="sl-badge sl-badge-stable">OK</span>
-                    </t>
-                    <button class="sl-log-btn" style="width:auto;padding:3px 8px;margin:0" t-on-click="() => this.onLogVitals(patient.id)">Log</button>
+                  <span style="font-size:13px;font-weight:500;color:#0F172A;"><t t-esc="patient.name"/></span>
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <span t-if="patient.vitalsStatus === 'overdue'" class="sl-badge-critical"><t t-esc="patient.dueLabel"/></span>
+                    <span t-elif="patient.vitalsStatus === 'due_soon'" class="sl-badge-warning">Due soon</span>
+                    <span t-else="" class="sl-badge-stable">OK</span>
+                    <button class="sl-btn-ghost" style="padding:3px 10px;font-size:10px;"
+                            t-on-click="() => this.onLogVitals(patient.id)">Log</button>
                   </div>
                 </div>
               </t>
               <t t-if="!state.schedule or state.schedule.length === 0">
-                <div class="text-muted small text-center py-3">All vitals up to date!</div>
+                <div style="text-align:center;color:#94A3B8;padding:20px;font-size:12px;">All vitals up to date!</div>
               </t>
             </div>
           </div>
 
-          <!-- Ward activity feed -->
+          <!-- Ward activity -->
           <div class="sl-glass-card">
-            <div class="sl-card-title"><i class="fa fa-feed text-primary me-1"/>Ward Activity</div>
-            <div class="sl-scrollable-list" style="max-height:200px">
+            <div class="sl-card-title">Ward Activity</div>
+            <div class="sl-scrollable-list" style="max-height:200px;">
               <t t-foreach="state.activityFeed" t-as="item" t-key="item.id">
                 <div class="sl-activity-item">
-                  <span class="sl-act-dot" t-attf-style="background:#{item.type === 'alert' ? '#EF4444' : item.type === 'vitals' ? '#10B981' : '#3B82F6'}"/>
+                  <span class="sl-act-dot"
+                        t-attf-style="background: #{item.type === 'alert' ? '#E24B4A' : item.type === 'vitals' ? '#16A34A' : '#185FA5'};"/>
                   <div>
                     <div class="sl-act-text"><t t-esc="item.text"/></div>
                     <div class="sl-act-time"><t t-esc="item.timeAgo"/></div>
@@ -163,7 +171,7 @@
                 </div>
               </t>
               <t t-if="!state.activityFeed or state.activityFeed.length === 0">
-                <div class="text-muted small text-center py-3">No recent activity.</div>
+                <div style="text-align:center;color:#94A3B8;padding:20px;font-size:12px;">No recent activity.</div>
               </t>
             </div>
           </div>
@@ -174,50 +182,49 @@
       <!-- Handoff Modal -->
       <div t-if="state.showHandoff" class="sl-modal-overlay" t-on-click="onCloseHandoffModal">
         <div class="sl-modal" t-on-click.stop="">
-          <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4">
-            <h3 class="m-0 fw-bold" style="font-size:16px">
-              <i class="fa fa-file-text-o text-primary me-2"/>Shift Handoff Report
-            </h3>
-            <button class="btn-close" t-on-click="onCloseHandoffModal"/>
+          <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #EEF2F7;padding-bottom:16px;margin-bottom:20px;">
+            <h3 style="margin:0;font-size:16px;font-weight:600;color:#0F172A;">Shift Handoff Report</h3>
+            <button t-on-click="onCloseHandoffModal"
+                    style="background:transparent;border:none;color:#94A3B8;font-size:22px;cursor:pointer;line-height:1;padding:0;">&#215;</button>
           </div>
-          <div class="row text-center mb-4">
-            <div class="col-4">
-              <div style="font-size:28px;font-weight:700;color:#3B82F6"><t t-esc="state.patients.length"/></div>
-              <div class="small text-muted">Total</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;text-align:center;">
+            <div style="background:#F8FAFC;border:1px solid #EEF2F7;border-radius:10px;padding:14px;">
+              <div style="font-size:28px;font-weight:700;color:#185FA5;"><t t-esc="state.patients.length"/></div>
+              <div style="font-size:9px;color:#94A3B8;text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;">Total</div>
             </div>
-            <div class="col-4">
-              <div style="font-size:28px;font-weight:700;color:#EF4444"><t t-esc="state.stats.critical"/></div>
-              <div class="small text-muted">Critical</div>
+            <div style="background:#F8FAFC;border:1px solid #EEF2F7;border-radius:10px;padding:14px;">
+              <div style="font-size:28px;font-weight:700;color:#E24B4A;"><t t-esc="state.stats.critical"/></div>
+              <div style="font-size:9px;color:#94A3B8;text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;">Critical</div>
             </div>
-            <div class="col-4">
-              <div style="font-size:28px;font-weight:700;color:#F59E0B"><t t-esc="state.stats.overdue"/></div>
-              <div class="small text-muted">Overdue</div>
+            <div style="background:#F8FAFC;border:1px solid #EEF2F7;border-radius:10px;padding:14px;">
+              <div style="font-size:28px;font-weight:700;color:#F59E0B;"><t t-esc="state.stats.overdue"/></div>
+              <div style="font-size:9px;color:#94A3B8;text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;">Overdue</div>
             </div>
           </div>
-          <h5 class="fw-bold mb-3" style="font-size:13px">High Risk Patients</h5>
-          <div style="max-height:220px;overflow-y:auto">
+          <h5 style="font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.07em;margin:0 0 12px;">High Risk Patients</h5>
+          <div style="max-height:220px;overflow-y:auto;padding-right:6px;">
             <t t-foreach="state.handoffList" t-as="p" t-key="p.id">
-              <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                <strong style="font-size:13px"><t t-esc="p.name"/></strong>
-                <div class="d-flex align-items-center gap-2">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #F1F5F9;">
+                <strong style="font-size:13px;color:#0F172A;"><t t-esc="p.name"/></strong>
+                <div style="display:flex;gap:6px;align-items:center;">
                   <t t-if="p.latestHR">
-                    <span class="sl-badge sl-badge-info">HR <t t-esc="p.latestHR"/></span>
-                    <span class="sl-badge sl-badge-info">SpO₂ <t t-esc="p.latestSpO2"/>%</span>
+                    <span class="sl-badge-info">HR <t t-esc="p.latestHR"/></span>
+                    <span class="sl-badge-info">SpO&#8322; <t t-esc="p.latestSpO2"/>%</span>
                   </t>
-                  <span t-attf-class="sl-badge sl-badge-#{p.risk_level}">
-                    <t t-esc="(p.risk_level || 'low').toUpperCase()"/>
+                  <span t-attf-class="sl-badge-#{p.risk_level === 'high' ? 'warning' : (p.risk_level || 'stable')}">
+                    <t t-esc="(p.risk_level || 'LOW').toUpperCase()"/>
                   </span>
                 </div>
               </div>
             </t>
             <t t-if="!state.handoffList or state.handoffList.length === 0">
-              <div class="text-muted text-center py-3 small">No high-risk patients.</div>
+              <div style="text-align:center;color:#94A3B8;padding:20px;font-size:12px;">No high-risk patients.</div>
             </t>
           </div>
-          <div class="mt-4 pt-3 border-top d-flex gap-2 justify-content-end">
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid #EEF2F7;">
             <button class="sl-btn-ghost" t-on-click="onCloseHandoffModal">Close</button>
-            <button class="sl-btn-ghost" t-on-click="onExportCSV"><i class="fa fa-download me-1"/>CSV</button>
-            <button class="sl-btn-primary" t-on-click="onPrintHandoff"><i class="fa fa-print me-1"/>Print</button>
+            <button class="sl-btn-ghost" t-on-click="onExportCSV">Export CSV</button>
+            <button class="sl-btn-primary" t-on-click="onPrintHandoff">Print</button>
           </div>
         </div>
       </div>
