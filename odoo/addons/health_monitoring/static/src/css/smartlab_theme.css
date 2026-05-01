@@ -1,9 +1,11 @@
-// SmartLab Clinical SaaS Theme
-// Design System — Applied to all non-dashboard views
+/* ============================================================
+   SmartLab Clinical SaaS Theme
+   Design System — Applied to all non-dashboard views
+   ============================================================ */
 
-// ── Global Font
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
+/* ── Global Font Override ── */
 .o_form_view,
 .o_list_view,
 .o_kanban_view,
@@ -13,11 +15,11 @@
     font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
 }
 
-// ── Page Background
+/* ── Page Background ── */
 .o_form_view .o_form_sheet_bg,
 .o_form_view .o_form_sheet { background: #F8FAFC !important; }
 
-// ── Cards
+/* ── Cards ── */
 .sl-card {
     background: #fff !important;
     border: 1px solid #EEF2F7 !important;
@@ -28,12 +30,13 @@
 .sl-card.shadow-sm,
 .sl-card.shadow-lg { box-shadow: none !important; }
 
+/* Remove shadow/border-0 from Bootstrap classes used on cards */
 .o_form_view .shadow-sm { box-shadow: none !important; }
-.o_form_view .border-0 { border: 1px solid #EEF2F7 !important; border-radius: 12px !important; }
+.o_form_view .border-0 { border: 1px solid #EEF2F7 !important; }
 .oe_kanban_card { box-shadow: none !important; }
 .oe_kanban_card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.06) !important; }
 
-// ── Horizontal separator / section headings
+/* ── Section Titles (horizontal separator) ── */
 .o_horizontal_separator {
     font-size: 10px !important;
     font-weight: 600 !important;
@@ -45,7 +48,7 @@
     margin-bottom: 12px !important;
 }
 
-// ── Smart stat buttons
+/* ── Smart Stat Buttons ── */
 .oe_stat_button {
     border: 1px solid #EEF2F7 !important;
     border-radius: 10px !important;
@@ -54,7 +57,7 @@
 }
 .oe_stat_button:hover { background: #EEF2F7 !important; }
 
-// ── Progress bars (thin)
+/* ── Progress Bars ── */
 .o_progressbar {
     height: 5px !important;
     border-radius: 3px !important;
@@ -62,7 +65,7 @@
 }
 .o_progressbar .o_progressbar_value { border-radius: 3px !important; }
 
-// ── Notebook tabs
+/* ── Notebook Tabs ── */
 .o_notebook .nav-link {
     font-size: 13px !important;
     font-weight: 500 !important;
@@ -73,7 +76,7 @@
     border-bottom-color: #185FA5 !important;
 }
 
-// ── Clinical Grid (list views)
+/* ── Clinical Grid (list views) ── */
 .sl-clinical-grid .o_data_row td,
 .sl-clinical-grid td {
     padding: 10px 14px !important;
@@ -95,7 +98,7 @@
 }
 .sl-clinical-grid .o_data_row:hover td { background: #FAFBFF !important; }
 
-// ── Form input fields
+/* ── Form Input Fields ── */
 .o_form_view .o_field_widget input[type="text"],
 .o_form_view .o_field_widget input[type="number"],
 .o_form_view .o_field_float input,
@@ -116,20 +119,31 @@
     box-shadow: none !important;
 }
 
-// ── Buttons
-.btn-primary {
+/* ── Buttons ── */
+.o_form_button_save,
+.btn-primary,
+.o_form_view .btn-primary {
     background: #185FA5 !important;
     border-color: #185FA5 !important;
     border-radius: 8px !important;
+    padding: 7px 18px !important;
     font-size: 12px !important;
     font-weight: 500 !important;
     transition: all 0.15s ease !important;
 }
 .btn-primary:hover { background: #1a6ab8 !important; border-color: #1a6ab8 !important; }
 .btn-success { border-radius: 8px !important; transition: all 0.15s ease !important; }
+.btn-outline-primary {
+    border-radius: 8px !important;
+    border: 1px solid #E2E8F0 !important;
+    color: #64748B !important;
+    background: transparent !important;
+    transition: all 0.15s ease !important;
+}
+.btn-outline-primary:hover { background: #F1F5F9 !important; }
 
-// ── Badge design system — override Bootstrap/Odoo badge colors
-.o_field_badge .badge {
+/* ── Badge design system ── */
+.o_field_badge.o_field_widget .badge {
     border-radius: 6px !important;
     font-size: 11px !important;
     font-weight: 600 !important;
@@ -137,29 +151,28 @@
     letter-spacing: 0.02em !important;
     border: 1px solid transparent !important;
 }
-
-// critical / danger
+/* critical / danger */
 .o_field_badge .badge.text-bg-danger,
 .o_field_badge .badge.bg-danger {
     background: #FCEBEB !important;
     color: #A32D2D !important;
     border-color: #F7C1C1 !important;
 }
-// high / warning
+/* high / warning */
 .o_field_badge .badge.text-bg-warning,
 .o_field_badge .badge.bg-warning {
     background: #FAEEDA !important;
     color: #854F0B !important;
     border-color: #FAC775 !important;
 }
-// success / stable
+/* success / stable */
 .o_field_badge .badge.text-bg-success,
 .o_field_badge .badge.bg-success {
     background: #EAF3DE !important;
     color: #3B6D11 !important;
     border-color: #C0DD97 !important;
 }
-// info / blue
+/* info / blue */
 .o_field_badge .badge.text-bg-info,
 .o_field_badge .badge.bg-info,
 .o_field_badge .badge.text-bg-primary,
@@ -168,7 +181,7 @@
     color: #0C447C !important;
     border-color: #B5D4F4 !important;
 }
-// muted
+/* muted */
 .o_field_badge .badge.text-bg-secondary,
 .o_field_badge .badge.bg-secondary {
     background: #F1F5F9 !important;
@@ -176,7 +189,53 @@
     border-color: #E2E8F0 !important;
 }
 
-// ── Alert AI banner box (attention / handled)
+/* ── Ward kanban cards ── */
+.sl-ward-card {
+    background: #fff !important;
+    border: 1px solid #EEF2F7 !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    overflow: hidden;
+}
+.sl-ward-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.06) !important; }
+
+/* ── Alert kanban cards ── */
+.sl-pipeline-card {
+    border-radius: 8px !important;
+    box-shadow: none !important;
+}
+
+/* ── Dot + Label section heading helper ── */
+.sl-section-dot {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 12px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #94A3B8;
+}
+.sl-section-dot .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* ── Remove Odoo purple from primary actions ── */
+.o_statusbar_status .o_arrow_button.o_arrow_button_current { background: #185FA5 !important; border-color: #185FA5 !important; }
+.o_form_view .o_group .o_wrap_label label { font-size: 12px !important; color: #64748B !important; font-weight: 500 !important; }
+
+/* ── Text colors ── */
+.text-primary { color: #185FA5 !important; }
+.text-danger  { color: #E24B4A !important; }
+.text-success { color: #16A34A !important; }
+.text-warning { color: #F59E0B !important; }
+.text-muted   { color: #64748B !important; }
+
+/* ── Alert banners (AI recommendation) ── */
 .sl-ai-alert-box {
     display: flex;
     align-items: flex-start;
@@ -190,22 +249,5 @@
     color: #854F0B;
 }
 
-// ── Text color utilities override
-.text-primary { color: #185FA5 !important; }
-.text-danger  { color: #E24B4A !important; }
-.text-success { color: #16A34A !important; }
-.text-warning { color: #F59E0B !important; }
-.text-muted   { color: #64748B !important; }
-
-// ── Statusbar active button — remove Odoo purple
-.o_statusbar_status .o_arrow_button.o_arrow_button_current {
-    background: #185FA5 !important;
-    border-color: #185FA5 !important;
-}
-
-// ── Field label text
-.o_form_view .o_group .o_wrap_label label {
-    font-size: 12px !important;
-    color: #64748B !important;
-    font-weight: 500 !important;
-}
+/* ── Remove fa icon bleeding ── */
+.fa { font-family: FontAwesome !important; }

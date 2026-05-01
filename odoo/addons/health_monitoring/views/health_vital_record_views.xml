@@ -13,94 +13,118 @@
         </header>
         <sheet>
           <field name="anomaly_detected" invisible="1"/>
-          
+
+          <!-- Page title — no fa icon -->
           <div class="oe_title mb-4">
-            <h1 class="d-flex align-items-center text-primary">
-              <i class="fa fa-heartbeat me-3"></i>Clinical Checkup
-            </h1>
+            <div style="margin-bottom:14px;">
+              <div style="font-size:18px;font-weight:600;color:#0F172A;letter-spacing:-0.3px;">Clinical Checkup</div>
+              <div style="font-size:12px;color:#64748B;margin-top:3px;">Enter vital signs for AI analysis</div>
+            </div>
           </div>
 
-          <!-- MODERN SIDEBAR LAYOUT -->
+          <!-- Two-column layout: left cards + right AI panel -->
           <div class="row">
-            <!-- Left Main Content: Clinical Data -->
+            <!-- Left: Clinical Data -->
             <div class="col-md-8">
               <div class="row sl-card-container mb-4">
-                  <div class="col-md-6 mb-3">
-                    <div class="sl-card shadow-sm p-4 bg-white rounded border-0 h-100">
-                      <h3 class="o_horizontal_separator text-primary mb-3"><i class="fa fa-heartbeat me-2"></i>Cardiovascular</h3>
-                      <group>
-                        <field name="patient_id" widget="many2one_avatar" options="{'no_create': True}"/>
-                        <label for="bp_systolic" string="Blood Pressure"/>
-                        <div class="o_row">
-                          <field name="bp_systolic" class="sl-numeric" placeholder="SYS"/>
-                          <span class="mx-1">/</span>
-                          <field name="bp_diastolic" class="sl-numeric" placeholder="DIA"/>
-                        </div>
-                        <field name="heart_rate" class="sl-numeric" string="Heart Rate (bpm)"/>
-                      </group>
+                <!-- Cardiovascular card -->
+                <div class="col-md-6 mb-3">
+                  <div style="background:#fff;border:1px solid #EEF2F7;border-radius:12px;padding:16px 18px;height:100%;">
+                    <div style="display:flex;align-items:center;gap:7px;margin-bottom:12px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:#94A3B8;">
+                      <div style="width:7px;height:7px;border-radius:50%;background:#185FA5;flex-shrink:0;"></div>
+                      Cardiovascular
                     </div>
+                    <group>
+                      <field name="patient_id" widget="many2one_avatar" options="{'no_create': True}"/>
+                      <label for="bp_systolic" string="Blood Pressure"/>
+                      <div class="o_row">
+                        <field name="bp_systolic" class="sl-numeric" placeholder="SYS"/>
+                        <span class="mx-1">/</span>
+                        <field name="bp_diastolic" class="sl-numeric" placeholder="DIA"/>
+                      </div>
+                      <field name="heart_rate" class="sl-numeric" string="Heart Rate (bpm)"/>
+                    </group>
                   </div>
-                  <div class="col-md-6 mb-3">
-                    <div class="sl-card shadow-sm p-4 bg-white rounded border-0 h-100">
-                      <h3 class="o_horizontal_separator text-info mb-3"><i class="fa fa-lungs me-2"></i>Respiratory</h3>
-                      <group>
-                        <field name="recorded_at"/>
-                        <field name="spo2" class="sl-numeric" string="SpO2 (%)"/>
-                        <field name="respiratory_rate" class="sl-numeric" string="Respiration (/min)"/>
-                      </group>
+                </div>
+                <!-- Respiratory card -->
+                <div class="col-md-6 mb-3">
+                  <div style="background:#fff;border:1px solid #EEF2F7;border-radius:12px;padding:16px 18px;height:100%;">
+                    <div style="display:flex;align-items:center;gap:7px;margin-bottom:12px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:#94A3B8;">
+                      <div style="width:7px;height:7px;border-radius:50%;background:#16A34A;flex-shrink:0;"></div>
+                      Respiratory
                     </div>
+                    <group>
+                      <field name="recorded_at"/>
+                      <field name="spo2" class="sl-numeric" string="SpO2 (%)"/>
+                      <field name="respiratory_rate" class="sl-numeric" string="Respiration (/min)"/>
+                    </group>
                   </div>
+                </div>
               </div>
-              
+
+              <!-- Metabolic card -->
               <div class="row sl-card-container">
-                  <div class="col-md-12">
-                    <div class="sl-card shadow-sm p-4 bg-white rounded border-0">
-                      <h3 class="o_horizontal_separator text-warning mb-3"><i class="fa fa-thermometer-half me-2"></i>Metabolic &amp; Temp</h3>
-                      <div class="row">
-                        <div class="col-md-6">
-                          <group>
-                            <field name="temperature" class="sl-numeric" string="Body Temp (°C)"/>
-                          </group>
-                        </div>
-                        <div class="col-md-6">
-                            <group>
-                              <field name="glucose" class="sl-numeric" string="Glucose (mg/dL)"/>
-                            </group>
-                        </div>
+                <div class="col-md-12">
+                  <div style="background:#fff;border:1px solid #EEF2F7;border-radius:12px;padding:16px 18px;">
+                    <div style="display:flex;align-items:center;gap:7px;margin-bottom:12px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:#94A3B8;">
+                      <div style="width:7px;height:7px;border-radius:50%;background:#F59E0B;flex-shrink:0;"></div>
+                      Metabolic &amp; Temp
+                    </div>
+                    <div class="row">
+                      <div class="col-md-6">
+                        <group>
+                          <field name="temperature" class="sl-numeric" string="Body Temp (°C)"/>
+                        </group>
+                      </div>
+                      <div class="col-md-6">
+                        <group>
+                          <field name="glucose" class="sl-numeric" string="Glucose (mg/dL)"/>
+                        </group>
                       </div>
                     </div>
                   </div>
+                </div>
               </div>
             </div>
 
-            <!-- Right Sidebar: Vertical AI Assessment -->
+            <!-- Right: AI Assessment Panel -->
             <div class="col-md-4">
-              <div t-attf-class="sl-card shadow-lg p-4 rounded border-0 h-100 d-flex flex-column align-items-center justify-content-center text-center #{anomaly_detected and 'bg-danger-subtle border-start border-danger border-4' or 'bg-success-subtle border-start border-success border-4'}" style="min-height: 400px;">
-                  <div t-attf-class="rounded-circle d-flex align-items-center justify-content-center mb-4 #{anomaly_detected and 'bg-danger text-white' or 'bg-success text-white'}" style="width: 80px; height: 80px;">
-                    <i t-attf-class="fa #{anomaly_detected and 'fa-warning' or 'fa-check-circle'} fa-3x"></i>
-                  </div>
-                  
-                  <h2 class="fw-bold mb-2 text-danger" invisible="not anomaly_detected">
-                    Anomaly Detected
-                  </h2>
-                  <h2 class="fw-bold mb-2 text-success" invisible="anomaly_detected">
-                    Normal Status
-                  </h2>
-                  
-                  <div class="w-100 mt-4 mb-4 p-4 bg-white rounded shadow-sm border text-center">
-                    <div class="text-muted small text-uppercase fw-bold mb-4">Clinical Risk Score</div>
-                    <div class="d-flex justify-content-center" style="min-height: 180px;">
-                        <field name="ai_score" widget="gauge" options="{'max_field': 100, 'title': ''}" nolabel="1"/>
-                    </div>
-                    <div class="mt-n3 h4 font-monospace fw-bold" t-att-class="anomaly_detected and 'text-danger' or 'text-success'">
-                      <field name="ai_score" nolabel="1"/>%
-                    </div>
-                  </div>
+              <div style="background:#fff;border:1px solid #EEF2F7;border-radius:12px;padding:16px;min-height:400px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;">
 
-                  <div class="text-start w-100 p-3 bg-white rounded shadow-sm border flex-grow-1" style="overflow-y: auto;">
-                    <div class="text-muted small text-uppercase fw-bold mb-2">Clinical Analysis</div>
-                    <field name="parsed_clinical_hints" nolabel="1"/>
+                <!-- Status icon circle — SVG, no fa -->
+                <div style="width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:8px;background:#E24B4A;" invisible="not anomaly_detected">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div style="width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:8px;background:#16A34A;" invisible="anomaly_detected">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 6L9 17l-5-5" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+
+                <div style="font-size:16px;font-weight:700;color:#E24B4A;" invisible="not anomaly_detected">Anomaly Detected</div>
+                <div style="font-size:16px;font-weight:700;color:#16A34A;" invisible="anomaly_detected">Normal Status</div>
+
+                <!-- Risk Score gauge -->
+                <div style="background:#F8FAFC;border:1px solid #EEF2F7;border-radius:10px;padding:14px;width:100%;">
+                  <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#94A3B8;margin-bottom:8px;">Clinical Risk Score</div>
+                  <div style="display:flex;justify-content:center;min-height:130px;">
+                    <field name="ai_score" widget="gauge" options="{'max_field': 100, 'title': ''}" nolabel="1"/>
                   </div>
+                  <div style="font-size:18px;font-weight:700;font-family:monospace;color:#E24B4A;" invisible="not anomaly_detected">
+                    <field name="ai_score" nolabel="1"/>%
+                  </div>
+                  <div style="font-size:18px;font-weight:700;font-family:monospace;color:#16A34A;" invisible="anomaly_detected">
+                    <field name="ai_score" nolabel="1"/>%
+                  </div>
+                </div>
+
+                <!-- Clinical analysis text -->
+                <div style="background:#F8FAFC;border:1px solid #EEF2F7;border-radius:8px;padding:12px;width:100%;text-align:left;flex:1;overflow-y:auto;">
+                  <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#94A3B8;margin-bottom:6px;">Clinical Analysis</div>
+                  <field name="parsed_clinical_hints" nolabel="1"/>
+                </div>
               </div>
             </div>
           </div>
@@ -117,14 +141,14 @@
       <tree decoration-danger="status=='critical'" class="sl-clinical-grid" limit="20">
         <field name="recorded_at" string="Checked At"/>
         <field name="patient_id" widget="many2one_avatar" string="Patient Profile"/>
-        <field name="heart_rate" string="Pulse (bpm)" class="fw-bold text-primary"/>
-        <field name="bp_systolic" string="SYS" class="sl-numeric"/>
-        <field name="bp_diastolic" string="DIA" class="sl-numeric"/>
-        <field name="spo2" string="SpO2 (%)" decoration-danger="spo2 &lt; 90" decoration-warning="spo2 &lt; 95" class="fw-bold"/>
+        <field name="heart_rate" string="Pulse (bpm)"/>
+        <field name="bp_systolic" string="SYS"/>
+        <field name="bp_diastolic" string="DIA"/>
+        <field name="spo2" string="SpO2 (%)" decoration-danger="spo2 &lt; 90" decoration-warning="spo2 &lt; 95"/>
         <field name="temperature" string="Temp (°C)" optional="show"/>
         <field name="glucose" string="Glucose" optional="show"/>
-        <field name="ai_score" string="AI Clinical Risk" widget="progressbar"/>
-        <field name="status" string="Triag Status" widget="badge" 
+        <field name="ai_score" string="AI Risk" widget="progressbar"/>
+        <field name="status" string="Triage Status" widget="badge"
                decoration-danger="status=='critical'"
                decoration-warning="status=='warning'"
                decoration-muted="status=='normal'"/>
