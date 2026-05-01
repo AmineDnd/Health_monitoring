@@ -10,6 +10,7 @@
         'security/security_groups.xml',
         'security/security_rules.xml',
         'security/ir.model.access.csv',
+        'views/assets.xml',
         'views/health_vital_record_views.xml',
         'views/health_alert_views.xml',
         'views/health_patient_views.xml',

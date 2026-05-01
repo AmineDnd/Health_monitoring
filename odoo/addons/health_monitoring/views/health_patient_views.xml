@@ -33,20 +33,32 @@
 
           <!-- Title Area -->
           <div class="oe_title mb-4">
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
-              <div style="width:44px;height:44px;border-radius:10px;background:#E6F1FB;color:#0C447C;font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                P
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <div style="width:44px;height:44px;border-radius:10px;background:#E6F1FB;color:#0C447C;font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  P
+                </div>
+                <div>
+                  <field name="name" placeholder="Patient Name" style="font-size:20px;font-weight:700;color:#0F172A;display:block;"/>
+                  <div style="font-size:12px;color:#64748B;margin-top:3px;display:flex;align-items:center;gap:6px;">
+                    <span>Age <field name="age" nolabel="1" readonly="1" style="font-weight:600;color:#334155;display:inline;"/></span>
+                    <span style="color:#CBD5E1;">·</span>
+                    <field name="gender" nolabel="1" readonly="1" style="color:#334155;font-weight:600;display:inline;"/>
+                    <span style="color:#CBD5E1;">·</span>
+                    <field name="category" nolabel="1" readonly="1" style="color:#334155;font-weight:600;display:inline;"/>
+                    <span style="color:#CBD5E1;">·</span>
+                    <field name="profile_male" nolabel="1" readonly="1" invisible="gender == 'female'" style="color:#334155;font-weight:600;display:inline;"/>
+                    <field name="profile_female" nolabel="1" readonly="1" invisible="gender != 'female'" style="color:#334155;font-weight:600;display:inline;"/>
+                  </div>
+                </div>
               </div>
-              <div>
-                <field name="name" placeholder="Patient Name" style="font-size:18px;font-weight:600;color:#0F172A;"/>
-                <field name="risk_level" widget="badge"
-                       decoration-danger="risk_level=='critical'"
-                       decoration-warning="risk_level=='high'"
-                       decoration-info="risk_level=='handled'"
-                       decoration-primary="risk_level=='medium'"
-                       decoration-success="risk_level=='low'"
-                       style="font-size:11px;font-weight:600;margin-left:8px;"/>
-              </div>
+              <field name="risk_level" widget="badge"
+                     decoration-danger="risk_level=='critical'"
+                     decoration-warning="risk_level=='high'"
+                     decoration-info="risk_level=='handled'"
+                     decoration-primary="risk_level=='medium'"
+                     decoration-success="risk_level=='low'"
+                     style="font-size:12px;font-weight:600;align-self:flex-start;"/>
             </div>
           </div>
 

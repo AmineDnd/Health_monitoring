@@ -2,7 +2,8 @@
 <odoo>
     <template id="smartlab_assets" inherit_id="web.assets_backend">
         <xpath expr="." position="inside">
-            <link rel="stylesheet" type="text/css" href="/health_monitoring/static/src/css/smartlab_theme.css"/>
+            <!-- Inter font from Google Fonts -->
+            <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap"/>
         </xpath>
     </template>
 </odoo>
