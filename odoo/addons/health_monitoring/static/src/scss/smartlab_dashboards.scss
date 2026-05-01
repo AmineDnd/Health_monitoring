@@ -3,7 +3,6 @@
 // Applied via smartlab_dashboards.scss (loaded by __manifest__.py)
 // =============================================================================
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 // ── KEYFRAMES ──────────────────────────────────────────────────────────────
 @keyframes sl-pulse-dot {
@@ -31,6 +30,7 @@
   -moz-osx-font-smoothing: grayscale;
   color: #0F172A;
   min-height: 100%;
+  overflow-y: auto;
 
   *, *::before, *::after { box-sizing: border-box; }
 }
@@ -40,13 +40,13 @@
 .sl-doctor-dashboard,
 .sl-nurse-dashboard {
   background: #F8FAFC !important;
-  min-height: 100vh;
+  min-height: 100%;
+  height: max-content;
 }
 
-// Kill ALL Font Awesome icons inside our dashboards
-.sl-dashboard-container .fa,
-.sl-dashboard-container .fa-solid,
-.sl-dashboard-container .fa-regular {
+// Hide Font Awesome icon elements that have ONLY icon classes (no meaningful text)
+// We target the kpi-icon class specifically to avoid hiding useful content
+.sl-kpi-icon {
   display: none !important;
 }
 
@@ -68,7 +68,7 @@
   background: #185FA5 !important;
   color: #ffffff !important;
   border: none !important;
-  border-radius: 9px;
+  border-radius: 50px;
   padding: 8px 18px;
   font-size: 12px;
   font-weight: 500;
@@ -92,7 +92,7 @@
   background: transparent !important;
   border: 1px solid #E2E8F0 !important;
   color: #64748B !important;
-  border-radius: 9px;
+  border-radius: 50px;
   padding: 8px 14px;
   font-size: 12px;
   font-weight: 500;
@@ -116,7 +116,7 @@
   background: #FCEBEB;
   color: #A32D2D;
   border: 1px solid #F7C1C1;
-  border-radius: 6px;
+  border-radius: 50px;
   font-size: 10px;
   font-weight: 600;
   padding: 2px 8px;
@@ -129,7 +129,7 @@
   background: #FAEEDA;
   color: #854F0B;
   border: 1px solid #FAC775;
-  border-radius: 6px;
+  border-radius: 50px;
   font-size: 10px;
   font-weight: 600;
   padding: 2px 8px;
@@ -143,7 +143,7 @@
   background: #EAF3DE;
   color: #3B6D11;
   border: 1px solid #C0DD97;
-  border-radius: 6px;
+  border-radius: 50px;
   font-size: 10px;
   font-weight: 600;
   padding: 2px 8px;
@@ -156,7 +156,7 @@
   background: #E6F1FB;
   color: #0C447C;
   border: 1px solid #B5D4F4;
-  border-radius: 6px;
+  border-radius: 50px;
   font-size: 10px;
   font-weight: 600;
   padding: 2px 8px;
@@ -212,7 +212,7 @@
   // ── Dark header (ONLY dark element)
   .sl-admin-header {
     background: #0B1120;
-    padding: 16px 24px;
+    padding: 10px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -268,11 +268,6 @@
     background: #F8FAFC;
     padding: 20px 24px;
     flex: 1;
-    overflow-y: auto;
-
-    &::-webkit-scrollbar       { width: 4px; }
-    &::-webkit-scrollbar-track { background: transparent; }
-    &::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 2px; }
   }
 
   // KPI cards row
@@ -411,8 +406,7 @@
 .sl-doctor-dashboard {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
+  height: max-content;
   background: #F8FAFC;
 
   // Light header
@@ -423,13 +417,13 @@
     flex-shrink: 0;
   }
 
-  // Split layout
+  // Split layout — 2 column grid
   .sl-doctor-body {
     display: grid;
     grid-template-columns: 280px 1fr;
+    width: 100%;
     flex: 1;
-    overflow: hidden;
-    min-height: 0;
+    align-items: stretch;
   }
 
   // Left queue pane
@@ -438,13 +432,13 @@
     border-right: 1px solid #EEF2F7;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    height: 100%;
+    overflow-y: auto;
   }
 
   .sl-queue-section {
     display: flex;
     flex-direction: column;
-    overflow: hidden;
     padding: 14px;
 
     &.unclaimed { flex: 1.6; border-bottom: 1px solid #EEF2F7; }
@@ -574,11 +568,6 @@
   .sl-nurse-body {
     padding: 20px 24px;
     flex: 1;
-    overflow-y: auto;
-
-    &::-webkit-scrollbar       { width: 4px; }
-    &::-webkit-scrollbar-track { background: transparent; }
-    &::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 2px; }
   }
 
   // Stats bar
@@ -729,8 +718,8 @@
       .sl-chip {
         font-size: 10px;
         font-weight: 500;
-        padding: 3px 8px;
-        border-radius: 6px;
+        padding: 3px 9px;
+        border-radius: 50px;
 
         &.chip-ok     { background: #EAF3DE; color: #3B6D11; }
         &.chip-warn   { background: #FAEEDA; color: #854F0B; }

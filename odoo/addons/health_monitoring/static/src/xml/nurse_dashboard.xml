@@ -12,8 +12,8 @@
           </p>
         </div>
         <div style="display:flex;gap:8px;">
-          <button class="sl-btn-ghost" t-on-click="onOpenHandoffModal">Handoff</button>
-          <button class="sl-btn-primary" t-on-click="onRefresh">Refresh</button>
+          <button class="sl-btn-ghost" style="border-radius:50px;" t-on-click="onOpenHandoffModal"><t t-esc="'Handoff'"/></button>
+          <button class="sl-btn-primary" style="border-radius:50px;" t-on-click="onRefresh"><t t-esc="'Refresh'"/></button>
         </div>
       </div>
 
@@ -25,23 +25,27 @@
           <div class="sl-stat-pill" style="cursor:pointer;"
                t-on-click="() => this.action.doAction('health_monitoring.action_patients')">
             <div class="sl-stat-num"><t t-esc="state.patients.length"/></div>
-            <div class="sl-stat-label">Total</div>
+            <div class="sl-stat-label"><t t-esc="'Total'"/></div>
           </div>
-          <div class="sl-stat-pill stat-critical">
+          <div class="sl-stat-pill stat-critical" style="cursor:pointer;"
+               t-on-click="() => this.action.doAction('health_monitoring.action_all_alerts')">
             <div class="sl-stat-num"><t t-esc="state.stats.critical"/></div>
-            <div class="sl-stat-label">Critical</div>
+            <div class="sl-stat-label"><t t-esc="'Critical'"/></div>
           </div>
-          <div class="sl-stat-pill stat-overdue">
+          <div class="sl-stat-pill stat-overdue" style="cursor:pointer;"
+               t-on-click="() => this.action.doAction('health_monitoring.action_patients')">
             <div class="sl-stat-num"><t t-esc="state.stats.overdue"/></div>
-            <div class="sl-stat-label">Overdue</div>
+            <div class="sl-stat-label"><t t-esc="'Overdue'"/></div>
           </div>
-          <div class="sl-stat-pill stat-due-soon">
+          <div class="sl-stat-pill stat-due-soon" style="cursor:pointer;"
+               t-on-click="() => this.action.doAction('health_monitoring.action_patients')">
             <div class="sl-stat-num"><t t-esc="state.stats.dueSoon"/></div>
-            <div class="sl-stat-label">Due Soon</div>
+            <div class="sl-stat-label"><t t-esc="'Due Soon'"/></div>
           </div>
-          <div class="sl-stat-pill stat-ok">
+          <div class="sl-stat-pill stat-ok" style="cursor:pointer;"
+               t-on-click="() => this.action.doAction('health_monitoring.action_patients')">
             <div class="sl-stat-num"><t t-esc="state.stats.ok"/></div>
-            <div class="sl-stat-label">Up to Date</div>
+            <div class="sl-stat-label"><t t-esc="'Up to Date'"/></div>
           </div>
         </div>
 
@@ -111,6 +115,11 @@
                 <span t-attf-class="sl-chip #{patient.bpAbnormal ? 'chip-danger' : patient.bpWarn ? 'chip-warn' : 'chip-ok'}">
                   BP <t t-esc="patient.latestBP"/>
                 </span>
+                <t t-if="patient.latestTemp">
+                  <span t-attf-class="sl-chip #{patient.tempAbnormal ? 'chip-danger' : 'chip-ok'}">
+                    <t t-esc="patient.latestTemp"/>&#176;
+                  </span>
+                </t>
               </div>
               <div class="sl-vitals-chips" t-if="!patient.latestHR">
                 <span class="sl-chip chip-warn">No vitals recorded</span>

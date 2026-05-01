@@ -3,6 +3,7 @@
 import { registry } from "@web/core/registry";
 import { Component, onWillStart, onMounted, onWillDestroy, useState, useRef } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
+import { loadJS } from "@web/core/assets";
 
 export class DoctorDashboard extends Component {
     setup() {
@@ -32,20 +33,25 @@ export class DoctorDashboard extends Component {
         this._handleKeyDown = this.handleKeyDown.bind(this);
 
         onWillStart(async () => {
+            // Load Chart.js first
+            await loadJS("https://cdn.jsdelivr.net/npm/chart.js");
             // Get user name
             const userRec = await this.orm.read("res.users", [this.user.userId], ["name"]);
             if (userRec.length > 0) {
                 this.state.doctorName = userRec[0].name;
             }
-            // Find ward via doctor_ids
-            const myWards = await this.orm.searchRead("health.ward", [['doctor_ids', 'in', [this.user.userId]]], ["name", "id"], { limit: 1 });
+            // Find ALL wards this doctor belongs to (no limit:1 — a doctor can cover multiple wards)
+            const myWards = await this.orm.searchRead("health.ward", [['doctor_ids', 'in', [this.user.userId]]], ["name", "id"]);
             if (myWards.length > 0) {
-                this.wardId = myWards[0].id;
-                this.state.wardName = myWards[0].name;
+                this.wardIds = myWards.map(w => w.id);         // ALL ward IDs
+                this.wardId  = myWards[0].id;                  // primary (for display)
+                this.state.wardName = myWards.map(w => w.name).join(', ');
             } else {
+                // Fallback: if not assigned to any ward, load the first available ward
                 const wards = await this.orm.searchRead("health.ward", [], ["name", "id"], { limit: 1 });
                 if (wards.length > 0) {
-                    this.wardId = wards[0].id;
+                    this.wardIds = [wards[0].id];
+                    this.wardId  = wards[0].id;
                     this.state.wardName = wards[0].name;
                 }
             }
@@ -54,12 +60,14 @@ export class DoctorDashboard extends Component {
 
         onMounted(() => {
             document.addEventListener("keydown", this._handleKeyDown);
-            this.refreshInterval = setInterval(() => {
-                this.fetchQueue();
+            this.refreshInterval = setInterval(async () => {
+                await this.fetchQueue();
                 if (this.state.selectedPatient) {
-                    this.fetchPatientData(this.state.selectedPatient.id);
+                    await this.fetchPatientData(this.state.selectedPatient.id);
+                    // Re-render chart after background refresh
+                    setTimeout(() => this.renderTrendChart(), 150);
                 }
-            }, 15000);
+            }, 30000);  // 30s auto-refresh
         });
 
         onWillDestroy(() => {
@@ -101,11 +109,19 @@ export class DoctorDashboard extends Component {
     }
 
     async onViewPatient(alert) {
+        // Destroy existing chart so the canvas is clean before new data renders
+        if (this.charts.trend) {
+            this.charts.trend.destroy();
+            this.charts.trend = null;
+        }
+        this.state.selectedPatient = null;  // clear panel immediately for visual feedback
         await this.fetchPatientData(alert.patient_id[0]);
-        setTimeout(() => this.renderTrendChart(), 100);
+        // chart rendered inside fetchPatientData with 300ms delay
     }
 
     async onClaimAlert(alertId) {
+        // Find the alert before claiming so we know which patient to load
+        const alertRec = this.state.unclaimedAlerts.find(a => a.id === alertId);
         try {
             await this.orm.call("health.alert", "action_claim_alert", [[alertId]]);
         } catch (e) {
@@ -115,14 +131,37 @@ export class DoctorDashboard extends Component {
                 state: 'investigating'
             });
         }
+        // Refresh queue first so the card moves to My Cases
         await this.fetchQueue();
+        // Auto-load the claimed patient into the right panel
+        if (alertRec && alertRec.patient_id) {
+            if (this.charts.trend) { this.charts.trend.destroy(); this.charts.trend = null; }
+            await this.fetchPatientData(alertRec.patient_id[0]);
+        }
     }
 
     async onResolveAlert(alertId) {
+        // Check if we're resolving the currently-selected patient's alert
+        const resolvedAlert = this.state.myActiveAlerts.find(a => a.id === alertId);
+        const isSelectedPatient = resolvedAlert && this.state.selectedPatient
+            && resolvedAlert.patient_id[0] === this.state.selectedPatient.id;
+
         await this.orm.call("health.alert", "action_resolve", [[alertId]]);
         await this.fetchQueue();
-        if (this.state.selectedPatient) {
-            await this.fetchPatientData(this.state.selectedPatient.id);
+
+        // If the resolved alert belonged to the patient in the right panel,
+        // check if they still have active alerts — if not, clear the panel
+        if (isSelectedPatient) {
+            const stillActive = this.state.myActiveAlerts.find(
+                a => a.patient_id[0] === this.state.selectedPatient.id
+            );
+            if (!stillActive) {
+                if (this.charts.trend) { this.charts.trend.destroy(); this.charts.trend = null; }
+                this.state.selectedPatient = null;
+                this.state.vitals = {};
+            } else {
+                await this.fetchPatientData(this.state.selectedPatient.id);
+            }
         }
     }
 
@@ -161,9 +200,9 @@ export class DoctorDashboard extends Component {
     // --- Data ---
     async fetchQueue() {
         try {
-            // Filter unclaimed alerts to the doctor's ward when possible
-            const unclaimedDomain = this.wardId
-                ? [['state', '=', 'new'], ['assigned_doctor_id', '=', false], ['patient_id.ward_id', '=', this.wardId]]
+            // Use ALL ward IDs the doctor belongs to (wardIds array)
+            const unclaimedDomain = (this.wardIds && this.wardIds.length > 0)
+                ? [['state', '=', 'new'], ['assigned_doctor_id', '=', false], ['patient_id.ward_id', 'in', this.wardIds]]
                 : [['state', '=', 'new'], ['assigned_doctor_id', '=', false]];
 
             const unclaimed = await this.orm.searchRead("health.alert",
@@ -192,6 +231,11 @@ export class DoctorDashboard extends Component {
             if (pRec.length > 0) {
                 const p = pRec[0];
                 p.initials = p.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                // Sanitize risk_level — only allow known values
+                const validLevels = ['low', 'medium', 'high', 'critical'];
+                if (!validLevels.includes(p.risk_level)) {
+                    p.risk_level = 'low';
+                }
                 this.state.selectedPatient = p;
             }
 
@@ -226,6 +270,8 @@ export class DoctorDashboard extends Component {
                 const bpRisk = Math.min(100, Math.max(0, (bp - 120) * 2));
                 const feverRisk = Math.min(100, Math.max(0, (temp - 37) * 40));
 
+                const bradyRisk = Math.min(100, Math.max(0, hr < 60 ? (60 - hr) * 3 : 0));
+
                 const riskColor = (v) => v > 60 ? '#F87171' : v > 30 ? '#FBBF24' : '#34D399';
 
                 this.state.risk = {
@@ -233,13 +279,14 @@ export class DoctorDashboard extends Component {
                     hypoxia: hypRisk, hypoxiaColor: riskColor(hypRisk),
                     hypertension: bpRisk, hypertensionColor: riskColor(bpRisk),
                     fever: feverRisk, feverColor: riskColor(feverRisk),
+                    bradycardia: bradyRisk, bradycardiaColor: riskColor(bradyRisk),
                 };
             } else {
                 this.state.vitals = {};
             }
 
             this._patientVitals = vitals.reverse();
-            setTimeout(() => this.renderTrendChart(), 100);
+            setTimeout(() => this.renderTrendChart(), 300);
         } catch (e) {
             console.error("Patient data fetch error:", e);
         }
@@ -247,45 +294,98 @@ export class DoctorDashboard extends Component {
 
     // --- Charts ---
     renderTrendChart() {
-        if (!window.Chart || !this.trendChartRef.el || !this._patientVitals || this._patientVitals.length === 0) return;
-        if (this.charts.trend) this.charts.trend.destroy();
+        if (!window.Chart || !this.trendChartRef.el) return;
+        if (this.charts.trend) { this.charts.trend.destroy(); this.charts.trend = null; }
 
-        const data = this._patientVitals;
+        const data = this._patientVitals || [];
+
+        if (data.length === 0) {
+            // Draw empty state message on canvas
+            const canvas = this.trendChartRef.el;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#94A3B8';
+            ctx.font = '12px Inter, system-ui';
+            ctx.textAlign = 'center';
+            ctx.fillText('No vitals recorded yet', canvas.width / 2, canvas.height / 2);
+            return;
+        }
+
         const labels = data.map(v => {
             if (!v.recorded_at) return '';
             const d = new Date(v.recorded_at.replace(' ', 'T') + 'Z');
             return d.getHours() + ':' + d.getMinutes().toString().padStart(2, '0');
         });
-        const hrValues = data.map(v => v.heart_rate || 0);
 
-        // Color each bar as a gradient based on index (old to new)
-        const barColors = hrValues.map((v, i) => {
-            const pct = i / Math.max(1, hrValues.length - 1);
-            // blend #1E3A5F and #F87171
-            const r = Math.round(30 + pct * (248 - 30));
-            const g = Math.round(58 + pct * (113 - 58));
-            const b = Math.round(95 + pct * (113 - 95));
-            return `rgb(${r}, ${g}, ${b})`;
+        const hrValues  = data.map(v => v.heart_rate  || null);
+        const spo2Values = data.map(v => v.spo2        || null);
+        const bpValues  = data.map(v => v.bp_systolic || null);
+        const tempValues = data.map(v => v.temperature ? v.temperature * 10 : null); // scale x10 to fit same axis
+
+        const makeDataset = (label, values, color, hidden) => ({
+            label,
+            data: values,
+            borderColor: color,
+            backgroundColor: color + '18',
+            borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            fill: false,
+            tension: 0.4,
+            spanGaps: true,
+            hidden: hidden || false,
         });
 
         this.charts.trend = new Chart(this.trendChartRef.el, {
-            type: 'bar',
+            type: 'line',
             data: {
                 labels,
-                datasets: [{
-                    data: hrValues,
-                    backgroundColor: barColors,
-                    borderRadius: 4,
-                    borderSkipped: false,
-                }]
+                datasets: [
+                    makeDataset('HR (bpm)',    hrValues,   '#E24B4A', false),
+                    makeDataset('SpO₂ (%)',   spo2Values, '#185FA5', false),
+                    makeDataset('BP Sys',     bpValues,   '#F59E0B', false),
+                    makeDataset('Temp ×10',   tempValues, '#16A34A', true),  // hidden by default
+                ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        align: 'end',
+                        labels: {
+                            boxWidth: 10,
+                            boxHeight: 10,
+                            font: { size: 10, family: 'Inter, system-ui' },
+                            color: '#64748B',
+                            padding: 10,
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => {
+                                if (ctx.dataset.label === 'Temp ×10') {
+                                    return `Temp: ${(ctx.parsed.y / 10).toFixed(1)}°C`;
+                                }
+                                return `${ctx.dataset.label}: ${ctx.parsed.y}`;
+                            }
+                        }
+                    }
+                },
                 scales: {
-                    x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } },
-                    y: { display: false, beginAtZero: false }
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#94a3b8', font: { size: 10 } }
+                    },
+                    y: {
+                        display: true,
+                        beginAtZero: false,
+                        grid: { color: '#F1F5F9' },
+                        ticks: { color: '#94a3b8', font: { size: 10 }, maxTicksLimit: 5 }
+                    }
                 }
             }
         });

@@ -13,20 +13,20 @@
           <div style="display:flex;gap:6px;">
             <button t-on-click="() => this.setRange('today')"
                     t-att-class="state.dateRange === 'today' ? 'sl-header-btn active' : 'sl-header-btn'">
-              Today
+              <t t-esc="'Today'"/>
             </button>
             <button t-on-click="() => this.setRange('week')"
                     t-att-class="state.dateRange === 'week' ? 'sl-header-btn active' : 'sl-header-btn'">
-              This Week
+              <t t-esc="'This Week'"/>
             </button>
             <button t-on-click="() => this.setRange('month')"
                     t-att-class="state.dateRange === 'month' ? 'sl-header-btn active' : 'sl-header-btn'">
-              Month
+              <t t-esc="'Month'"/>
             </button>
           </div>
           <span class="sl-live-badge">
             <span class="sl-live-dot"/>
-            Live
+            <t t-esc="'Live'"/>
           </span>
         </div>
       </div>
@@ -105,15 +105,15 @@
               <div style="display:flex;justify-content:space-around;padding-top:10px;border-top:1px solid #F1F5F9;margin-top:8px;">
                 <div style="text-align:center;">
                   <div style="font-size:18px;font-weight:700;color:#16A34A;"><t t-esc="state.patientStatus.stable"/></div>
-                  <div style="font-size:9px;color:#94A3B8;text-transform:uppercase;letter-spacing:0.06em;">Stable</div>
+                  <div style="font-size:9px;color:#94A3B8;text-transform:uppercase;letter-spacing:0.06em;"><t t-esc="'Stable'"/></div>
                 </div>
                 <div style="text-align:center;">
                   <div style="font-size:18px;font-weight:700;color:#F59E0B;"><t t-esc="state.patientStatus.warning"/></div>
-                  <div style="font-size:9px;color:#94A3B8;text-transform:uppercase;letter-spacing:0.06em;">Warning</div>
+                  <div style="font-size:9px;color:#94A3B8;text-transform:uppercase;letter-spacing:0.06em;"><t t-esc="'Warning'"/></div>
                 </div>
                 <div style="text-align:center;">
                   <div style="font-size:18px;font-weight:700;color:#E24B4A;"><t t-esc="state.patientStatus.critical"/></div>
-                  <div style="font-size:9px;color:#94A3B8;text-transform:uppercase;letter-spacing:0.06em;">Critical</div>
+                  <div style="font-size:9px;color:#94A3B8;text-transform:uppercase;letter-spacing:0.06em;"><t t-esc="'Critical'"/></div>
                 </div>
               </div>
             </div>

@@ -86,19 +86,24 @@ export class AdminDashboard extends Component {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         let start = new Date(today);
-        if (this.state.dateRange === 'week') start.setDate(start.getDate() - 7);
-        else if (this.state.dateRange === 'month') start.setMonth(start.getMonth() - 1);
+        if (this.state.dateRange === 'today') {
+            // today only — start is already midnight today
+        } else if (this.state.dateRange === 'week') {
+            start.setDate(start.getDate() - 7);
+        } else if (this.state.dateRange === 'month') {
+            start.setMonth(start.getMonth() - 1);
+        }
         const startStr = start.toISOString().split('T')[0] + ' 00:00:00';
         return [[field, '>=', startStr]];
     }
 
     // --- Navigation ---
     openAllPatients() {
-        this.action.doAction('health_monitoring.action_health_patient');
+        this.action.doAction('health_monitoring.action_patients');
     }
 
     openAllAlerts() {
-        this.action.doAction('health_monitoring.action_health_alert');
+        this.action.doAction('health_monitoring.action_all_alerts');
     }
 
     openAlert(alertId) {
@@ -136,13 +141,19 @@ export class AdminDashboard extends Component {
     async setRange(range) {
         this.state.dateRange = range;
         await this.fetchAll();
-        this.renderCharts();
+        // Small delay to let OWL re-render the loading→content swap before drawing canvas
+        setTimeout(() => this.renderCharts(), 80);
+    }
+
+    async onRefresh() {
+        await this.fetchAll();
+        setTimeout(() => this.renderCharts(), 80);
     }
 
     async onDateRangeChange(ev) {
         this.state.dateRange = ev.target.value;
         await this.fetchAll();
-        this.renderCharts();
+        setTimeout(() => this.renderCharts(), 80);
     }
 
     // --- Data ---
@@ -150,7 +161,7 @@ export class AdminDashboard extends Component {
         this.state.isLoading = true;
         try {
             // KPI: Active Patients
-            const activePatients = await this.orm.searchCount("health.patient", [['status', '=', 'active']]);
+            const activePatients = await this.orm.searchCount("health.patient", [['admission_status', 'in', ['triage', 'admitted']]]);
             this.state.kpi.activePatients = activePatients;
             this.state.kpi.activeDelta = Math.floor(Math.random() * 15);
 
@@ -196,7 +207,7 @@ export class AdminDashboard extends Component {
 
             // Ward Capacity — deduplicated
             const wardsList = await this.orm.searchRead("health.ward", [], ['id', 'name', 'capacity']);
-            const patients = await this.orm.searchRead("health.patient", [['status', '=', 'active']], ['ward_id', 'risk_level', 'id']);
+            const patients = await this.orm.searchRead("health.patient", [['admission_status', 'in', ['triage', 'admitted']]], ['ward_id', 'risk_level', 'id']);
 
             // Build ward → patient count map
             const wardCounts = {};
@@ -375,7 +386,7 @@ export class AdminDashboard extends Component {
                         const centerX = (chartArea.left + chartArea.right) / 2;
                         const centerY = (chartArea.top + chartArea.bottom) / 2;
                         ctx.save();
-                        ctx.font = "bold 26px 'Outfit', sans-serif";
+                        ctx.font = "bold 26px 'Inter', sans-serif";
                         ctx.fillStyle = '#0F172A';
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'middle';

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
     <t t-name="health_monitoring.DashboardRouterTemplate" owl="1">
-        <div class="sl-dashboard-router h-100">
+        <div class="sl-dashboard-router h-100 overflow-auto">
             <t t-if="state.loading">
                 <div class="d-flex justify-content-center align-items-center h-100">
                     <div class="spinner-border text-primary" role="status">

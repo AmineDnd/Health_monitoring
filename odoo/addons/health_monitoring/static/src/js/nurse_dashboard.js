@@ -33,23 +33,14 @@ export class NurseDashboard extends Component {
             // Get user
             const userRec = await this.orm.read("res.users", [this.user.userId], ["name"]);
             if (userRec.length > 0) this.state.nurseName = userRec[0].name;
-            // Find ward
-            const myWards = await this.orm.searchRead("health.ward", [['doctor_ids', 'in', [this.user.userId]]], ["name", "id"], { limit: 1 });
-            if (myWards.length > 0) {
-                this.wardId = myWards[0].id;
-                this.state.wardName = myWards[0].name;
-            } else {
-                const wards = await this.orm.searchRead("health.ward", [], ["name", "id"], { limit: 1 });
-                if (wards.length > 0) {
-                    this.wardId = wards[0].id;
-                    this.state.wardName = wards[0].name;
-                }
-            }
+            // Nurse sees all wards by default, or we could add a ward selector later
+            this.wardId = null;
+            this.state.wardName = 'All Wards';
             await this.fetchData();
         });
 
         onMounted(() => {
-            this.interval = setInterval(() => this.fetchData(), 60000);
+            this.interval = setInterval(() => this.fetchData(), 30000);  // 30s auto-refresh
             this.clockInterval = setInterval(() => {
                 this.state.currentTime = new Date().toLocaleTimeString();
             }, 1000);
@@ -91,7 +82,10 @@ export class NurseDashboard extends Component {
             res_model: 'health.vital.record',
             views: [[false, 'form']],
             context: { default_patient_id: id },
-            target: 'new'
+            target: 'new',
+        }, {
+            // When the dialog closes (save or discard), refresh the dashboard
+            onClose: () => this.fetchData(),
         });
     }
 
@@ -169,8 +163,8 @@ export class NurseDashboard extends Component {
     // --- Data ---
     async fetchData() {
         try {
-            const domain = [['status', '=', 'active']];
-            if (this.wardId) domain.push(['ward_id', '=', this.wardId]);
+            // Show all admitted or triage patients (not just 'active' which requires doctor validation)
+            const domain = [['admission_status', 'in', ['triage', 'admitted']]];
 
             const patients = await this.orm.searchRead("health.patient", domain,
                 ["id", "name", "admission_status", "risk_level", "age", "gender"]);
@@ -219,12 +213,23 @@ export class NurseDashboard extends Component {
                 else if (status === 'due_soon') due++;
                 else stable++;
 
-                const hrAbnormal  = latest ? (latest.heart_rate > 100 || latest.heart_rate < 60) : false;
-                const hrWarn      = !hrAbnormal && latest ? (latest.heart_rate > 90 || latest.heart_rate < 65) : false;
-                const spo2Abnormal = latest ? (latest.spo2 < 90) : false;
-                const spo2Warn    = !spo2Abnormal && latest ? (latest.spo2 < 95) : false;
-                const bpAbnormal  = latest ? (latest.bp_systolic > 140 || latest.bp_systolic < 90) : false;
-                const bpWarn      = !bpAbnormal && latest ? (latest.bp_systolic > 130) : false;
+                // Build composite latest vitals to handle partial submissions
+                let cHR = null, cSpO2 = null, cBpSys = null, cBpDia = null, cTemp = null;
+                for (const v of pv) {
+                    if (cHR === null && v.heart_rate) cHR = v.heart_rate;
+                    if (cSpO2 === null && v.spo2) cSpO2 = v.spo2;
+                    if (cBpSys === null && v.bp_systolic) cBpSys = v.bp_systolic;
+                    if (cBpDia === null && v.bp_diastolic) cBpDia = v.bp_diastolic;
+                    if (cTemp === null && v.temperature) cTemp = v.temperature;
+                }
+
+                const hrAbnormal  = cHR ? (cHR > 100 || cHR < 60) : false;
+                const hrWarn      = !hrAbnormal && cHR ? (cHR > 90 || cHR < 65) : false;
+                const spo2Abnormal = cSpO2 ? (cSpO2 < 90) : false;
+                const spo2Warn    = !spo2Abnormal && cSpO2 ? (cSpO2 < 95) : false;
+                const bpAbnormal  = cBpSys ? (cBpSys > 140 || cBpSys < 90) : false;
+                const bpWarn      = !bpAbnormal && cBpSys ? (cBpSys > 130) : false;
+                const tempAbnormal= cTemp ? (cTemp > 38.5 || cTemp < 35.5) : false;
 
                 let timeSince = 'No vitals';
                 if (hours < 1) timeSince = `${Math.round(hours * 60)}min since vitals`;
@@ -251,16 +256,17 @@ export class NurseDashboard extends Component {
                     statusLabel,
                     dueLabel,
                     hoursSort: hours,
-                    latestHR: latest ? Math.round(latest.heart_rate) : null,
-                    latestSpO2: latest ? Math.round(latest.spo2) : null,
-                    latestBP: latest ? `${Math.round(latest.bp_systolic)}/${Math.round(latest.bp_diastolic)}` : null,
-                    latestTemp: latest ? latest.temperature?.toFixed(1) : null,
-                    rawBpSys: latest ? latest.bp_systolic : null,
-                    rawBpDia: latest ? latest.bp_diastolic : null,
-                    rawTemp: latest ? latest.temperature : null,
+                    latestHR: pv.length > 0 ? (cHR ? Math.round(cHR) : '--') : null,
+                    latestSpO2: pv.length > 0 ? (cSpO2 ? Math.round(cSpO2) : '--') : null,
+                    latestBP: pv.length > 0 ? ((cBpSys && cBpDia) ? `${Math.round(cBpSys)}/${Math.round(cBpDia)}` : '--/--') : null,
+                    latestTemp: pv.length > 0 ? (cTemp ? cTemp.toFixed(1) : '--') : null,
+                    rawBpSys: cBpSys,
+                    rawBpDia: cBpDia,
+                    rawTemp: cTemp,
                     hrAbnormal, hrWarn,
                     spo2Abnormal, spo2Warn,
                     bpAbnormal, bpWarn,
+                    tempAbnormal,
                     recentVitals: pv.slice(0, 5).reverse()
                 };
             });
@@ -328,21 +334,20 @@ export class NurseDashboard extends Component {
 
             const hrData = patient.recentVitals.map(v => v.heart_rate || 0);
             // Color bars based on value
-            const colors = hrData.map(v => {
-                if (v > 100 || v < 55) return '#ef4444';
-                if (v > 90 || v < 60) return '#f59e0b';
-                return patient.vitalsStatus === 'overdue' ? '#ef4444' : (patient.vitalsStatus === 'due_soon' ? '#f59e0b' : '#10b981');
-            });
+            const lineColor = patient.vitalsStatus === 'overdue' ? '#E24B4A' : (patient.vitalsStatus === 'due_soon' ? '#F59E0B' : '#16A34A');
 
             this.sparklineInstances[patient.id] = new Chart(canvas, {
-                type: 'bar',
+                type: 'line',
                 data: {
                     labels: hrData.map(() => ''),
                     datasets: [{
                         data: hrData,
-                        backgroundColor: colors,
-                        borderRadius: 3,
-                        borderSkipped: false,
+                        borderColor: lineColor,
+                        backgroundColor: lineColor + '18',
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        fill: true,
+                        tension: 0.4,
                     }]
                 },
                 options: {

@@ -215,6 +215,7 @@ class HealthAlert(models.Model):
             if not rec.assigned_doctor_id:
                 rec.write({
                     'assigned_doctor_id': self.env.user.id,
+                    'state': 'investigating',
                 })
                 rec.message_post(body=f"Alert claimed by {self.env.user.name}.")
         return True

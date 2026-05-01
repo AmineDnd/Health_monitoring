@@ -16,7 +16,7 @@
               </strong>
             </p>
           </div>
-          <button class="sl-btn-primary" t-on-click="onRefresh">Refresh queue</button>
+          <button style="border-radius:50px;" class="sl-btn-primary" t-on-click="onRefresh"><t t-esc="'Refresh queue'"/></button>
         </div>
       </div>
 
@@ -52,13 +52,13 @@
                     <t t-esc="alert.headline || 'Anomaly detected'"/>
                   </div>
                   <div style="display:flex;gap:6px;">
-                    <button style="flex:1;padding:5px 10px;font-size:10px;font-weight:500;background:#FCEBEB;color:#A32D2D;border:0.5px solid #F7C1C1;border-radius:7px;cursor:pointer;font-family:inherit;transition:background 0.15s;"
+                    <button style="flex:1;padding:5px 10px;font-size:10px;font-weight:500;background:#FCEBEB;color:#A32D2D;border:0.5px solid #F7C1C1;border-radius:50px;cursor:pointer;font-family:inherit;transition:background 0.15s;"
                             onmouseover="this.style.background='#F7C1C1'"
                             onmouseout="this.style.background='#FCEBEB'"
                             t-on-click.stop="() => this.onClaimAlert(alert.id)">
                       Claim
                     </button>
-                    <button style="padding:5px 10px;font-size:10px;font-weight:500;background:transparent;border:1px solid #E2E8F0;color:#64748B;border-radius:7px;cursor:pointer;font-family:inherit;transition:background 0.15s;"
+                    <button style="padding:5px 10px;font-size:10px;font-weight:500;background:transparent;border:1px solid #E2E8F0;color:#64748B;border-radius:50px;cursor:pointer;font-family:inherit;transition:background 0.15s;"
                             onmouseover="this.style.background='#F1F5F9'"
                             onmouseout="this.style.background='transparent'"
                             t-on-click.stop="() => this.onViewPatient(alert)">
@@ -95,7 +95,7 @@
                        t-on-click.stop="() => this.openAlertForm(alert.id)">
                     <t t-esc="alert.headline || 'Under investigation'"/>
                   </div>
-                  <button style="width:100%;padding:6px;font-size:11px;font-weight:500;background:#E6F1FB;color:#0C447C;border:0.5px solid #B5D4F4;border-radius:7px;cursor:pointer;font-family:inherit;transition:background 0.15s;"
+                  <button style="width:100%;padding:6px;font-size:11px;font-weight:500;background:#E6F1FB;color:#0C447C;border:0.5px solid #B5D4F4;border-radius:50px;cursor:pointer;font-family:inherit;transition:background 0.15s;"
                           onmouseover="this.style.background='#B5D4F4'"
                           onmouseout="this.style.background='#E6F1FB'"
                           t-on-click.stop="() => this.onResolveAlert(alert.id)">
@@ -156,11 +156,11 @@
                 </div>
               </div>
               <div style="display:flex;align-items:center;gap:10px;">
-                <span t-attf-class="sl-badge-#{state.selectedPatient.risk_level === 'high' ? 'warning' : (state.selectedPatient.risk_level || 'stable')}">
-                  <t t-esc="(state.selectedPatient.risk_level || 'normal').toUpperCase()"/>
+                <span t-attf-class="sl-badge-#{state.selectedPatient.risk_level === 'critical' ? 'critical' : (state.selectedPatient.risk_level === 'high' ? 'warning' : (state.selectedPatient.risk_level === 'medium' ? 'medium' : 'stable'))}">
+                  <t t-esc="(state.selectedPatient.risk_level || 'LOW').toUpperCase()"/>
                 </span>
                 <button class="sl-btn-primary" style="padding:7px 16px;font-size:12px;" t-on-click="onOpenPatientRecord">
-                  Open record
+                  <t t-esc="'Open record'"/>
                 </button>
               </div>
             </div>
@@ -198,15 +198,15 @@
 
             <!-- Heart rate trend chart -->
             <div class="sl-glass-card" style="margin-bottom:12px;">
-              <div class="sl-card-title">Heart Rate — Last 12 Readings</div>
-              <div style="height:180px;position:relative;">
+              <div class="sl-card-title"><t t-esc="'Vitals Trend — Last 12 Readings'"/></div>
+              <div style="height:220px;position:relative;">
                 <canvas t-ref="trendChart"/>
               </div>
             </div>
 
             <!-- Risk factors -->
             <div class="sl-glass-card">
-              <div class="sl-card-title">Risk Factors</div>
+              <div class="sl-card-title"><t t-esc="'Risk Factors'"/></div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                 <div style="background:#FFFFFF;border:1px solid #EEF2F7;border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
                   <span style="font-size:12px;color:#334155;">Arrhythmia</span>
@@ -227,9 +227,9 @@
                   </div>
                 </div>
                 <div style="background:#FFFFFF;border:1px solid #EEF2F7;border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
-                  <span style="font-size:12px;color:#334155;">Bradycardia</span>
+                  <span style="font-size:12px;color:#334155;"><t t-esc="'Bradycardia'"/></span>
                   <div style="width:80px;height:4px;background:#F1F5F9;border-radius:3px;overflow:hidden;">
-                    <div t-attf-style="width:#{state.risk.fever}%;height:100%;border-radius:3px;background:#{state.risk.feverColor};transition:width 0.5s;"/>
+                    <div t-attf-style="width:#{state.risk.bradycardia}%;height:100%;border-radius:3px;background:#{state.risk.bradycardiaColor};transition:width 0.5s;"/>
                   </div>
                 </div>
               </div>
