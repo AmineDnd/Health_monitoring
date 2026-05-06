@@ -152,7 +152,10 @@
                         <field name="heart_rate" string="Pulse" class="sl-numeric"/>
                         <field name="bp_systolic" string="BP (Sys)" class="sl-numeric"/>
                         <field name="spo2" string="SpO2 (%)" class="fw-bold" decoration-danger="spo2 &lt; 90" decoration-warning="spo2 &lt; 95"/>
-                        <field name="ai_score" string="AI Risk" widget="progressbar"/>
+                        <field name="ai_score" string="AI Risk"
+                               decoration-danger="ai_score >= 70"
+                               decoration-warning="ai_score >= 40 and ai_score &lt; 70"
+                               decoration-success="ai_score &lt; 40"/>
                         <field name="anomaly_detected" invisible="1"/>
                       </tree>
                     </field>

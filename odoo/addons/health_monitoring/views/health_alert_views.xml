@@ -100,7 +100,11 @@
                decoration-warning="severity=='high'"
                decoration-muted="severity in ['medium', 'low']"/>
         <field name="headline" string="Clinical Headline"/>
-        <field name="ai_confidence" string="AI Conf." widget="progressbar" optional="show"/>
+        <field name="ai_confidence" string="AI Conf." widget="progressbar"
+               decoration-danger="ai_confidence >= 70"
+               decoration-warning="ai_confidence >= 40 and ai_confidence &lt; 70"
+               decoration-success="ai_confidence &lt; 40"
+               optional="show"/>
         <field name="state" string="Status" widget="badge"
                decoration-success="state=='resolved'"
                decoration-info="state=='investigating'"

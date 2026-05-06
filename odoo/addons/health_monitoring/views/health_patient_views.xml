@@ -33,32 +33,32 @@
 
           <!-- Title Area -->
           <div class="oe_title mb-4">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;">
-              <div style="display:flex;align-items:center;gap:12px;">
-                <div style="width:44px;height:44px;border-radius:10px;background:#E6F1FB;color:#0C447C;font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                  P
+            <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:6px;">
+              <!-- Avatar -->
+              <div style="width:44px;height:44px;border-radius:10px;background:#E6F1FB;color:#0C447C;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:4px;">P</div>
+              <!-- Name + subtitle + badge -->
+              <div style="flex:1;min-width:0;">
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                  <field name="name" placeholder="Patient Name" style="font-size:20px;font-weight:700;color:#0F172A;"/>
+                  <field name="risk_level" widget="badge"
+                         decoration-danger="risk_level=='critical'"
+                         decoration-warning="risk_level=='high'"
+                         decoration-info="risk_level=='handled'"
+                         decoration-primary="risk_level=='medium'"
+                         decoration-success="risk_level=='low'"
+                         style="font-size:11px;font-weight:600;flex-shrink:0;"/>
                 </div>
-                <div>
-                  <field name="name" placeholder="Patient Name" style="font-size:20px;font-weight:700;color:#0F172A;display:block;"/>
-                  <div style="font-size:12px;color:#64748B;margin-top:3px;display:flex;align-items:center;gap:6px;">
-                    <span>Age <field name="age" nolabel="1" readonly="1" style="font-weight:600;color:#334155;display:inline;"/></span>
-                    <span style="color:#CBD5E1;">·</span>
-                    <field name="gender" nolabel="1" readonly="1" style="color:#334155;font-weight:600;display:inline;"/>
-                    <span style="color:#CBD5E1;">·</span>
-                    <field name="category" nolabel="1" readonly="1" style="color:#334155;font-weight:600;display:inline;"/>
-                    <span style="color:#CBD5E1;">·</span>
-                    <field name="profile_male" nolabel="1" readonly="1" invisible="gender == 'female'" style="color:#334155;font-weight:600;display:inline;"/>
-                    <field name="profile_female" nolabel="1" readonly="1" invisible="gender != 'female'" style="color:#334155;font-weight:600;display:inline;"/>
-                  </div>
+                <div style="font-size:12px;color:#64748B;margin-top:4px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+                  <span>Age <field name="age" nolabel="1" readonly="1" style="font-weight:600;color:#334155;display:inline;"/></span>
+                  <span style="color:#CBD5E1;">·</span>
+                  <field name="gender" nolabel="1" readonly="1" style="color:#334155;font-weight:600;display:inline;"/>
+                  <span style="color:#CBD5E1;">·</span>
+                  <field name="category" nolabel="1" readonly="1" style="color:#334155;font-weight:600;display:inline;"/>
+                  <span style="color:#CBD5E1;">·</span>
+                  <field name="profile_male" nolabel="1" readonly="1" invisible="gender == 'female'" style="color:#334155;font-weight:600;display:inline;"/>
+                  <field name="profile_female" nolabel="1" readonly="1" invisible="gender != 'female'" style="color:#334155;font-weight:600;display:inline;"/>
                 </div>
               </div>
-              <field name="risk_level" widget="badge"
-                     decoration-danger="risk_level=='critical'"
-                     decoration-warning="risk_level=='high'"
-                     decoration-info="risk_level=='handled'"
-                     decoration-primary="risk_level=='medium'"
-                     decoration-success="risk_level=='low'"
-                     style="font-size:12px;font-weight:600;align-self:flex-start;"/>
             </div>
           </div>
 
@@ -188,46 +188,55 @@
           <!-- Tabs -->
           <notebook>
             <page string="Overview" name="overview" class="sl-overview-page">
-              <div class="row mt-3">
-                <div class="col-md-7">
-                  <div style="background:#fff;border:1px solid #EEF2F7;border-radius:12px;overflow:hidden;">
-                    <div style="padding:10px 14px;border-bottom:1px solid #EEF2F7;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#E24B4A;">
+              <div style="display:flex;gap:16px;margin-top:12px;">
+                <!-- Critical Notifications -->
+                <div style="flex:1;background:#fff;border:1px solid #EEF2F7;border-radius:10px;overflow:auto;">
+                  <div style="padding:12px 14px 8px 14px;border-bottom:1px solid #EEF2F7;">
+                    <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#E24B4A;display:flex;align-items:center;gap:6px;">
+                      <span style="width:6px;height:6px;border-radius:50%;background:#E24B4A;display:inline-block;"></span>
                       Critical Notifications
-                    </div>
-                    <div style="max-height:400px;overflow-y:auto;">
-                      <field name="alert_ids" readonly="1">
-                        <tree decoration-danger="severity=='critical'" limit="5" no_open="1" class="sl-clinical-grid">
-                          <field name="create_date" string="Time"/>
-                          <field name="severity" widget="badge" string="Level"
-                                 decoration-danger="severity=='critical'"
-                                 decoration-warning="severity=='high'"
-                                 decoration-muted="severity in ['medium', 'low']"/>
-                          <field name="headline" string="Clinical Headline"/>
-                          <field name="state" widget="badge" string="Status"
-                                 decoration-success="state=='resolved'"
-                                 decoration-info="state=='investigating'"
-                                 decoration-muted="state=='new'"/>
-                        </tree>
-                      </field>
-                    </div>
+                    </span>
+                  </div>
+                  <div style="max-height:260px;overflow-y:auto;overflow-x:auto;">
+                    <field name="alert_ids" readonly="1">
+
+                      <tree decoration-danger="severity=='critical'" limit="10" class="sl-overview-alerts sl-overview-tree">
+                        <field name="create_date" string="Time"/>
+                        <field name="severity" widget="badge" string="Level"
+                               decoration-danger="severity=='critical'"
+                               decoration-warning="severity=='high'"
+                               decoration-muted="severity in ['medium','low']"/>
+                        <field name="headline" string="Headline"/>
+                        <field name="state" widget="badge" string="Status"
+                               decoration-success="state=='resolved'"
+                               decoration-info="state=='investigating'"
+                               decoration-muted="state=='new'"/>
+                      </tree>
+                    </field>
                   </div>
                 </div>
-                <div class="col-md-5 border-start ps-4">
-                  <div style="background:#fff;border:1px solid #EEF2F7;border-radius:12px;overflow:hidden;">
-                    <div style="padding:10px 14px;border-bottom:1px solid #EEF2F7;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#185FA5;">
+                <!-- Recent Vitals -->
+                <div style="flex:1;background:#fff;border:1px solid #EEF2F7;border-radius:10px;overflow:auto;padding:0;">
+                  <div style="padding:12px 14px 8px 14px;border-bottom:1px solid #EEF2F7;">
+                    <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#185FA5;display:flex;align-items:center;gap:6px;">
+                      <span style="width:6px;height:6px;border-radius:50%;background:#185FA5;display:inline-block;"></span>
                       Recent Vitals
-                    </div>
-                    <div style="max-height:400px;overflow-y:auto;">
-                      <field name="vital_record_ids" readonly="1">
-                        <tree limit="8" no_open="1" class="sl-clinical-grid">
-                          <field name="recorded_at" string="Checked At"/>
-                          <field name="heart_rate" string="Pulse"/>
-                          <field name="bp_systolic" string="BP (Sys)"/>
-                          <field name="spo2" string="SpO2 (%)" decoration-danger="spo2 &lt; 90" decoration-warning="spo2 &lt; 95"/>
-                          <field name="ai_score" string="Risk"/>
-                        </tree>
-                      </field>
-                    </div>
+                    </span>
+                  </div>
+                  <div style="max-height:260px;overflow-y:auto;overflow-x:auto;">
+                    <field name="vital_record_ids" readonly="1">
+
+                      <tree limit="10" class="sl-overview-vitals sl-overview-tree">
+                        <field name="recorded_at" string="Time"/>
+                        <field name="heart_rate" string="Pulse" digits="[6,0]"/>
+                        <field name="bp_systolic" string="BP Sys" digits="[6,0]"/>
+                        <field name="spo2" string="SpO2%" digits="[6,0]" decoration-danger="spo2 &lt; 90" decoration-warning="spo2 &lt; 95"/>
+                        <field name="ai_score" string="Risk%" widget="progressbar"
+                               decoration-danger="ai_score >= 70"
+                               decoration-warning="ai_score >= 40 and ai_score &lt; 70"
+                               decoration-success="ai_score &lt; 40"/>
+                      </tree>
+                    </field>
                   </div>
                 </div>
               </div>
@@ -263,7 +272,10 @@
                decoration-danger="risk_level=='critical'"
                decoration-warning="risk_level=='high'"
                decoration-muted="risk_level in ['handled', 'medium', 'low']"/>
-        <field name="dashboard_risk_score" widget="progressbar" string="AI Clinical Prediction"/>
+        <field name="dashboard_risk_score" string="AI Risk"
+               decoration-danger="dashboard_risk_score >= 70"
+               decoration-warning="dashboard_risk_score >= 40 and dashboard_risk_score &lt; 70"
+               decoration-success="dashboard_risk_score &lt; 40"/>
         <field name="doctor_id" widget="many2one_avatar_user" string="In-Charge Doctor"/>
         <field name="age" string="Age" optional="show"/>
         <field name="category" widget="badge" string="Profile" optional="hide"/>

@@ -76,9 +76,13 @@
 .sl-clinical-grid td {
     padding: 10px 14px !important;
     font-size: 13px !important;
-    color: #334155 !important;
     border-bottom: 1px solid #F8FAFC !important;
     vertical-align: middle !important;
+    // NOTE: no color override here — we let Odoo's decoration classes (text-danger etc.) work
+}
+// Default text color only for cells without a decoration class
+.sl-clinical-grid .o_data_row td:not(.text-danger):not(.text-warning):not(.text-success):not(.text-muted):not(.text-info) {
+    color: #334155;
 }
 .sl-clinical-grid thead th,
 .sl-clinical-grid .o_column_headers th {
@@ -195,15 +199,670 @@
 .text-warning { color: #F59E0B !important; }
 .text-muted   { color: #64748B !important; }
 
-// ── Statusbar active button — remove Odoo purple
-.o_statusbar_status .o_arrow_button.o_arrow_button_current {
-    background: #185FA5 !important;
-    border-color: #185FA5 !important;
-}
+// ── Statusbar: restore Odoo default (do NOT override teal/dark)
+// (removed custom blue override)
 
 // ── Field label text
 .o_form_view .o_group .o_wrap_label label {
     font-size: 12px !important;
     color: #64748B !important;
     font-weight: 500 !important;
+}
+
+// ── Progressbar widget in list/tree views — fix gray line + alignment
+// Odoo 17 renders .o_field_progressbar > .o_progress > .o_progress_bar
+// Override ALL possible rendering variants:
+.o_list_view .o_field_progressbar,
+.o_field_progressbar {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    // force left-align even in numeric columns
+    justify-content: flex-start !important;
+    text-align: left !important;
+}
+
+// The track/groove (background bar)
+.o_list_view .o_field_progressbar .o_progressbar,
+.o_list_view .o_field_progressbar .progress,
+.o_list_view .o_field_progressbar .o_progress {
+    flex: 1 !important;
+    height: 6px !important;
+    border-radius: 4px !important;
+    background: #E2E8F0 !important;  // light gray track — clean, no outline
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    overflow: hidden !important;
+    min-width: 60px !important;
+}
+
+// The fill bar
+.o_list_view .o_field_progressbar .o_progressbar_value,
+.o_list_view .o_field_progressbar .progress-bar,
+.o_list_view .o_field_progressbar .o_progress_bar {
+    height: 100% !important;
+    border-radius: 4px !important;
+    background: #16A34A !important;  // default green
+    border: none !important;
+    box-shadow: none !important;
+    // Remove any text content the widget puts inside the bar
+    font-size: 0 !important;
+    color: transparent !important;
+}
+
+// Color the fill by width — use attribute selectors for known value ranges
+// (Odoo puts inline width style)
+// We approximate via the complete class variants Odoo adds:
+.o_list_view .o_field_progressbar .o_progressbar_value[style*='width: 7'],
+.o_list_view .o_field_progressbar .o_progressbar_value[style*='width: 8'],
+.o_list_view .o_field_progressbar .o_progressbar_value[style*='width: 9'],
+.o_list_view .o_field_progressbar .o_progressbar_value[style*='width: 100'] {
+    background: #E24B4A !important; // red for high risk
+}
+.o_list_view .o_field_progressbar .o_progressbar_value[style*='width: 5'],
+.o_list_view .o_field_progressbar .o_progressbar_value[style*='width: 6'] {
+    background: #F59E0B !important; // amber for medium risk
+}
+
+// The score text label that shows next to the bar
+.o_list_view .o_field_progressbar .o_progressbar_complete,
+.o_list_view .o_field_progressbar .o_progressbar_number {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: #475569 !important;
+    flex-shrink: 0 !important;
+    min-width: 28px !important;
+    text-align: right !important;
+}
+
+// Force left-align of the entire column header for progressbar fields
+.o_list_view th.o_column_sortable[data-name="ai_score"],
+.o_list_view th[data-name="ai_score"] {
+    text-align: left !important;
+}
+
+// ── Patient form title: fix name + subtitle alignment
+.oe_title .o_field_char {
+    display: block !important;
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    color: #0F172A !important;
+    line-height: 1.2 !important;
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+}
+.oe_title .o_field_char input {
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    color: #0F172A !important;
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+}
+
+// ── Overview tab inner trees (Critical Notifications + Recent Vitals)
+.sl-overview-tree {
+    // No horizontal overflow
+    table-layout: fixed !important;
+    width: 100% !important;
+
+    thead th {
+        font-size: 10px !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.06em !important;
+        color: #94A3B8 !important;
+        background: #F8FAFC !important;
+        padding: 8px 12px !important;
+        border-bottom: 1px solid #EEF2F7 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    td {
+        font-size: 12px !important;
+        color: #334155 !important;
+        padding: 9px 12px !important;
+        border-bottom: 1px solid #F8FAFC !important;
+        vertical-align: middle !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    .o_data_row:hover td { background: #F8FBFF !important; }
+
+    // No optional column picker, no row checkboxes
+    .o_optional_columns_dropdown,
+    .o_list_record_selector { display: none !important; }
+
+    // No horizontal scroll on the table wrapper
+    .o_list_renderer { overflow: visible !important; }
+
+    // Proper padding so rows breathe
+    th, td {
+        padding-top: 10px !important;
+        padding-bottom: 10px !important;
+        padding-left: 14px !important;
+        padding-right: 14px !important;
+    }
+
+    // Minimum row height
+    tr { min-height: 40px !important; }
+}
+
+// Remove horizontal scrollbar from overview tables
+.sl-overview-page .o_list_renderer {
+    overflow-x: hidden !important;
+}
+.sl-overview-page table {
+    table-layout: auto !important;
+    min-width: unset !important;
+}
+
+// ── Admin dashboard cards: auto-height (no stretching empty space)
+.sl-glass-card {
+    height: auto !important;
+    min-height: unset !important;
+}
+
+// =============================================================================
+// FIX 1 — All list/tree column headers: force left-align
+// Fixes the AI CONF. header being right-aligned due to numeric field default
+// =============================================================================
+.sl-clinical-grid th,
+.sl-clinical-grid thead th,
+.o_list_view th.o_column_sortable,
+.o_list_view thead th {
+    text-align: left !important;
+}
+
+// =============================================================================
+// FIX 3 — Overview tab tables: column widths, thin scrollbar, clean rows
+// =============================================================================
+
+// Thin scrollbar for the overflow-y containers
+.sl-overview-page div[style*="overflow-y:auto"],
+.sl-overview-page div[style*="overflow-y: auto"] {
+    scrollbar-width: thin !important;
+    scrollbar-color: #E2E8F0 transparent !important;
+}
+.sl-overview-page div[style*="overflow-y:auto"]::-webkit-scrollbar,
+.sl-overview-page div[style*="overflow-y: auto"]::-webkit-scrollbar {
+    width: 3px !important;
+}
+.sl-overview-page div[style*="overflow-y:auto"]::-webkit-scrollbar-thumb,
+.sl-overview-page div[style*="overflow-y: auto"]::-webkit-scrollbar-thumb {
+    background: #CBD5E1 !important;
+    border-radius: 2px !important;
+}
+
+// Critical Notifications table column widths
+.sl-overview-alerts td:nth-child(1),
+.sl-overview-alerts th:nth-child(1) { width: 125px !important; white-space: nowrap !important; font-size: 11px !important; }
+.sl-overview-alerts td:nth-child(2),
+.sl-overview-alerts th:nth-child(2) { width: 80px !important; }
+.sl-overview-alerts td:nth-child(3),
+.sl-overview-alerts th:nth-child(3) { min-width: 140px !important; max-width: 220px !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
+.sl-overview-alerts td:nth-child(4),
+.sl-overview-alerts th:nth-child(4) { width: 90px !important; }
+
+// Recent Vitals table column widths + right-align numbers
+.sl-overview-vitals td:nth-child(1),
+.sl-overview-vitals th:nth-child(1) { width: 125px !important; white-space: nowrap !important; font-size: 11px !important; }
+.sl-overview-vitals td:nth-child(2),
+.sl-overview-vitals td:nth-child(3),
+.sl-overview-vitals td:nth-child(4),
+.sl-overview-vitals td:nth-child(5) {
+    width: 65px !important;
+    text-align: right !important;
+    font-weight: 600 !important;
+    font-size: 12px !important;
+    color: #0F172A !important;
+}
+.sl-overview-vitals th:nth-child(2),
+.sl-overview-vitals th:nth-child(3),
+.sl-overview-vitals th:nth-child(4),
+.sl-overview-vitals th:nth-child(5) {
+    text-align: right !important;
+}
+
+// Both overview trees: clean row height, no optional column button, no checkbox
+.sl-overview-alerts .o_optional_columns_dropdown,
+.sl-overview-vitals .o_optional_columns_dropdown,
+.sl-overview-alerts .o_list_record_selector,
+.sl-overview-vitals .o_list_record_selector { display: none !important; }
+
+// =============================================================================
+// FIX 4 — Escalations: prevent text from inheriting link blue color
+// =============================================================================
+.sl-esc-text { color: #334155 !important; }
+.sl-escalation-item { overflow: hidden !important; }
+
+// =============================================================================
+// FIX 5+6 — Ward Capacity + Doctor Performance: thin CSS scroll, no arrows
+// =============================================================================
+// All dashboard scrollable lists
+.sl-scrollable-list,
+.sl-glass-card div[style*="overflow-y:auto"],
+.sl-glass-card div[style*="max-height"] {
+    scrollbar-width: thin !important;
+    scrollbar-color: #E2E8F0 transparent !important;
+}
+.sl-scrollable-list::-webkit-scrollbar,
+.sl-glass-card div[style*="overflow-y:auto"]::-webkit-scrollbar {
+    width: 3px !important;
+}
+.sl-scrollable-list::-webkit-scrollbar-thumb,
+.sl-glass-card div[style*="overflow-y:auto"]::-webkit-scrollbar-thumb {
+    background: #CBD5E1 !important;
+    border-radius: 2px !important;
+}
+// Remove native scroll buttons (arrow buttons at top/bottom of scrollbar)
+.sl-scrollable-list::-webkit-scrollbar-button { display: none !important; height: 0 !important; }
+
+// =============================================================================
+// Progressbar fix — remove broken double-bar appearance in list views
+// =============================================================================
+.o_list_view .o_field_progressbar {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+}
+.o_list_view .o_field_progressbar .o_progressbar {
+    flex: 1 !important;
+    height: 5px !important;
+    border-radius: 3px !important;
+    background: #E2E8F0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    overflow: hidden !important;
+    min-width: 50px !important;
+}
+.o_list_view .o_field_progressbar .o_progressbar_value {
+    height: 100% !important;
+    border-radius: 3px !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+.o_list_view .o_field_progressbar .o_progressbar_complete {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: #475569 !important;
+    flex-shrink: 0 !important;
+    min-width: 32px !important;
+    text-align: right !important;
+}
+
+// =============================================================================
+// FIX 2 — Ward list: thin scrollbar + hover effect
+// =============================================================================
+.sl-ward-list {
+    max-height: 260px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: #CBD5E1 transparent;
+}
+.sl-ward-list::-webkit-scrollbar { width: 3px; }
+.sl-ward-list::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 2px;
+}
+.sl-ward-list > div:hover {
+    background: #F8FAFC;
+    border-radius: 6px;
+}
+
+// =============================================================================
+// FIX 3 — Doctor list: thin scrollbar
+// =============================================================================
+.sl-doctor-list {
+    max-height: 260px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: #CBD5E1 transparent;
+}
+.sl-doctor-list::-webkit-scrollbar { width: 3px; }
+.sl-doctor-list::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 2px;
+}
+
+// =============================================================================
+// FIX 5 — Overview tables: ensure first column (Time/Date) is never clipped
+// =============================================================================
+.sl-overview-alerts,
+.sl-overview-vitals {
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+}
+.sl-overview-alerts .o_list_table,
+.sl-overview-vitals .o_list_table {
+    min-width: 460px !important;
+    table-layout: auto !important;
+}
+// First column: date — needs breathing room
+.sl-overview-alerts thead th:first-child,
+.sl-overview-alerts .o_data_row td:first-child,
+.sl-overview-vitals thead th:first-child,
+.sl-overview-vitals .o_data_row td:first-child {
+    padding-left: 14px !important;
+    min-width: 145px !important;
+    white-space: nowrap !important;
+    font-size: 11px !important;
+}
+// Thin scrollbar on overview containers
+.sl-overview-alerts::-webkit-scrollbar,
+.sl-overview-vitals::-webkit-scrollbar { width: 3px; height: 3px; }
+.sl-overview-alerts::-webkit-scrollbar-thumb,
+.sl-overview-vitals::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 2px;
+}
+
+// =============================================================================
+// FIX 1 — NUCLEAR: kill every progressbar bar rendering in list/tree views
+// The widget may still be activated by Odoo's field registry even without XML attr
+// =============================================================================
+
+// Hide the bar track and fill; only show the numeric text
+.o_list_view .o_field_progressbar .o_progressbar,
+.o_list_view .o_field_progressbar > .o_progressbar_wrapper,
+.o_list_view .o_field_progressbar > div:not(.o_progressbar_complete) {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+}
+// Make the percentage number the only visible element
+.o_list_view .o_field_progressbar {
+    display: inline !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+}
+.o_list_view .o_field_progressbar .o_progressbar_complete {
+    display: inline !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: inherit !important;
+}
+
+// FIX 1 — Force left-align on the specific AI columns
+.o_list_view thead th[data-name="dashboard_risk_score"],
+.o_list_view thead th[data-name="ai_confidence"],
+.o_list_view thead th[data-name="ai_score"] {
+    text-align: left !important;
+    padding-left: 14px !important;
+}
+.o_list_view td[name="dashboard_risk_score"],
+.o_list_view td[name="ai_confidence"],
+.o_list_view td[name="ai_score"] {
+    text-align: left !important;
+    padding-left: 14px !important;
+}
+
+// =============================================================================
+// FIX 2 — Doctor Performance card: kill any fixed height, let it shrink to fit
+// =============================================================================
+.sl-glass-card[style*="flex-direction:column"],
+.sl-glass-card[style*="flex-direction: column"] {
+    height: auto !important;
+    min-height: 0 !important;
+}
+// Belt-and-suspenders: cover any inner flex-1 that stretches
+.sl-glass-card .sl-doctor-list,
+.sl-glass-card > div[style*="flex:1"] {
+    flex: 0 0 auto !important;
+}
+
+// =============================================================================
+// FIX 3 — Overview tables: consistent padding on ALL rows, bigger min-widths
+// =============================================================================
+
+// Every row, every cell — uniform padding
+.sl-overview-alerts .o_data_row td,
+.sl-overview-vitals .o_data_row td {
+    padding: 10px 12px !important;
+    vertical-align: middle !important;
+    white-space: nowrap !important;
+}
+// First cell gets extra left padding so it never clips against the card border
+.sl-overview-alerts .o_data_row td:first-child,
+.sl-overview-vitals .o_data_row td:first-child,
+.sl-overview-alerts .o_data_row:first-child td:first-child,
+.sl-overview-vitals .o_data_row:first-child td:first-child {
+    padding-left: 14px !important;
+}
+// Header consistent padding
+.sl-overview-alerts thead th,
+.sl-overview-vitals thead th {
+    padding: 8px 12px !important;
+}
+.sl-overview-alerts thead th:first-child,
+.sl-overview-vitals thead th:first-child {
+    padding-left: 14px !important;
+}
+// Larger min-widths so ALL columns + RISK column are reachable via horizontal scroll
+.sl-overview-vitals .o_list_table { min-width: 580px !important; }
+.sl-overview-alerts .o_list_table { min-width: 520px !important; }
+
+// =============================================================================
+// FINAL FIXES — All remaining visual issues
+// =============================================================================
+
+// --- 1. AI CONF / AI RISK header: FORCE left-align on ALL list headers globally ---
+// (The most specific rule wins — target every th in any o_list_view)
+.o_list_view .o_column_sortable,
+.o_list_view thead th,
+.o_list_view .o_list_table thead th {
+    text-align: left !important;
+    padding-left: 12px !important;
+}
+
+// --- 2. Decoration colors: ensure text-danger/warning/success are vivid even if overridden ---
+// These re-enforce Bootstrap's decoration colors specifically inside list views
+.o_list_view .o_data_row td.text-danger,
+.o_list_view .o_data_row td .text-danger { color: #DC2626 !important; font-weight: 600 !important; }
+.o_list_view .o_data_row td.text-warning,
+.o_list_view .o_data_row td .text-warning { color: #D97706 !important; font-weight: 600 !important; }
+.o_list_view .o_data_row td.text-success,
+.o_list_view .o_data_row td .text-success { color: #16A34A !important; font-weight: 600 !important; }
+// Also target the row-level decoration (Odoo sometimes puts it on the tr)
+.o_list_view .o_data_row.text-danger td { color: #DC2626 !important; }
+.o_list_view .o_data_row.text-warning td { color: #D97706 !important; }
+.o_list_view .o_data_row.text-success td { color: #16A34A !important; }
+
+// --- 3. Overview tab: TIME column — guarantee first-cell never clips ---
+// Remove any potential negative margin on the inner list renderer inside card
+.sl-overview-page .o_list_renderer {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+.sl-overview-page .o_list_view {
+    overflow: visible !important;
+}
+// Every data cell in overview trees: consistent padding
+.sl-overview-alerts .o_list_table td,
+.sl-overview-vitals .o_list_table td {
+    padding: 9px 10px !important;
+    vertical-align: middle !important;
+    white-space: nowrap !important;
+}
+.sl-overview-alerts .o_list_table td:first-child,
+.sl-overview-vitals .o_list_table td:first-child {
+    padding-left: 14px !important;
+    min-width: 150px !important;
+}
+.sl-overview-alerts .o_list_table th,
+.sl-overview-vitals .o_list_table th {
+    padding: 8px 10px !important;
+    text-align: left !important;
+}
+.sl-overview-alerts .o_list_table th:first-child,
+.sl-overview-vitals .o_list_table th:first-child {
+    padding-left: 14px !important;
+}
+
+// --- 4. Doctor Performance card: force height auto to kill empty white space ---
+// The card grid uses 1.6fr 1fr 1.4fr — the 1.4fr Doctor column stretches to match the tallest sibling
+// We cannot change grid row height in CSS alone, so we suppress the internal flex stretching:
+.sl-doctor-list {
+    flex: 0 0 auto !important;
+    height: auto !important;
+}
+// The glass card itself must not flex-grow its children
+.sl-glass-card[style*="flex-direction:column"] > *,
+.sl-glass-card[style*="flex-direction: column"] > * {
+    flex-shrink: 1 !important;
+}
+// Specific kill: any div inside the doctor card that has flex:1 was the stretch culprit
+.sl-glass-card .sl-doctor-list ~ * { flex: 0 0 auto !important; }
+
+// =============================================================================
+// DEFINITIVE ROOT-CAUSE FIXES — v3
+// =============================================================================
+
+// ── FIX 1: Overview tab TIME column — stop the o_list_renderer from clipping ──
+// The inner Odoo list renderer has a negative left margin that clips the first column
+.sl-overview-alerts .o_list_renderer,
+.sl-overview-vitals .o_list_renderer {
+    overflow: visible !important;
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+}
+
+// The tree widget wrapper must allow horizontal scroll
+.sl-overview-alerts,
+.sl-overview-vitals {
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    max-height: 250px !important;
+}
+
+// Table itself — no left margin, collapse borders cleanly
+.sl-overview-alerts table,
+.sl-overview-vitals table {
+    margin-left: 0 !important;
+    border-collapse: collapse !important;
+    width: 100% !important;
+}
+
+// Add a solid spacer below the header to separate it from the first row
+.sl-overview-alerts thead,
+.sl-overview-vitals thead {
+    border-bottom: 12px solid #fff !important;
+}
+
+// All cells — consistent padding, no wrapping
+.sl-overview-alerts th,
+.sl-overview-alerts td,
+.sl-overview-vitals th,
+.sl-overview-vitals td {
+    padding: 12px 14px !important;
+    white-space: nowrap !important;
+    vertical-align: middle !important;
+}
+
+// FIRST column gets extra left padding and minimum width so "TIME" is fully visible
+.sl-overview-alerts th:first-child,
+.sl-overview-alerts td:first-child,
+.sl-overview-vitals th:first-child,
+.sl-overview-vitals td:first-child {
+    padding-left: 16px !important;
+    min-width: 160px !important;
+}
+
+// ── FIX 2: AI CONF / AI RISK / dashboard_risk_score — LEFT-ALIGN headers ──
+// These use Odoo's exact DOM attribute names: data-name on <th>, name on <td>
+th[data-name="ai_confidence"] {
+    text-align: left !important;
+}
+th[data-name="ai_score"] {
+    text-align: left !important;
+}
+th[data-name="dashboard_risk_score"] {
+    text-align: left !important;
+}
+td[name="ai_confidence"],
+td[name="ai_score"],
+td[name="dashboard_risk_score"] {
+    text-align: left !important;
+}
+
+// ── FIX 4: Decoration colors — survive our td color override ──
+.o_list_view .o_data_row td.text-danger   { color: #DC2626 !important; font-weight: 600 !important; }
+.o_list_view .o_data_row td.text-warning  { color: #D97706 !important; font-weight: 600 !important; }
+.o_list_view .o_data_row td.text-success  { color: #16A34A !important; font-weight: 600 !important; }
+
+// ── FIX 5: Doctor row hover ──
+.sl-doctor-row:hover {
+    background: #F8FAFC !important;
+    border-radius: 8px !important;
+}
+
+// ── Progressbar Styling (Simple & Professional) ──
+.o_list_view .o_field_progressbar .o_progress,
+.o_list_view .o_field_progressbar .progress {
+    height: 8px !important;
+    border-radius: 4px !important;
+    background-color: #E2E8F0 !important;
+    box-shadow: none !important;
+    margin-top: 4px !important;
+    margin-bottom: 0 !important;
+}
+.o_list_view .o_field_progressbar .progress-bar {
+    border-radius: 4px !important;
+    box-shadow: none !important;
+}
+.o_list_view .o_field_progressbar {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+}
+
+// =============================================================================
+// DEFINITIVE COLUMN ALIGNMENT FIX — integer/progressbar widget deep override
+// The span has text-align:right baked in — we must target it directly
+// =============================================================================
+
+// Header cells — center-align by data-name attribute (Odoo renders this on <th>)
+.o_list_view th[data-name="ai_score"],
+.o_list_view th[data-name="ai_confidence"],
+.o_list_view th[data-name="dashboard_risk_score"] {
+    text-align: center !important;
+}
+
+// Data cells — target the TD, the field widget wrapper, AND the inner span
+.o_list_view td[name="ai_score"],
+.o_list_view td[name="ai_score"] .o_field_integer,
+.o_list_view td[name="ai_score"] .o_field_widget,
+.o_list_view td[name="ai_score"] span,
+.o_list_view td[name="ai_score"] .o_field_progressbar > div {
+    text-align: center !important;
+    justify-content: center !important;
+}
+.o_list_view td[name="ai_confidence"],
+.o_list_view td[name="ai_confidence"] .o_field_integer,
+.o_list_view td[name="ai_confidence"] .o_field_widget,
+.o_list_view td[name="ai_confidence"] span,
+.o_list_view td[name="ai_confidence"] .o_field_progressbar > div {
+    text-align: center !important;
+    justify-content: center !important;
+}
+.o_list_view td[name="dashboard_risk_score"],
+.o_list_view td[name="dashboard_risk_score"] .o_field_integer,
+.o_list_view td[name="dashboard_risk_score"] .o_field_widget,
+.o_list_view td[name="dashboard_risk_score"] span,
+.o_list_view td[name="dashboard_risk_score"] .o_field_progressbar > div {
+    text-align: center !important;
+    justify-content: center !important;
 }

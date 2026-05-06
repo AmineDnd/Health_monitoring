@@ -89,39 +89,46 @@
 
             <!-- Right: AI Assessment Panel -->
             <div class="col-md-4">
-              <div style="background:#fff;border:1px solid #EEF2F7;border-radius:12px;padding:16px;min-height:400px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;">
+              <div style="background:#fff;border:1px solid #EEF2F7;border-radius:12px;padding:16px;min-height:400px;display:flex;flex-direction:column;gap:12px;">
 
-                <!-- Status icon circle — SVG, no fa -->
-                <div style="width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:8px;background:#E24B4A;" invisible="not anomaly_detected">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                    <path d="M18 6L6 18M6 6l12 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
+                <!-- Status banner -->
+                <!-- ANOMALY: red pill header -->
+                <div invisible="not anomaly_detected"
+                     style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:#FFF1F2;border:1px solid #FECDD3;">
+                  <div style="width:32px;height:32px;border-radius:8px;background:#E24B4A;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:13px;font-weight:700;color:#9F1239;line-height:1.2;">Anomaly Detected</div>
+                    <div style="font-size:11px;color:#BE123C;margin-top:2px;">Clinical values outside normal range</div>
+                  </div>
                 </div>
-                <div style="width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:8px;background:#16A34A;" invisible="anomaly_detected">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                    <path d="M20 6L9 17l-5-5" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
+                <!-- NORMAL: green pill header -->
+                <div invisible="anomaly_detected"
+                     style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:#F0FDF4;border:1px solid #BBF7D0;">
+                  <div style="width:32px;height:32px;border-radius:8px;background:#16A34A;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M20 6L9 17l-5-5" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:13px;font-weight:700;color:#14532D;line-height:1.2;">All Vitals Normal</div>
+                    <div style="font-size:11px;color:#15803D;margin-top:2px;">No anomalies detected</div>
+                  </div>
                 </div>
-
-                <div style="font-size:16px;font-weight:700;color:#E24B4A;" invisible="not anomaly_detected">Anomaly Detected</div>
-                <div style="font-size:16px;font-weight:700;color:#16A34A;" invisible="anomaly_detected">Normal Status</div>
 
                 <!-- Risk Score gauge -->
-                <div style="background:#F8FAFC;border:1px solid #EEF2F7;border-radius:10px;padding:14px;width:100%;">
-                  <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#94A3B8;margin-bottom:8px;">Clinical Risk Score</div>
+                <div style="background:#F8FAFC;border:1px solid #EEF2F7;border-radius:10px;padding:14px;">
+                  <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#94A3B8;margin-bottom:4px;">Clinical Risk Score</div>
                   <div style="display:flex;justify-content:center;min-height:130px;">
-                    <field name="ai_score" widget="gauge" options="{'max_field': 100, 'title': ''}" nolabel="1"/>
-                  </div>
-                  <div style="font-size:18px;font-weight:700;font-family:monospace;color:#E24B4A;" invisible="not anomaly_detected">
-                    <field name="ai_score" nolabel="1"/>%
-                  </div>
-                  <div style="font-size:18px;font-weight:700;font-family:monospace;color:#16A34A;" invisible="anomaly_detected">
-                    <field name="ai_score" nolabel="1"/>%
+                    <field name="ai_score" widget="gauge" options="{'max_field': 100, 'title': 'AI Score'}" nolabel="1"/>
                   </div>
                 </div>
 
                 <!-- Clinical analysis text -->
-                <div style="background:#F8FAFC;border:1px solid #EEF2F7;border-radius:8px;padding:12px;width:100%;text-align:left;flex:1;overflow-y:auto;">
+                <div style="background:#F8FAFC;border:1px solid #EEF2F7;border-radius:8px;padding:12px;flex:1;overflow-y:auto;">
                   <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#94A3B8;margin-bottom:6px;">Clinical Analysis</div>
                   <field name="parsed_clinical_hints" nolabel="1"/>
                 </div>
@@ -133,22 +140,26 @@
     </field>
   </record>
 
-  <!-- VITALS TREE VIEW -->
   <record id="view_vitals_tree" model="ir.ui.view">
     <field name="name">health.vital.record.tree</field>
     <field name="model">health.vital.record</field>
     <field name="arch" type="xml">
       <tree decoration-danger="status=='critical'" class="sl-clinical-grid" limit="20">
         <field name="recorded_at" string="Checked At"/>
-        <field name="patient_id" widget="many2one_avatar" string="Patient Profile"/>
-        <field name="heart_rate" string="Pulse (bpm)"/>
-        <field name="bp_systolic" string="SYS"/>
-        <field name="bp_diastolic" string="DIA"/>
-        <field name="spo2" string="SpO2 (%)" decoration-danger="spo2 &lt; 90" decoration-warning="spo2 &lt; 95"/>
-        <field name="temperature" string="Temp (°C)" optional="show"/>
-        <field name="glucose" string="Glucose" optional="show"/>
-        <field name="ai_score" string="AI Risk" widget="progressbar"/>
-        <field name="status" string="Triage Status" widget="badge"
+        <field name="patient_id" widget="many2one_avatar" string="Patient"/>
+        <field name="heart_rate" string="Pulse" widget="integer"/>
+        <field name="bp_systolic" string="SYS" widget="integer"/>
+        <field name="bp_diastolic" string="DIA" widget="integer"/>
+        <field name="spo2" string="SpO2 %" widget="integer"
+               decoration-danger="spo2 &lt; 90"
+               decoration-warning="spo2 &lt; 94 and spo2 >= 90"/>
+        <field name="temperature" string="Temp°C" widget="integer" optional="show"/>
+        <field name="glucose" string="Glucose" widget="integer" optional="show"/>
+        <field name="ai_score" string="AI Risk" widget="progressbar"
+               decoration-danger="ai_score >= 70"
+               decoration-warning="ai_score >= 40 and ai_score &lt; 70"
+               decoration-success="ai_score &lt; 40"/>
+        <field name="status" string="Triage" widget="badge"
                decoration-danger="status=='critical'"
                decoration-warning="status=='warning'"
                decoration-muted="status=='normal'"/>

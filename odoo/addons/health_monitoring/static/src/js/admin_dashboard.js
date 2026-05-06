@@ -137,6 +137,26 @@ export class AdminDashboard extends Component {
         });
     }
 
+    openDoctor(doctorId) {
+        this.action.doAction({
+            type: 'ir.actions.act_window',
+            res_model: 'res.users',
+            res_id: doctorId,
+            views: [[false, 'form']],
+            target: 'new',
+        });
+    }
+
+    openWard(wardId) {
+        this.action.doAction({
+            type: 'ir.actions.act_window',
+            res_model: 'health.ward',
+            res_id: wardId,
+            views: [[false, 'form']],
+            target: 'current',
+        });
+    }
+
     // --- Range buttons ---
     async setRange(range) {
         this.state.dateRange = range;
@@ -228,13 +248,19 @@ export class AdminDashboard extends Component {
                 wardDeduped[key].capacity = Math.max(wardDeduped[key].capacity, w.capacity || 10);
             });
 
-            this.state.wards = Object.values(wardDeduped).map(w => {
-                const pct = Math.min(100, Math.round((w.count / w.capacity) * 100));
-                const fillClass = pct >= 90 ? 'fill-red' : pct >= 70 ? 'fill-amber' : 'fill-green';
-                const pctClass  = pct >= 90 ? 'pct-red'  : pct >= 70 ? 'pct-amber'  : 'pct-green';
-                const label = w.name.length > 20 ? w.name.substring(0, 18) + '...' : w.name;
-                return { id: w.id, name: label, pct, fillClass, pctClass };
-            });
+            this.state.wards = Object.values(wardDeduped)
+                .sort((a, b) => b.count - a.count)
+                .map(w => {
+                    const pct = Math.min(100, Math.round((w.count / w.capacity) * 100));
+                    return {
+                        id: w.id,
+                        name: w.name,
+                        occupancy_percentage: pct,
+                        current_occupancy: w.count,
+                        capacity: w.capacity,
+                        isFull: pct >= 100
+                    };
+                });
 
             // Patient Status breakdown for donut
             let psStable = 0, psWarning = 0, psCritical = 0;
@@ -245,11 +271,29 @@ export class AdminDashboard extends Component {
             });
             this.state.patientStatus = { stable: psStable, warning: psWarning, critical: psCritical };
 
-            // Leaderboard — store doctor ID for click navigation
+            // Leaderboard — show ALL doctors in the system, overlay alert stats on top
+            // Step 1: get all users in the Doctor group (so doctors with 0 alerts still appear)
+            const doctorGroupRes = await this.orm.searchRead('res.groups',
+                [['full_name', 'like', 'Doctor']],
+                ['id', 'users'], { limit: 5 });
+            const allDocUsers = doctorGroupRes.length > 0 ? doctorGroupRes[0].users : [];
+            const allDoctors = allDocUsers.length > 0
+                ? await this.orm.searchRead('res.users',
+                    [['id', 'in', allDocUsers], ['id', '!=', 1], ['active', '=', true]],
+                    ['id', 'name'])
+                : [];
+
+            // Step 2: fetch all handled alerts (no date filter)
             const handled = await this.orm.searchRead("health.alert",
                 [['assigned_doctor_id', '!=', false]],
                 ['assigned_doctor_id', 'state', 'severity']);
+
+            // Step 3: build map starting with ALL doctors at 0
             const docMap = {};
+            allDoctors.forEach(u => {
+                docMap[u.id] = { id: u.id, name: u.name, total: 0, resolved: 0, critical: 0 };
+            });
+            // Overlay alert stats
             handled.forEach(a => {
                 const did = a.assigned_doctor_id[0];
                 const dname = a.assigned_doctor_id[1];
@@ -258,7 +302,13 @@ export class AdminDashboard extends Component {
                 if (a.state === 'resolved') docMap[did].resolved++;
                 if (a.severity === 'critical') docMap[did].critical++;
             });
-            this.state.leaderboard = Object.values(docMap).sort((a, b) => b.resolved - a.resolved).slice(0, 5);
+
+            this.state.leaderboard = Object.values(docMap)
+                .sort((a, b) => b.resolved - a.resolved)
+                .map(d => ({
+                    ...d,
+                    borderColor: d.critical >= 3 ? '#E24B4A' : d.critical >= 1 ? '#F59E0B' : '#185FA5'
+                }));
 
             // Escalations with timeAgo pre-computed
             const escs = await this.orm.searchRead("health.alert",
@@ -357,7 +407,8 @@ export class AdminDashboard extends Component {
                     labels: ['Stable', 'Warning', 'Critical'],
                     datasets: [{
                         data: [stable, warning, critical],
-                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                        backgroundColor: ['#10B981', '#FBBF24', '#FC8181'],
+                        hoverBackgroundColor: ['#059669', '#F59E0B', '#F56565'],
                         borderWidth: 0,
                         hoverOffset: 4
                     }]

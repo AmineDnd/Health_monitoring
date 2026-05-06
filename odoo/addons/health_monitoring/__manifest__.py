@@ -10,7 +10,6 @@
         'security/security_groups.xml',
         'security/security_rules.xml',
         'security/ir.model.access.csv',
-        'views/assets.xml',
         'views/health_vital_record_views.xml',
         'views/health_alert_views.xml',
         'views/health_patient_views.xml',
@@ -26,6 +25,7 @@
     ],
     'assets': {
         'web.assets_backend': [
+            'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
             'health_monitoring/static/src/scss/smartlab_theme.scss',
             'health_monitoring/static/src/scss/smartlab_dashboards.scss',
             'health_monitoring/static/src/xml/nurse_dashboard.xml',
