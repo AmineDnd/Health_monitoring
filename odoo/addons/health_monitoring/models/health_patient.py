@@ -14,7 +14,10 @@ class HealthPatient(models.Model):
     _inherit = ['mail.thread', 'mail.activity.mixin']
 
     name = fields.Char('Patient Name', required=True, tracking=True)
-    age = fields.Integer('Age', required=True, default=0)
+    image_1920 = fields.Image('Patient Photo', max_width=1920, max_height=1920)
+    image_128 = fields.Image('Thumbnail', related='image_1920', max_width=128, max_height=128, store=True)
+    date_of_birth = fields.Date('Date of Birth')
+    age = fields.Integer('Age', compute='_compute_age', store=True, readonly=False, tracking=True)
     gender = fields.Selection([('male', 'Male'), ('female', 'Female'), ('other', 'Other')], 'Gender', required=True)
     category = fields.Selection([
         ('child', 'Child'),
@@ -58,6 +61,22 @@ class HealthPatient(models.Model):
             else:
                 rec.lifestyle_profile = rec.profile_male
 
+    @api.depends('date_of_birth')
+    def _compute_age(self):
+        for rec in self:
+            if rec.date_of_birth:
+                today = fields.Date.today()
+                dob = rec.date_of_birth
+                age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+                rec.age = age
+            elif not rec.age:
+                rec.age = 0
+
+    @api.onchange('age')
+    def _onchange_age(self):
+        if self.gender != 'female' and self.lifestyle_profile == 'pregnant':
+            self.lifestyle_profile = 'standard'
+
     @api.onchange('gender')
     def _onchange_gender(self):
         if self.gender != 'female' and self.lifestyle_profile == 'pregnant':
@@ -67,7 +86,7 @@ class HealthPatient(models.Model):
     def _check_age(self):
         for rec in self:
             if rec.age < 0 or rec.age > 130:
-                raise odoo.exceptions.ValidationError("Age must be between 0 and 130.")
+                raise ValidationError("Age must be between 0 and 130.")
     
     doctor_id = fields.Many2one('res.users', 'Assigned Doctor', tracking=True)
     
@@ -84,6 +103,9 @@ class HealthPatient(models.Model):
     
     ai_recommended_ward_id = fields.Many2one('health.ward', string='AI Recommended Ward', tracking=True)
     ai_recommendation_msg = fields.Char('AI Recommendation Message', tracking=True)
+    
+    vitals_frequency_hours = fields.Float('Vitals Frequency (Hours)', default=4.0, tracking=True, 
+                                          help="How often vitals should be logged for this patient.")
     
     is_doctor = fields.Boolean(compute='_compute_is_doctor')
 
@@ -110,6 +132,28 @@ class HealthPatient(models.Model):
                 raise AccessError("No AI Recommended Ward to admit to.")
             rec.ward_id = rec.ai_recommended_ward_id
             rec.action_admit()
+            
+    def action_discharge(self):
+        for rec in self:
+            ward_name = rec.ward_id.name if rec.ward_id else 'the hospital'
+            rec.admission_status = 'discharged'
+            rec.ward_id = False
+            
+            # Auto-resolve active alerts for this patient
+            active_alerts = self.env['health.alert'].search([
+                ('patient_id', '=', rec.id),
+                ('status', 'in', ['pending', 'escalated'])
+            ])
+            for alert in active_alerts:
+                alert.write({
+                    'status': 'handled',
+                    'resolution_notes': 'Patient discharged from hospital.' if hasattr(alert, 'resolution_notes') else False
+                })
+            
+            # Post message to chatter
+            rec.message_post(
+                body=f"Patient has been discharged from {ward_name}. All active alerts auto-resolved."
+            )
     
     @api.depends('age')
     def _compute_category(self):
@@ -177,21 +221,61 @@ class HealthPatient(models.Model):
     last_alert_id = fields.Many2one('health.alert', 'Latest Alert', readonly=True)
     last_alert_state = fields.Selection(related='last_alert_id.state', string='Latest Alert Status', readonly=True)
     
+    last_vital_time = fields.Datetime('Last Vitals Logged', compute='_compute_last_vital_time', store=True)
+
+    @api.depends('vital_record_ids.recorded_at')
+    def _compute_last_vital_time(self):
+        for rec in self:
+            vitals = rec.vital_record_ids.sorted('recorded_at', reverse=True)
+            rec.last_vital_time = vitals[0].recorded_at if vitals else False
+            
     vital_record_ids = fields.One2many('health.vital.record', 'patient_id', 'Vital Records')
     alert_ids = fields.One2many('health.alert', 'patient_id', 'Alerts')
     
     vitals_count = fields.Integer(compute='_compute_vitals_count', string='Vitals Count')
-    alerts_count = fields.Integer(compute='_compute_alerts_count', string='Alerts Count')
-    critical_alerts_count = fields.Integer(compute='_compute_alerts_count', string='Critical Alerts Count')
+    alerts_count = fields.Integer(compute='_compute_alerts_count')
+    critical_alerts_count = fields.Integer(compute='_compute_alerts_count')
+    
+    total_alerts_this_month = fields.Integer(compute='_compute_alert_trends')
+    total_alerts_last_month = fields.Integer(compute='_compute_alert_trends')
+    alert_trend_label = fields.Char(compute='_compute_alert_trends')
 
+    def _compute_alerts_count(self):
+        for rec in self:
+            rec.alerts_count = self.env['health.alert'].search_count([('patient_id', '=', rec.id)])
+            rec.critical_alerts_count = self.env['health.alert'].search_count([
+                ('patient_id', '=', rec.id),
+                ('severity', '=', 'critical')
+            ])
+
+    def _compute_alert_trends(self):
+        for rec in self:
+            today = fields.Date.today()
+            # This Month
+            start_this_month = today.replace(day=1)
+            rec.total_alerts_this_month = self.env['health.alert'].search_count([
+                ('patient_id', '=', rec.id),
+                ('create_date', '>=', start_this_month)
+            ])
+            # Last Month
+            # Handle january
+            start_last_month = start_this_month.replace(month=start_this_month.month - 1) if start_this_month.month > 1 else start_this_month.replace(year=start_this_month.year - 1, month=12)
+            
+            rec.total_alerts_last_month = self.env['health.alert'].search_count([
+                ('patient_id', '=', rec.id),
+                ('create_date', '>=', start_last_month),
+                ('create_date', '<', start_this_month)
+            ])
+            
+            diff = rec.total_alerts_this_month - rec.total_alerts_last_month
+            if diff > 0:
+                rec.alert_trend_label = f"↑ {diff} from last month"
+            elif diff < 0:
+                rec.alert_trend_label = f"↓ {abs(diff)} from last month"
+            else:
+                rec.alert_trend_label = "Same as last month"
 
     @api.depends('vital_record_ids')
     def _compute_vitals_count(self):
         for rec in self:
             rec.vitals_count = len(rec.vital_record_ids)
-
-    @api.depends('alert_ids')
-    def _compute_alerts_count(self):
-        for rec in self:
-            rec.alerts_count = len(rec.alert_ids)
-            rec.critical_alerts_count = len(rec.alert_ids.filtered(lambda a: a.severity == 'critical'))

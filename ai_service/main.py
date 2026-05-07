@@ -88,9 +88,57 @@ def model_info():
     return {'algorithm':'IsolationForest','n_estimators':MODEL.n_estimators,
             'contamination':float(MODEL.contamination),'features':FEATURES}
 
+class RetrainRequest(BaseModel):
+    records: list
+    n_samples: int = Field(default=500)
+
 @app.post('/retrain')
-def retrain():
-    for f in ['isolation_forest.joblib','scaler.joblib','training_data.csv']:
-        if os.path.exists(f): os.remove(f)
-    from analyzer import _train_and_save; _train_and_save()
-    return {'status':'Model retrained successfully'}
+def retrain_model(req: RetrainRequest):
+    try:
+        import pandas as pd
+        from sklearn.ensemble import IsolationForest
+        from sklearn.preprocessing import StandardScaler
+        from analyzer import FEATURES, compute_derived_features
+        import joblib
+        
+        rows = []
+        records = req.records
+        # Sort by patient and time to compute history properly
+        for i, rec in enumerate(records):
+            history = records[max(0, i-3):i]
+            processed = compute_derived_features(rec.copy(), history)
+            row = {f: processed.get(f, 0.0) for f in FEATURES}
+            rows.append(row)
+        
+        if len(rows) < 50:
+            return {"status": "error", "message": f"Not enough data: {len(rows)} records. Need at least 50."}
+        
+        df = pd.DataFrame(rows)
+        
+        # Only keep rows that look like normal readings (no extreme outliers for training)
+        # We train the model to know what normal looks like
+        scaler = StandardScaler()
+        X = scaler.fit_transform(df[FEATURES].values)
+        
+        model = IsolationForest(
+            n_estimators=200,
+            contamination=0.05,
+            random_state=42,
+            n_jobs=-1
+        )
+        model.fit(X)
+        
+        joblib.dump(model, 'isolation_forest.joblib')
+        joblib.dump(scaler, 'scaler.joblib')
+        
+        # Reload the model in memory
+        from analyzer import _load_or_train
+        import analyzer
+        analyzer.MODEL, analyzer.SCALER = model, scaler
+        
+        logger.info(f"Model retrained on {len(rows)} real hospital records.")
+        return {"status": "success", "samples": len(rows), "message": f"Model retrained on {len(rows)} real patient records."}
+    
+    except Exception as e:
+        logger.error(f"Retraining failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

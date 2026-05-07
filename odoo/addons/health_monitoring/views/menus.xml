@@ -20,7 +20,10 @@
   <menuitem id="menu_vitals"       name="All Vitals"      parent="menu_health_root" action="action_vitals_all" sequence="20"/>
 
   <!-- Analytics -->
-  <menuitem id="menu_analytics_root" name="Analytics" parent="menu_health_root" sequence="30" groups="health_monitoring.group_health_admin"/>
-  <menuitem id="menu_analytics_vitals" name="Vital Trends" parent="menu_analytics_root" action="action_analytics_vitals_graph" sequence="1" groups="health_monitoring.group_health_admin"/>
-  <menuitem id="menu_analytics_alerts" name="Alert Severity" parent="menu_analytics_root" action="action_analytics_alerts_graph" sequence="2"  groups="health_monitoring.group_health_admin"/>
+  <menuitem id="menu_analytics_root"
+            name="Analytics"
+            parent="menu_health_root"
+            action="action_analytics_dashboard"
+            sequence="30"
+            groups="health_monitoring.group_health_admin"/>
 </odoo>

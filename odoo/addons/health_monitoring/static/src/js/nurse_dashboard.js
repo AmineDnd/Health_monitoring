@@ -90,8 +90,12 @@ export class NurseDashboard extends Component {
     }
 
     onOpenHandoffModal() {
-        this.state.handoffList = this.state.patients.filter(p => p.risk_level === 'high' || p.risk_level === 'critical');
-        this.state.showHandoff = true;
+        this.action.doAction({
+            type: 'ir.actions.act_window',
+            res_model: 'health.handoff',
+            views: [[false, 'form']],
+            target: 'new',
+        });
     }
 
     onCloseHandoffModal() {
@@ -167,7 +171,7 @@ export class NurseDashboard extends Component {
             const domain = [['admission_status', 'in', ['triage', 'admitted']]];
 
             const patients = await this.orm.searchRead("health.patient", domain,
-                ["id", "name", "admission_status", "risk_level", "age", "gender"]);
+                ["id", "name", "admission_status", "risk_level", "age", "gender", "vitals_frequency_hours"]);
 
             const patientIds = patients.map(p => p.id);
             let vitals = [];
@@ -203,8 +207,12 @@ export class NurseDashboard extends Component {
                 if (latest && latest.recorded_at) {
                     const recDate = new Date(latest.recorded_at.replace(' ', 'T') + 'Z');
                     hours = (now - recDate) / (1000 * 60 * 60);
-                    if (hours >= 2) status = 'overdue';
-                    else if (hours >= 1) status = 'due_soon';
+                    
+                    const freq = p.vitals_frequency_hours || 4; // Default to 4h if missing
+                    const soonThreshold = Math.max(freq - 1, freq * 0.75); // Due soon 1 hr before or at 75% of time
+
+                    if (hours >= freq) status = 'overdue';
+                    else if (hours >= soonThreshold) status = 'due_soon';
                     else status = 'up_to_date';
                 }
 
@@ -238,11 +246,12 @@ export class NurseDashboard extends Component {
                 // Due label for schedule
                 let dueLabel = '';
                 let statusLabel = '';
+                const freq = p.vitals_frequency_hours || 4;
                 if (status === 'overdue') {
-                    statusLabel = `${hours.toFixed(0)}h overdue`;
-                    dueLabel = 'Was due ' + Math.round(hours) + 'h ago';
+                    statusLabel = `${(hours - freq).toFixed(0)}h overdue`;
+                    dueLabel = `Was due ${(hours - freq).toFixed(0)}h ago`;
                 } else if (status === 'due_soon') {
-                    statusLabel = 'Due in ' + Math.round((2 - hours) * 60) + 'min';
+                    statusLabel = 'Due in ' + Math.round((freq - hours) * 60) + 'min';
                     dueLabel = statusLabel;
                 } else {
                     statusLabel = 'Next check';

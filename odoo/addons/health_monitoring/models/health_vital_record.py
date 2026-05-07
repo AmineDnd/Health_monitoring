@@ -14,6 +14,67 @@ class HealthVitalRecord(models.Model):
         """Dummy method just to give users a 'Save & Close' button that closes the popup wizard"""
         return {'type': 'ir.actions.act_window_close'}
 
+    @api.model
+    def action_retrain_ai_model(self):
+        """Collect all real vitals and send to AI service for retraining."""
+        records = self.search([], order='patient_id, recorded_at asc', limit=5000)
+        
+        if len(records) < 50:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Not Enough Data',
+                    'message': f'Only {len(records)} vital records found. Need at least 50 to retrain.',
+                    'type': 'warning',
+                    'sticky': False,
+                }
+            }
+        
+        payload_records = []
+        for rec in records:
+            payload_records.append({
+                'bp_systolic': rec.bp_systolic or 0,
+                'bp_diastolic': rec.bp_diastolic or 0,
+                'heart_rate': rec.heart_rate or 0,
+                'glucose': rec.glucose or 0,
+                'temperature': rec.temperature or 0,
+                'spo2': rec.spo2 or 0,
+                'respiratory_rate': rec.respiratory_rate or 0,
+            })
+        
+        try:
+            import requests as req_lib
+            resp = req_lib.post(
+                f'{AI_URL}/retrain',
+                json={'records': payload_records},
+                timeout=60
+            )
+            resp.raise_for_status()
+            result = resp.json()
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'AI Model Retrained',
+                    'message': result.get('message', 'Model updated successfully.'),
+                    'type': 'success',
+                    'sticky': False,
+                }
+            }
+        except Exception as e:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Retraining Failed',
+                    'message': str(e),
+                    'type': 'danger',
+                    'sticky': True,
+                }
+            }
+
     patient_id = fields.Many2one('health.patient', 'Patient', required=True, ondelete='cascade', index=True)
     type = fields.Selection([
         ('blood_pressure', 'Blood Pressure'),
@@ -125,8 +186,12 @@ class HealthVitalRecord(models.Model):
 
     def write(self, vals):
         res = super().write(vals)
-        for rec in self:
-            rec._call_ai_service()
+        # Only call AI if physiological vitals actually changed. This prevents infinite loops
+        # and prevents double-triggering when merely opening/saving a form without edits.
+        vital_fields = ['heart_rate', 'bp_systolic', 'bp_diastolic', 'spo2', 'temperature', 'glucose', 'respiratory_rate']
+        if any(f in vals for f in vital_fields):
+            for rec in self:
+                rec._call_ai_service()
         return res
 
     @api.constrains('patient_id', 'heart_rate', 'bp_systolic', 'bp_diastolic', 'spo2', 'temperature', 'glucose', 'respiratory_rate')

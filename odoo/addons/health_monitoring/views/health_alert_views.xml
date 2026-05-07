@@ -45,7 +45,14 @@
 
                 <!-- AI Confidence + state -->
                 <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid #F1F5F9;margin-bottom:8px;">
-                  <span style="font-size:11px;font-weight:600;color:#185FA5;">AI CONF: <t t-esc="Math.round(record.ai_confidence.raw_value)"/>%</span>
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <span style="font-size:11px;font-weight:600;color:#185FA5;">AI CONF: <t t-esc="Math.round(record.ai_confidence.raw_value)"/>%</span>
+                    <span t-attf-style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;color:#fff;background:#{record.ai_confidence.raw_value >= 80 ? '#16A34A' : record.ai_confidence.raw_value >= 50 ? '#F59E0B' : '#E24B4A'};">
+                      <t t-if="record.ai_confidence.raw_value >= 80">HIGH CONFIDENCE</t>
+                      <t t-elif="record.ai_confidence.raw_value >= 50">MODERATE</t>
+                      <t t-else="">LOW CONFIDENCE</t>
+                    </span>
+                  </div>
                   <div>
                     <field name="state" widget="label_selection" options="{'classes': {'new': 'default', 'investigating': 'info', 'resolved': 'success'}}"/>
                   </div>
@@ -90,7 +97,8 @@
     <field name="name">health.alert.tree</field>
     <field name="model">health.alert</field>
     <field name="arch" type="xml">
-      <tree decoration-danger="severity=='critical'"
+      <tree create="0"
+            decoration-danger="severity=='critical'"
             decoration-muted="state=='resolved'"
             class="sl-clinical-grid" limit="20">
         <field name="create_date" string="Time"/>
@@ -109,6 +117,11 @@
                decoration-success="state=='resolved'"
                decoration-info="state=='investigating'"
                decoration-muted="state=='new'"/>
+        <field name="response_time_minutes" string="Response (min)"
+               optional="show"
+               decoration-danger="response_time_minutes > 10 and response_time_minutes > 0"
+               decoration-warning="response_time_minutes > 5 and response_time_minutes &lt;= 10"
+               decoration-success="response_time_minutes > 0 and response_time_minutes &lt;= 5"/>
         <field name="assigned_doctor_id" widget="many2one_avatar_user" string="Claimed By"/>
         <button name="action_claim_alert" type="object" string="Claim"
                 invisible="assigned_doctor_id != False"/>
@@ -172,6 +185,7 @@
                   <field name="acknowledged" readonly="1"/>
                   <field name="acknowledged_by" readonly="1" widget="many2one_avatar_user"/>
                   <field name="acknowledged_at" readonly="1"/>
+                  <field name="resolution_notes" readonly="1" invisible="state != 'resolved'"/>
                 </group>
               </div>
             </div>

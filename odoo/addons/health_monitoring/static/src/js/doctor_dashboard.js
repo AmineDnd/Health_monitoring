@@ -146,8 +146,16 @@ export class DoctorDashboard extends Component {
         const isSelectedPatient = resolvedAlert && this.state.selectedPatient
             && resolvedAlert.patient_id[0] === this.state.selectedPatient.id;
 
-        await this.orm.call("health.alert", "action_resolve", [[alertId]]);
-        await this.fetchQueue();
+        const action = await this.orm.call("health.alert", "action_resolve", [[alertId]]);
+        if (action) {
+            this.action.doAction(action, {
+                onClose: () => {
+                    this.fetchQueue();
+                }
+            });
+        } else {
+            await this.fetchQueue();
+        }
 
         // If the resolved alert belonged to the patient in the right panel,
         // check if they still have active alerts — if not, clear the panel

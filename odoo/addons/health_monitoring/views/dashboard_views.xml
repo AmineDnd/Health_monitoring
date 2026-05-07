@@ -2,6 +2,10 @@
 <odoo>
 
   <!-- NEW ANALYTICS GRAPHS AND PIVOTS -->
+  <record id="action_analytics_dashboard" model="ir.actions.client">
+      <field name="name">Analytics</field>
+      <field name="tag">smartlab_analytics</field>
+  </record>
   <record id="action_analytics_vitals_graph" model="ir.actions.act_window">
     <field name="name">Interactive Vital Trends</field>
     <field name="res_model">health.vital.record</field>

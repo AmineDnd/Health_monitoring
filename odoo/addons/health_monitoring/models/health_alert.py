@@ -35,6 +35,24 @@ class HealthAlert(models.Model):
     
     headline = fields.Char('Alert Headline', compute='_compute_headline', store=True)
     
+    response_time_minutes = fields.Float(
+        'Response Time (min)',
+        compute='_compute_response_time',
+        store=True,
+        help="Minutes from alert creation to first acknowledgement"
+    )
+    
+    resolution_notes = fields.Text('Resolution Notes', tracking=True)
+
+    @api.depends('created_at', 'acknowledged_at', 'acknowledged')
+    def _compute_response_time(self):
+        for rec in self:
+            if rec.acknowledged and rec.acknowledged_at and rec.created_at:
+                delta = rec.acknowledged_at - rec.created_at
+                rec.response_time_minutes = round(delta.total_seconds() / 60.0, 1)
+            else:
+                rec.response_time_minutes = 0.0
+    
     @api.depends('message')
     def _compute_headline(self):
         for rec in self:
@@ -234,11 +252,16 @@ class HealthAlert(models.Model):
             })
         
     def action_resolve(self):
-        self.write({
-            'state': 'resolved',
-            'status': 'handled',
-            'handled_at': fields.Datetime.now()
-        })
+        self.ensure_one()
+        return {
+            'name': 'Resolve Alert',
+            'type': 'ir.actions.act_window',
+            'res_model': 'health.alert.resolve.wizard',
+            'view_mode': 'form',
+            'views': [[False, 'form']],
+            'target': 'new',
+            'context': {'default_alert_id': self.id}
+        }
 
     def _send_telegram(self, chat_id, message, bot_type='doctor'):
         if not chat_id: return

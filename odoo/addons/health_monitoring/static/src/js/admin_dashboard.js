@@ -190,32 +190,17 @@ export class AdminDashboard extends Component {
             this.state.kpi.criticalAlerts = criticalAlerts;
             this.state.kpi.criticalDelta = Math.max(0, Math.floor(Math.random() * 5));
 
-            // KPI: Real Avg Response Time
-            const resolvedAlerts = await this.orm.searchRead("health.alert",
-                [['state', '=', 'resolved'], ['handled_at', '!=', false]],
-                ['create_date', 'handled_at'],
-                { limit: 50 });
-            if (resolvedAlerts.length > 0) {
-                let totalMs = 0, count = 0;
-                resolvedAlerts.forEach(a => {
-                    if (a.create_date && a.handled_at) {
-                        const c = new Date(a.create_date.replace(' ', 'T') + 'Z');
-                        const r = new Date(a.handled_at.replace(' ', 'T') + 'Z');
-                        totalMs += (r - c);
-                        count++;
-                    }
-                });
-                if (count > 0) {
-                    const avgMin = Math.round((totalMs / count) / 60000);
-                    this.state.kpi.avgResponse = avgMin >= 60
-                        ? `${Math.floor(avgMin / 60)}h ${avgMin % 60}m`
-                        : `${avgMin}m`;
-                } else {
-                    this.state.kpi.avgResponse = 'N/A';
-                }
-            } else {
-                this.state.kpi.avgResponse = 'N/A';
-            }
+            // KPI: SLA Compliance
+            const respondedAlerts = await this.orm.searchRead(
+                'health.alert',
+                [['response_time_minutes', '>', 0]],
+                ['response_time_minutes']
+            );
+            const withinSla = respondedAlerts.filter(a => a.response_time_minutes <= 5).length;
+            const slaPercent = respondedAlerts.length > 0
+                ? Math.round((withinSla / respondedAlerts.length) * 100)
+                : 100;
+            this.state.slaCompliance = slaPercent;
 
             // KPI: AI Anomalies (alerts created today)
             const today = new Date().toISOString().split('T')[0];
@@ -304,7 +289,11 @@ export class AdminDashboard extends Component {
             });
 
             this.state.leaderboard = Object.values(docMap)
-                .sort((a, b) => b.resolved - a.resolved)
+                .sort((a, b) => {
+                    if (b.resolved !== a.resolved) return b.resolved - a.resolved;
+                    if (b.total !== a.total) return b.total - a.total;
+                    return a.name.localeCompare(b.name);
+                })
                 .map(d => ({
                     ...d,
                     borderColor: d.critical >= 3 ? '#E24B4A' : d.critical >= 1 ? '#F59E0B' : '#185FA5'

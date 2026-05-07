@@ -3,6 +3,7 @@ from odoo import models, fields, api
 class HealthWard(models.Model):
     _name = 'health.ward'
     _description = 'Hospital Ward / Service'
+    _inherit = ['mail.thread']
 
     name = fields.Char('Ward Name', required=True)
     description = fields.Text('Description')
@@ -19,6 +20,7 @@ class HealthWard(models.Model):
     
     capacity = fields.Integer('Bed Capacity', default=10, help="Total number of beds available in this ward.")
     current_occupancy = fields.Integer('Current Occupancy', compute='_compute_occupancy', store=True)
+    capacity_percentage = fields.Float('Capacity %', compute='_compute_capacity_percentage', store=True)
     
     floor_number = fields.Char('Floor / Location', help="e.g., 3rd Floor North Wing")
     contact_extension = fields.Char('Nurse Station Ext.', help="Internal phone extension")
@@ -39,6 +41,14 @@ class HealthWard(models.Model):
     def _compute_occupancy(self):
         for rec in self:
             rec.current_occupancy = len(rec.patient_ids)
+
+    @api.depends('capacity', 'current_occupancy')
+    def _compute_capacity_percentage(self):
+        for rec in self:
+            if rec.capacity > 0:
+                rec.capacity_percentage = (rec.current_occupancy / rec.capacity) * 100
+            else:
+                rec.capacity_percentage = 0.0
             
     def _compute_alert_counts(self):
         for rec in self:

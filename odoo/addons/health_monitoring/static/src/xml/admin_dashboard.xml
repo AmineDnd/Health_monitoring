@@ -59,9 +59,11 @@
               <div class="sl-kpi-delta"><t t-esc="state.kpi.criticalDelta"/> in last hour</div>
             </div>
             <div class="sl-kpi-card kpi-response">
-              <div class="sl-kpi-label">Avg Response Time</div>
-              <div class="sl-kpi-value"><t t-esc="state.kpi.avgResponse"/></div>
-              <div class="sl-kpi-delta">from alert to resolution</div>
+              <div class="sl-kpi-label">SLA Compliance</div>
+              <div class="sl-kpi-value" t-attf-style="color: #{state.slaCompliance >= 80 ? '#10B981' : state.slaCompliance >= 60 ? '#F59E0B' : '#E24B4A'};">
+                  <t t-esc="state.slaCompliance"/>%
+              </div>
+              <div class="sl-kpi-delta">Responded within 5 min</div>
             </div>
             <div class="sl-kpi-card kpi-anomalies">
               <div class="sl-kpi-label">AI Anomalies Today</div>
