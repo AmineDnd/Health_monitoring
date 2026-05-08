@@ -227,48 +227,29 @@ class HealthVitalRecord(models.Model):
         if self.env.context.get('no_ai'):
             return
         patient = self.patient_id
-        # Optimize: Fetch ALL latest vitals in ONE query
+
+        # Fast single-query history — replaces the old O(N²) nested loop
         latest_recs = self.env['health.vital.record'].search([
             ('patient_id', '=', patient.id),
             ('id', '!=', self.id)
-        ], order='recorded_at desc')
-        
-        # Check if this is the first record for this patient
-        is_first = not bool(latest_recs)
-        
-        # Build a robust state history (last 5 states)
-        v_fields = ['bp_systolic', 'bp_diastolic', 'heart_rate', 'glucose', 'temperature', 'spo2', 'respiratory_rate']
-        history = []
-        
-        # We want to build 5 snapshots. 
-        # For each of the last 5 records, what was the FULL patient state?
-        for i in range(min(5, len(latest_recs))):
-            snapshot = {}
-            # Look at this record and all records older than it
-            for r in latest_recs[i:]:
-                if len(snapshot) == len(v_fields): break
-                for f in v_fields:
-                    if f not in snapshot:
-                        val = getattr(r, f)
-                        # Fallback to generic value fields
-                        if not val:
-                            if f == 'bp_systolic' and r.type == 'blood_pressure': val = r.value
-                            elif f == 'bp_diastolic' and r.type == 'blood_pressure': val = r.value2
-                            elif f == 'heart_rate' and r.type == 'heart_rate': val = r.value
-                            elif f == 'glucose' and r.type == 'glucose': val = r.value
-                            elif f == 'temperature' and r.type == 'temperature': val = r.value
-                            elif f == 'spo2' and r.type == 'oxygen': val = r.value
-                            elif f == 'respiratory_rate' and r.type == 'respiratory_rate': val = r.value
-                        
-                        if val: snapshot[f] = val
-            
-            # Fill remaining with 0.0
-            for f in v_fields:
-                if f not in snapshot: snapshot[f] = 0.0
-            history.append(snapshot)
+        ], order='recorded_at desc', limit=5)
 
-        # Baseline for the CURRENT reading (snapshot of everything BEFORE current)
-        baseline = history[0] if history else {f: 0.0 for f in v_fields}
+        is_first = not bool(latest_recs)
+
+        history = [{
+            'bp_systolic': r.bp_systolic or 0,
+            'bp_diastolic': r.bp_diastolic or 0,
+            'heart_rate': r.heart_rate or 0,
+            'glucose': r.glucose or 90,
+            'temperature': r.temperature or 37.0,
+            'spo2': r.spo2 or 0,
+            'respiratory_rate': r.respiratory_rate or 16,
+        } for r in latest_recs]
+
+        baseline = history[0] if history else {
+            'bp_systolic': 0, 'bp_diastolic': 0, 'heart_rate': 0,
+            'glucose': 0, 'temperature': 0, 'spo2': 0, 'respiratory_rate': 0
+        }
 
         payload = {
             'patient_code': str(patient.id),
@@ -288,7 +269,12 @@ class HealthVitalRecord(models.Model):
         }
 
         try:
-            resp = requests.post(f'{AI_URL}/analyze', json=payload, timeout=8)
+            resp = requests.post(
+                f'{AI_URL}/analyze',
+                json=payload,
+                timeout=12,
+                headers={'Content-Type': 'application/json'}
+            )
             resp.raise_for_status()
             result = resp.json()
             score = result.get('anomaly_score', 0.0)
@@ -355,7 +341,12 @@ class HealthVitalRecord(models.Model):
                 if active_alerts:
                     active_alerts.sudo().write({
                         'state': 'resolved',
-                        'resolution_notes': _("System: Patient vitals returned to normal range (Verified by AI in Vital Record #%s)") % self.id
+                        'status': 'handled',
+                        'handled_at': fields.Datetime.now(),
+                        'resolution_notes': _(
+                            "System: Patient vitals returned to normal range "
+                            "(Verified by AI in Vital Record #%s)"
+                        ) % self.id
                     })
                 
                 # Update stable recommendation
@@ -372,13 +363,15 @@ class HealthVitalRecord(models.Model):
                     'ai_recommendation_msg': "Patient Stable. AI Recommends General Admission."
                 })
 
+        except requests.exceptions.Timeout:
+            _logger.warning(f'AI service timeout for vital record {self.id}. Record saved without AI analysis.')
+        except requests.exceptions.ConnectionError:
+            _logger.warning(f'AI service unreachable for vital record {self.id}. Record saved without AI analysis.')
         except Exception as e:
-            _logger.error(f'AI service error: {e}')
+            _logger.error(f'AI service unexpected error for vital record {self.id}: {e}')
 
     @api.model
     def cron_reanalyze_recent(self):
-        cutoff = fields.Datetime.now() - fields.Datetime.subtract(fields.Datetime.now(), hours=2)
-        # Using timedelta is usually fine but let's just do search
         from datetime import timedelta
         cutoff = fields.Datetime.now() - timedelta(hours=2)
         recent = self.search([

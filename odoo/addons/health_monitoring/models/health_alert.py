@@ -39,16 +39,16 @@ class HealthAlert(models.Model):
         'Response Time (min)',
         compute='_compute_response_time',
         store=True,
-        help="Minutes from alert creation to first acknowledgement"
+        help="Minutes from alert creation to being handled"
     )
     
     resolution_notes = fields.Text('Resolution Notes', tracking=True)
 
-    @api.depends('created_at', 'acknowledged_at', 'acknowledged')
+    @api.depends('created_at', 'handled_at', 'status')
     def _compute_response_time(self):
         for rec in self:
-            if rec.acknowledged and rec.acknowledged_at and rec.created_at:
-                delta = rec.acknowledged_at - rec.created_at
+            if rec.status == 'handled' and rec.handled_at and rec.created_at:
+                delta = rec.handled_at - rec.created_at
                 rec.response_time_minutes = round(delta.total_seconds() / 60.0, 1)
             else:
                 rec.response_time_minutes = 0.0

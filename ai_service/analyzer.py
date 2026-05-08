@@ -191,6 +191,7 @@ def calculate_news2(data: dict) -> tuple:
 
 def analyze(input_data: dict) -> dict:
     """Full analysis with missing data handling."""
+    global MODEL, SCALER
     history = input_data.get('history', [])
     is_initial = input_data.get('is_initial', False)
     

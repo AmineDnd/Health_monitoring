@@ -142,17 +142,19 @@ class HealthPatient(models.Model):
             # Auto-resolve active alerts for this patient
             active_alerts = self.env['health.alert'].search([
                 ('patient_id', '=', rec.id),
-                ('status', 'in', ['pending', 'escalated'])
+                ('state', 'not in', ['resolved']),
             ])
             for alert in active_alerts:
                 alert.write({
                     'status': 'handled',
-                    'resolution_notes': 'Patient discharged from hospital.' if hasattr(alert, 'resolution_notes') else False
+                    'state': 'resolved',
+                    'handled_at': fields.Datetime.now(),
+                    'resolution_notes': 'Patient discharged from hospital. Alert auto-resolved.'
                 })
             
             # Post message to chatter
             rec.message_post(
-                body=f"Patient has been discharged from {ward_name}. All active alerts auto-resolved."
+                body=f"Patient has been discharged from {ward_name}. {len(active_alerts)} active alert(s) auto-resolved."
             )
     
     @api.depends('age')
