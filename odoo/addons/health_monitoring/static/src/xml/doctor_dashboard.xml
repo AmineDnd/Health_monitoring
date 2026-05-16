@@ -166,7 +166,7 @@
             </div>
 
             <!-- Vitals grid -->
-            <div class="sl-vitals-grid">
+            <div class="sl-vitals-grid" style="grid-template-columns:repeat(3,1fr);">
               <div class="sl-vital-box">
                 <div t-attf-class="sl-vital-val #{state.vitals.hr_abnormal ? 'abnormal' : ''}">
                   <t t-esc="state.vitals.heart_rate || '—'"/>
@@ -194,14 +194,125 @@
                 </div>
                 <div class="sl-vital-label">Temperature</div>
               </div>
+              <div class="sl-vital-box">
+                <div t-attf-class="sl-vital-val #{state.vitals.rr_abnormal ? 'abnormal' : ''}">
+                  <t t-esc="state.vitals.respiratory_rate || '—'"/>
+                </div>
+                <div class="sl-vital-label">Resp. Rate</div>
+              </div>
+              <div class="sl-vital-box">
+                <div t-attf-class="sl-vital-val #{state.vitals.glucose_abnormal ? 'abnormal' : ''}">
+                  <t t-esc="state.vitals.glucose || '—'"/>
+                </div>
+                <div class="sl-vital-label">Glucose</div>
+              </div>
+            </div>
+
+            <!-- AI Alert Summary — explains WHY patient is flagged -->
+            <t t-if="state.activeAlert">
+              <div t-attf-style="background:#{state.activeAlert.severity === 'critical' ? '#FCEBEB' : '#FAEEDA'};border:1px solid #{state.activeAlert.severity === 'critical' ? '#F7C1C1' : '#FAC775'};border-left:3px solid #{state.activeAlert.severity === 'critical' ? '#E24B4A' : '#F59E0B'};border-radius:8px;padding:10px 14px;margin-bottom:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                  <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;" t-attf-style="color:#{state.activeAlert.severity === 'critical' ? '#A32D2D' : '#854F0B'};">
+                    AI Alert — <t t-esc="(state.activeAlert.severity || '').toUpperCase()"/>
+                  </span>
+                  <span style="font-size:10px;color:#64748B;"><t t-esc="state.activeAlert.timeAgo"/></span>
+                </div>
+                <div style="font-size:12px;font-weight:500;color:#0F172A;line-height:1.5;">
+                  <t t-esc="state.activeAlert.headline || 'Anomaly detected by AI analysis'"/>
+                </div>
+                <t t-if="state.vitals.ai_score">
+                  <div style="font-size:10px;color:#64748B;margin-top:4px;">AI Risk Score: <strong t-attf-style="color:#{state.vitals.ai_score >= 80 ? '#A32D2D' : state.vitals.ai_score >= 60 ? '#854F0B' : '#334155'};"><t t-esc="state.vitals.ai_score"/>%</strong></div>
+                </t>
+              </div>
+            </t>
+
+            <!-- Critical value warning banners -->
+            <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;">
+
+              <!-- SpO2 critically low -->
+              <t t-if="state.vitals and state.vitals.spo2 and state.vitals.spo2 &lt; 90">
+                <div style="background:#FCEBEB;border:1px solid #F7C1C1;border-left:3px solid #E24B4A;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
+                  <div style="width:6px;height:6px;border-radius:50%;background:#E24B4A;flex-shrink:0;"/>
+                  <div style="font-size:11px;font-weight:600;color:#A32D2D;">SpO&#8322; critically low at <t t-esc="state.vitals.spo2"/>% — immediate oxygen intervention</div>
+                </div>
+              </t>
+
+              <!-- Heart rate dangerously high -->
+              <t t-if="state.vitals and state.vitals.heart_rate and state.vitals.heart_rate &gt; 120">
+                <div style="background:#FCEBEB;border:1px solid #F7C1C1;border-left:3px solid #E24B4A;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
+                  <div style="width:6px;height:6px;border-radius:50%;background:#E24B4A;flex-shrink:0;"/>
+                  <div style="font-size:11px;font-weight:600;color:#A32D2D;">Tachycardia at <t t-esc="state.vitals.heart_rate"/> bpm — risk of arrhythmia</div>
+                </div>
+              </t>
+
+              <!-- Heart rate dangerously low -->
+              <t t-if="state.vitals and state.vitals.heart_rate and state.vitals.heart_rate &lt; 50">
+                <div style="background:#FCEBEB;border:1px solid #F7C1C1;border-left:3px solid #E24B4A;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
+                  <div style="width:6px;height:6px;border-radius:50%;background:#E24B4A;flex-shrink:0;"/>
+                  <div style="font-size:11px;font-weight:600;color:#A32D2D;">Bradycardia at <t t-esc="state.vitals.heart_rate"/> bpm — risk of cardiac arrest</div>
+                </div>
+              </t>
+
+              <!-- BP critically high -->
+              <t t-if="state.vitals and state.vitals.bp_systolic and state.vitals.bp_systolic &gt; 180">
+                <div style="background:#FCEBEB;border:1px solid #F7C1C1;border-left:3px solid #E24B4A;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
+                  <div style="width:6px;height:6px;border-radius:50%;background:#E24B4A;flex-shrink:0;"/>
+                  <div style="font-size:11px;font-weight:600;color:#A32D2D;">Hypertensive crisis at <t t-esc="state.vitals.bp_systolic"/>/<t t-esc="state.vitals.bp_diastolic"/> mmHg</div>
+                </div>
+              </t>
+
+              <!-- BP critically low (hypotension) -->
+              <t t-if="state.vitals and state.vitals.bp_systolic and state.vitals.bp_systolic &lt; 90">
+                <div style="background:#FCEBEB;border:1px solid #F7C1C1;border-left:3px solid #E24B4A;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
+                  <div style="width:6px;height:6px;border-radius:50%;background:#E24B4A;flex-shrink:0;"/>
+                  <div style="font-size:11px;font-weight:600;color:#A32D2D;">Hypotension at <t t-esc="state.vitals.bp_systolic"/>/<t t-esc="state.vitals.bp_diastolic"/> mmHg — risk of shock</div>
+                </div>
+              </t>
+
+              <!-- Respiratory rate high (tachypnea) -->
+              <t t-if="state.vitals and state.vitals.respiratory_rate and state.vitals.respiratory_rate &gt; 25">
+                <div style="background:#FCEBEB;border:1px solid #F7C1C1;border-left:3px solid #E24B4A;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
+                  <div style="width:6px;height:6px;border-radius:50%;background:#E24B4A;flex-shrink:0;"/>
+                  <div style="font-size:11px;font-weight:600;color:#A32D2D;">Tachypnea at <t t-esc="state.vitals.respiratory_rate"/> br/min — respiratory distress</div>
+                </div>
+              </t>
+
+              <!-- Glucose critically low -->
+              <t t-if="state.vitals and state.vitals.glucose and state.vitals.glucose &lt; 70">
+                <div style="background:#FCEBEB;border:1px solid #F7C1C1;border-left:3px solid #E24B4A;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
+                  <div style="width:6px;height:6px;border-radius:50%;background:#E24B4A;flex-shrink:0;"/>
+                  <div style="font-size:11px;font-weight:600;color:#A32D2D;">Hypoglycemia at <t t-esc="state.vitals.glucose"/> mg/dL — immediate glucose needed</div>
+                </div>
+              </t>
+
+              <!-- Fever -->
+              <t t-if="state.vitals and state.vitals.temperature and state.vitals.temperature &gt; 38.5">
+                <div style="background:#FAEEDA;border:1px solid #FAC775;border-left:3px solid #F59E0B;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
+                  <div style="width:6px;height:6px;border-radius:50%;background:#F59E0B;flex-shrink:0;"/>
+                  <div style="font-size:11px;font-weight:600;color:#854F0B;">Fever at <t t-esc="state.vitals.temperature"/>°C — infection risk</div>
+                </div>
+              </t>
+
             </div>
 
             <!-- Heart rate trend chart -->
             <div class="sl-glass-card" style="margin-bottom:12px;">
               <div class="sl-card-title"><t t-esc="'Vitals Trend — Last 12 Readings'"/></div>
-              <div style="height:220px;position:relative;">
-                <canvas t-ref="trendChart"/>
-              </div>
+
+              <t t-if="!state.showVitalsChart">
+                <div style="height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:#F8FAFC;border-radius:10px;border:1px dashed #E2E8F0;">
+                  <div style="font-size:13px;font-weight:500;color:#64748B;">No trend data yet</div>
+                  <div style="font-size:11px;color:#94A3B8;">Log 3 or more vitals to see the chart</div>
+                </div>
+              </t>
+
+              <!-- Chart canvas: only when 3+ vitals exist -->
+              <t t-if="state.showVitalsChart">
+                <div style="height:220px;position:relative;">
+                  <canvas t-ref="trendChart"/>
+                </div>
+              </t>
+
             </div>
 
             <!-- Risk factors -->
@@ -209,15 +320,15 @@
               <div class="sl-card-title"><t t-esc="'Risk Factors'"/></div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                 <div style="background:#FFFFFF;border:1px solid #EEF2F7;border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
-                  <span style="font-size:12px;color:#334155;">Arrhythmia</span>
+                  <span style="font-size:12px;color:#334155;">Cardiac</span>
                   <div style="width:80px;height:4px;background:#F1F5F9;border-radius:3px;overflow:hidden;">
-                    <div t-attf-style="width:#{state.risk.arrhythmia}%;height:100%;border-radius:3px;background:#{state.risk.arrhythmiaColor};transition:width 0.5s;"/>
+                    <div t-attf-style="width:#{state.risk.cardiac}%;height:100%;border-radius:3px;background:#{state.risk.cardiacColor};transition:width 0.5s;"/>
                   </div>
                 </div>
                 <div style="background:#FFFFFF;border:1px solid #EEF2F7;border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
-                  <span style="font-size:12px;color:#334155;">Hypertension</span>
+                  <span style="font-size:12px;color:#334155;">Respiratory</span>
                   <div style="width:80px;height:4px;background:#F1F5F9;border-radius:3px;overflow:hidden;">
-                    <div t-attf-style="width:#{state.risk.hypertension}%;height:100%;border-radius:3px;background:#{state.risk.hypertensionColor};transition:width 0.5s;"/>
+                    <div t-attf-style="width:#{state.risk.respiratory}%;height:100%;border-radius:3px;background:#{state.risk.respiratoryColor};transition:width 0.5s;"/>
                   </div>
                 </div>
                 <div style="background:#FFFFFF;border:1px solid #EEF2F7;border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
@@ -227,9 +338,21 @@
                   </div>
                 </div>
                 <div style="background:#FFFFFF;border:1px solid #EEF2F7;border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
-                  <span style="font-size:12px;color:#334155;"><t t-esc="'Bradycardia'"/></span>
+                  <span style="font-size:12px;color:#334155;">Blood Pressure</span>
                   <div style="width:80px;height:4px;background:#F1F5F9;border-radius:3px;overflow:hidden;">
-                    <div t-attf-style="width:#{state.risk.bradycardia}%;height:100%;border-radius:3px;background:#{state.risk.bradycardiaColor};transition:width 0.5s;"/>
+                    <div t-attf-style="width:#{state.risk.bloodPressure}%;height:100%;border-radius:3px;background:#{state.risk.bloodPressureColor};transition:width 0.5s;"/>
+                  </div>
+                </div>
+                <div style="background:#FFFFFF;border:1px solid #EEF2F7;border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
+                  <span style="font-size:12px;color:#334155;">Thermoregulation</span>
+                  <div style="width:80px;height:4px;background:#F1F5F9;border-radius:3px;overflow:hidden;">
+                    <div t-attf-style="width:#{state.risk.thermoregulation}%;height:100%;border-radius:3px;background:#{state.risk.thermoregulationColor};transition:width 0.5s;"/>
+                  </div>
+                </div>
+                <div style="background:#FFFFFF;border:1px solid #EEF2F7;border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
+                  <span style="font-size:12px;color:#334155;">Metabolic</span>
+                  <div style="width:80px;height:4px;background:#F1F5F9;border-radius:3px;overflow:hidden;">
+                    <div t-attf-style="width:#{state.risk.metabolic}%;height:100%;border-radius:3px;background:#{state.risk.metabolicColor};transition:width 0.5s;"/>
                   </div>
                 </div>
               </div>

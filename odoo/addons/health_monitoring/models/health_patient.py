@@ -85,8 +85,25 @@ class HealthPatient(models.Model):
     @api.constrains('age')
     def _check_age(self):
         for rec in self:
-            if rec.age < 0 or rec.age > 130:
-                raise ValidationError("Age must be between 0 and 130.")
+            if rec.age is not False and rec.age is not None:
+                if rec.age < 0 or rec.age > 110:
+                    raise ValidationError(
+                        f"Age {rec.age} is not valid. Please enter an age between 0 and 110."
+                    )
+
+    @api.constrains('date_of_birth')
+    def _check_date_of_birth(self):
+        for rec in self:
+            if rec.date_of_birth and rec.date_of_birth > fields.Date.today():
+                raise ValidationError("Date of birth cannot be in the future.")
+
+    @api.onchange('date_of_birth')
+    def _onchange_date_of_birth(self):
+        """Immediately sync age in the UI when DOB changes."""
+        if self.date_of_birth:
+            today = fields.Date.today()
+            dob = self.date_of_birth
+            self.age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
     
     doctor_id = fields.Many2one('res.users', 'Assigned Doctor', tracking=True)
     
@@ -120,32 +137,54 @@ class HealthPatient(models.Model):
             rec.status = 'active'
             
     def action_admit(self):
-        for rec in self:
-            if not rec.ward_id:
-                raise AccessError("Please select a Ward before admitting the patient.")
-            rec.admission_status = 'admitted'
-            rec.message_post(body=f"Patient officially admitted to {rec.ward_id.name}.")
+        """Open admit wizard — lets nurse select ward and confirm admission."""
+        self.ensure_one()
+        return {
+            'name': 'Admit Patient',
+            'type': 'ir.actions.act_window',
+            'res_model': 'health.patient.admit.wizard',
+            'view_mode': 'form',
+            'views': [[False, 'form']],
+            'target': 'new',
+            'context': {
+                'default_patient_id': self.id,
+                'default_ward_id': (
+                    self.ai_recommended_ward_id.id
+                    if self.ai_recommended_ward_id
+                    else self.ward_id.id if self.ward_id
+                    else False
+                ),
+            },
+        }
+
 
     def action_admit_ai(self):
         for rec in self:
             if not rec.ai_recommended_ward_id:
-                raise AccessError("No AI Recommended Ward to admit to.")
-            rec.ward_id = rec.ai_recommended_ward_id
-            rec.action_admit()
+                raise ValidationError("No AI Recommended Ward to admit to.")
+            # Use sudo: the AI may recommend a ward the current doctor isn't assigned to
+            rec.sudo().write({
+                'ward_id': rec.ai_recommended_ward_id.id,
+                'admission_status': 'admitted',
+            })
+            rec.sudo().message_post(body=f"Patient officially admitted to {rec.ai_recommended_ward_id.name} (AI Recommendation).")
+        return True
             
     def action_discharge(self):
         for rec in self:
             ward_name = rec.ward_id.name if rec.ward_id else 'the hospital'
-            rec.admission_status = 'discharged'
-            rec.ward_id = False
+            rec.sudo().write({
+                'admission_status': 'discharged',
+                'ward_id': False,
+            })
             
             # Auto-resolve active alerts for this patient
-            active_alerts = self.env['health.alert'].search([
+            active_alerts = self.env['health.alert'].sudo().search([
                 ('patient_id', '=', rec.id),
                 ('state', 'not in', ['resolved']),
             ])
-            for alert in active_alerts:
-                alert.write({
+            if active_alerts:
+                active_alerts.sudo().write({
                     'status': 'handled',
                     'state': 'resolved',
                     'handled_at': fields.Datetime.now(),
@@ -153,9 +192,10 @@ class HealthPatient(models.Model):
                 })
             
             # Post message to chatter
-            rec.message_post(
+            rec.sudo().message_post(
                 body=f"Patient has been discharged from {ward_name}. {len(active_alerts)} active alert(s) auto-resolved."
             )
+        return True
     
     @api.depends('age')
     def _compute_category(self):

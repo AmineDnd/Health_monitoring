@@ -24,8 +24,9 @@ export class NurseDashboard extends Component {
             schedule: [],
             activityFeed: [],
             handoffList: [],
-            stats: { total: 0, stable: 0, dueSoon: 0, overdue: 0, critical: 0 },
+            stats: { total: 0, upToDate: 0, dueSoon: 0, overdue: 0, critical: 0 },
             showHandoff: false,
+            filterModal: { show: false, title: '', patients: [] },
         });
 
         onWillStart(async () => {
@@ -84,7 +85,19 @@ export class NurseDashboard extends Component {
             context: { default_patient_id: id },
             target: 'new',
         }, {
-            // When the dialog closes (save or discard), refresh the dashboard
+            onClose: () => this.fetchData(),
+        });
+    }
+
+    onOpenPatient(patientId) {
+        // Open patient profile in a dialog so nurse stays on the dashboard
+        this.action.doAction({
+            type: 'ir.actions.act_window',
+            res_model: 'health.patient',
+            res_id: patientId,
+            views: [[false, 'form']],
+            target: 'new',
+        }, {
             onClose: () => this.fetchData(),
         });
     }
@@ -100,6 +113,31 @@ export class NurseDashboard extends Component {
 
     onCloseHandoffModal() {
         this.state.showHandoff = false;
+    }
+
+    // --- KPI filter modal ---
+    onFilterCritical() {
+        const filtered = this.state.patients.filter(p => p.risk_level === 'critical');
+        this.state.filterModal = { show: true, title: 'Critical Patients', patients: filtered };
+    }
+
+    onFilterOverdue() {
+        const filtered = this.state.patients.filter(p => p.vitalsStatus === 'overdue');
+        this.state.filterModal = { show: true, title: 'Overdue Patients', patients: filtered };
+    }
+
+    onFilterDueSoon() {
+        const filtered = this.state.patients.filter(p => p.vitalsStatus === 'due_soon');
+        this.state.filterModal = { show: true, title: 'Due Soon', patients: filtered };
+    }
+
+    onFilterUpToDate() {
+        const filtered = this.state.patients.filter(p => p.vitalsStatus === 'up_to_date');
+        this.state.filterModal = { show: true, title: 'Up to Date', patients: filtered };
+    }
+
+    onCloseFilterModal() {
+        this.state.filterModal = { show: false, title: '', patients: [] };
     }
 
     onExportCSV() {
@@ -184,8 +222,8 @@ export class NurseDashboard extends Component {
                     { order: "recorded_at desc" });
                 alerts = await this.orm.searchRead("health.alert",
                     [['patient_id', 'in', patientIds]],
-                    ["id", "headline", "create_date", "severity"],
-                    { limit: 10, order: "create_date desc" });
+                    ["id", "headline", "create_date", "severity", "patient_id"],
+                    { limit: 20, order: "create_date desc" });
             }
 
             const vitalsByPatient = {};
@@ -216,7 +254,7 @@ export class NurseDashboard extends Component {
                     else status = 'up_to_date';
                 }
 
-                if (p.risk_level === 'critical' || p.risk_level === 'high') critical++;
+                if (p.risk_level === 'critical') critical++;
                 else if (status === 'overdue') overdue++;
                 else if (status === 'due_soon') due++;
                 else stable++;
@@ -237,6 +275,8 @@ export class NurseDashboard extends Component {
                 const spo2Warn    = !spo2Abnormal && cSpO2 ? (cSpO2 < 95) : false;
                 const bpAbnormal  = cBpSys ? (cBpSys > 140 || cBpSys < 90) : false;
                 const bpWarn      = !bpAbnormal && cBpSys ? (cBpSys > 130) : false;
+                const bpLow       = cBpSys ? (cBpSys < 90) : false;
+                const bpEqual     = (cBpSys && cBpDia) ? (Math.abs(cBpSys - cBpDia) < 5) : false;
                 const tempAbnormal= cTemp ? (cTemp > 38.5 || cTemp < 35.5) : false;
 
                 let timeSince = 'No vitals';
@@ -274,7 +314,7 @@ export class NurseDashboard extends Component {
                     rawTemp: cTemp,
                     hrAbnormal, hrWarn,
                     spo2Abnormal, spo2Warn,
-                    bpAbnormal, bpWarn,
+                    bpAbnormal, bpWarn, bpLow, bpEqual,
                     tempAbnormal,
                     recentVitals: pv.slice(0, 5).reverse()
                 };
@@ -288,29 +328,85 @@ export class NurseDashboard extends Component {
                 return b.hoursSort - a.hoursSort;
             });
 
+            // Store all processed patients — used by filter modal
             this.state.patients = processed;
-            this.state.stats = { total: patients.length, stable, ok: stable, dueSoon: due, overdue, critical };
-            this.state.schedule = processed.filter(p => p.vitalsStatus !== 'up_to_date').slice(0, 6);
 
-            // Activity Feed
+            this.state.stats = {
+                total: patients.length,
+                upToDate: stable,
+                dueSoon: due, overdue, critical,
+            };
+
+            // Schedule: overdue + due_soon + patients with no vitals at all
+            this.state.schedule = processed
+                .filter(p => p.vitalsStatus === 'overdue' || p.vitalsStatus === 'due_soon')
+                .sort((a, b) => {
+                    if (a.vitalsStatus === 'overdue' && b.vitalsStatus !== 'overdue') return -1;
+                    if (b.vitalsStatus === 'overdue' && a.vitalsStatus !== 'overdue') return 1;
+                    return b.hoursSort - a.hoursSort;
+                })
+                .slice(0, 8);
+
+            // Handoff list: high-risk + critical patients
+            this.state.handoffList = processed
+                .filter(p => p.risk_level === 'critical' || p.risk_level === 'high')
+                .slice(0, 15);
+
+            // Activity Feed — cross-reference vitals with alerts to show real status
             const feed = [];
+
+            // Build a map: patient_id → list of alerts
+            const patientAlertMap = {};
+            alerts.forEach(a => {
+                if (!a.patient_id) return;
+                const pid = Array.isArray(a.patient_id) ? a.patient_id[0] : a.patient_id;
+                if (!patientAlertMap[pid]) patientAlertMap[pid] = [];
+                patientAlertMap[pid].push(a);
+            });
+
+            // Alert entries
             alerts.forEach(a => {
                 if (!a.create_date) return;
+                const sevLabel = (a.severity || 'alert').toUpperCase();
+                const icon = a.severity === 'critical' ? '🚨' : a.severity === 'warning' ? '⚠️' : '🔔';
                 feed.push({
                     id: `a${a.id}`, type: 'alert',
-                    text: `AI alert: ${a.headline || 'Anomaly'} — ${a.severity}`,
+                    text: `${icon} ${sevLabel}: ${a.headline || 'Anomaly detected'}`,
                     timeAgo: this.timeAgo(a.create_date),
                     timeSort: new Date(a.create_date.replace(' ', 'T') + 'Z').getTime()
                 });
             });
-            vitals.slice(0, 5).forEach(v => {
+
+            // Vitals entries — look for a matching alert within 5 minutes of the vital
+            vitals.slice(0, 8).forEach(v => {
                 if (!v.recorded_at) return;
-                const pName = patients.find(p => p.id === v.patient_id[0])?.name || 'Patient';
+                const pid = Array.isArray(v.patient_id) ? v.patient_id[0] : v.patient_id;
+                const pName = patients.find(p => p.id === pid)?.name || 'Patient';
+                const vTime = new Date(v.recorded_at.replace(' ', 'T') + 'Z').getTime();
+
+                // Find closest alert for this patient within 5 min of the vital
+                const patAlerts = patientAlertMap[pid] || [];
+                const nearAlert = patAlerts.find(a => {
+                    if (!a.create_date) return false;
+                    const aTime = new Date(a.create_date.replace(' ', 'T') + 'Z').getTime();
+                    return Math.abs(aTime - vTime) < 5 * 60 * 1000;
+                });
+
+                let statusText, feedType;
+                if (nearAlert) {
+                    const sev = (nearAlert.severity || 'alert').toUpperCase();
+                    statusText = `${sev} alert triggered`;
+                    feedType = 'alert';
+                } else {
+                    statusText = 'Values within normal range';
+                    feedType = 'vitals';
+                }
+
                 feed.push({
-                    id: `v${v.id}`, type: 'vitals',
-                    text: `Vitals logged — ${pName}. All normal`,
+                    id: `v${v.id}`, type: feedType,
+                    text: `Vitals logged — ${pName}. ${statusText}`,
                     timeAgo: this.timeAgo(v.recorded_at),
-                    timeSort: new Date(v.recorded_at.replace(' ', 'T') + 'Z').getTime()
+                    timeSort: vTime
                 });
             });
             this.state.activityFeed = feed.sort((a, b) => b.timeSort - a.timeSort).slice(0, 8);

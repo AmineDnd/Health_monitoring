@@ -292,7 +292,9 @@
                decoration-warning="dashboard_risk_score >= 40 and dashboard_risk_score &lt; 70"
                decoration-success="dashboard_risk_score &lt; 40"/>
         <field name="doctor_id" widget="many2one_avatar_user" string="In-Charge Doctor"/>
-        <field name="age" string="Age" optional="show"/>
+        <field name="age" string="Age" optional="show"
+               decoration-danger="age &gt; 110 or age &lt; 0"
+               decoration-warning="age &gt; 100"/>
         <field name="category" widget="badge" string="Profile" optional="hide"/>
         <field name="tag_ids" widget="many2many_tags" string="Medical Tags" options="{'color_field': 'color'}" optional="hide"/>
       </tree>

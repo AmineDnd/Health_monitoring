@@ -28,23 +28,23 @@
             <div class="sl-stat-label"><t t-esc="'Total'"/></div>
           </div>
           <div class="sl-stat-pill stat-critical" style="cursor:pointer;"
-               t-on-click="() => this.action.doAction('health_monitoring.action_all_alerts')">
+               t-on-click="onFilterCritical">
             <div class="sl-stat-num"><t t-esc="state.stats.critical"/></div>
             <div class="sl-stat-label"><t t-esc="'Critical'"/></div>
           </div>
           <div class="sl-stat-pill stat-overdue" style="cursor:pointer;"
-               t-on-click="() => this.action.doAction('health_monitoring.action_patients')">
+               t-on-click="onFilterOverdue">
             <div class="sl-stat-num"><t t-esc="state.stats.overdue"/></div>
             <div class="sl-stat-label"><t t-esc="'Overdue'"/></div>
           </div>
           <div class="sl-stat-pill stat-due-soon" style="cursor:pointer;"
-               t-on-click="() => this.action.doAction('health_monitoring.action_patients')">
+               t-on-click="onFilterDueSoon">
             <div class="sl-stat-num"><t t-esc="state.stats.dueSoon"/></div>
             <div class="sl-stat-label"><t t-esc="'Due Soon'"/></div>
           </div>
           <div class="sl-stat-pill stat-ok" style="cursor:pointer;"
-               t-on-click="() => this.action.doAction('health_monitoring.action_patients')">
-            <div class="sl-stat-num"><t t-esc="state.stats.ok"/></div>
+               t-on-click="onFilterUpToDate">
+            <div class="sl-stat-num"><t t-esc="state.stats.upToDate"/></div>
             <div class="sl-stat-label"><t t-esc="'Up to Date'"/></div>
           </div>
         </div>
@@ -52,7 +52,9 @@
         <!-- Patient card grid -->
         <div class="sl-bed-grid">
           <t t-foreach="state.patients" t-as="patient" t-key="patient.id">
-            <div t-attf-class="sl-patient-card sl-status-#{patient.vitalsStatus} #{patient.risk_level === 'critical' ? 'sl-critical-pulse' : ''}">
+            <div t-attf-class="sl-patient-card sl-status-#{patient.vitalsStatus} #{patient.risk_level === 'critical' ? 'sl-critical-pulse' : ''}"
+                 style="cursor:pointer;"
+                 t-on-click="() => this.onOpenPatient(patient.id)">
 
               <!-- Card header -->
               <div class="sl-pc-inner">
@@ -62,14 +64,7 @@
                       <t t-esc="patient.name.substring(0,1).toUpperCase()"/>
                     </div>
                     <div>
-                      <div class="sl-pc-name"
-                           t-on-click.stop="() => this.action.doAction({
-                             type: 'ir.actions.act_window',
-                             res_model: 'health.patient',
-                             res_id: patient.id,
-                             views: [[false,'form']],
-                             target: 'current'
-                           })">
+                      <div class="sl-pc-name">
                         <t t-esc="patient.name"/>
                       </div>
                       <div class="sl-pc-meta"><t t-esc="patient.timeSinceVitals"/></div>
@@ -85,6 +80,7 @@
                   </div>
                 </div>
               </div><!-- end pc-inner -->
+
 
               <!-- Vitals status banner (full-width) -->
               <div t-attf-class="sl-vitals-banner sl-banner-#{patient.vitalsStatus}">
@@ -112,8 +108,9 @@
                 <span t-attf-class="sl-chip #{patient.spo2Abnormal ? 'chip-danger' : patient.spo2Warn ? 'chip-warn' : 'chip-ok'}">
                   SpO&#8322; <t t-esc="patient.latestSpO2"/>%
                 </span>
-                <span t-attf-class="sl-chip #{patient.bpAbnormal ? 'chip-danger' : patient.bpWarn ? 'chip-warn' : 'chip-ok'}">
-                  BP <t t-esc="patient.latestBP"/>
+                <span t-attf-class="sl-chip #{patient.bpEqual ? 'chip-danger' : patient.bpAbnormal ? 'chip-danger' : patient.bpWarn ? 'chip-warn' : 'chip-ok'}"
+                      t-att-title="patient.bpEqual ? 'Warning: systolic and diastolic nearly equal — check entry' : patient.bpLow ? 'Hypotension — risk of shock' : ''">
+                  BP <t t-esc="patient.latestBP"/><t t-if="patient.bpEqual"> &#9888;</t>
                 </span>
                 <t t-if="patient.latestTemp">
                   <span t-attf-class="sl-chip #{patient.tempAbnormal ? 'chip-danger' : 'chip-ok'}">
@@ -239,5 +236,49 @@
       </div>
 
     </div>
+
+      <!-- Filter Results Modal -->
+      <t t-if="state.filterModal and state.filterModal.show">
+        <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.4);z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding-top:60px;"
+             t-on-click="onCloseFilterModal">
+          <div style="background:#fff;border-radius:14px;width:520px;max-height:70vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.2);"
+               t-on-click.stop="">
+            <div style="padding:16px 20px;border-bottom:1px solid #EEF2F7;display:flex;justify-content:space-between;align-items:center;">
+              <div style="font-size:15px;font-weight:600;color:#0F172A;">
+                <t t-esc="state.filterModal.title"/>
+                <span style="font-size:12px;font-weight:400;color:#64748B;margin-left:6px;">(<t t-esc="state.filterModal.patients.length"/> patients)</span>
+              </div>
+              <button t-on-click="onCloseFilterModal"
+                      style="background:transparent;border:none;font-size:20px;color:#94A3B8;cursor:pointer;line-height:1;">&#215;</button>
+            </div>
+            <div style="overflow-y:auto;padding:12px 16px;">
+              <t t-foreach="state.filterModal.patients" t-as="p" t-key="p.id">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #F8FAFC;">
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="width:32px;height:32px;border-radius:8px;background:#E6F1FB;color:#0C447C;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;">
+                      <t t-esc="p.name.substring(0,1).toUpperCase()"/>
+                    </div>
+                    <div>
+                      <div style="font-size:13px;font-weight:500;color:#0F172A;"><t t-esc="p.name"/></div>
+                      <div style="font-size:11px;color:#64748B;"><t t-esc="p.timeSinceVitals"/></div>
+                    </div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <span t-attf-class="sl-badge-#{p.risk_level === 'high' ? 'warning' : (p.risk_level || 'stable')}">
+                      <t t-esc="(p.risk_level || 'low').toUpperCase()"/>
+                    </span>
+                    <button style="padding:5px 12px;font-size:10px;font-weight:500;background:#185FA5;color:#fff;border:none;border-radius:7px;cursor:pointer;"
+                            t-on-click="() => this.onLogVitals(p.id)">Log Vitals</button>
+                  </div>
+                </div>
+              </t>
+              <t t-if="state.filterModal.patients.length === 0">
+                <div style="text-align:center;color:#94A3B8;padding:32px;font-size:13px;">No patients in this category.</div>
+              </t>
+            </div>
+          </div>
+        </div>
+      </t>
+
   </t>
 </templates>

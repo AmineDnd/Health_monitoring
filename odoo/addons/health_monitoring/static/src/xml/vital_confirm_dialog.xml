@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates>
+  <t t-name="health_monitoring.VitalConfirmDialog">
+    <div style="font-family:'Inter',system-ui,sans-serif;padding:0;max-width:480px;margin:0 auto;">
+
+      <!-- Header -->
+      <div style="background:#FCEBEB;border-bottom:1px solid #F7C1C1;padding:16px 20px;border-radius:12px 12px 0 0;display:flex;align-items:center;gap:12px;">
+        <div style="width:36px;height:36px;border-radius:50%;background:#E24B4A;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div style="font-size:15px;font-weight:600;color:#A32D2D;">Extreme Values Detected</div>
+          <div style="font-size:11px;color:#C0392B;margin-top:2px;">Please verify before saving</div>
+        </div>
+      </div>
+
+      <!-- Warning list -->
+      <div style="padding:16px 20px;background:#fff;">
+        <div style="font-size:13px;color:#334155;margin-bottom:12px;">
+          The following readings are outside the extreme safety range. This could indicate a data entry error or a life-threatening emergency:
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
+          <t t-foreach="params.warnings" t-as="warning" t-key="warning">
+            <div style="display:flex;align-items:flex-start;gap:8px;padding:8px 10px;background:#FEF2F2;border-radius:7px;border-left:3px solid #E24B4A;">
+              <div style="width:6px;height:6px;border-radius:50%;background:#E24B4A;flex-shrink:0;margin-top:4px;"/>
+              <div style="font-size:12px;font-weight:500;color:#A32D2D;"><t t-esc="warning"/></div>
+            </div>
+          </t>
+        </div>
+        <div style="padding:10px 12px;background:#FFF8E1;border-radius:8px;border-left:3px solid #F59E0B;font-size:12px;color:#854F0B;">
+          If this is a real emergency, save the record and notify the doctor immediately. If this was a typing error, click "Re-enter Values" to correct it.
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div style="padding:14px 20px;border-top:1px solid #EEF2F7;display:flex;gap:8px;justify-content:flex-end;background:#F8FAFC;border-radius:0 0 12px 12px;">
+        <button t-on-click="onReEnter"
+                style="padding:8px 18px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;background:transparent;border:1px solid #E2E8F0;color:#64748B;">
+          Re-enter Values
+        </button>
+        <button t-on-click="onConfirm"
+                t-att-disabled="state.loading"
+                style="padding:8px 18px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;background:#E24B4A;color:#fff;border:none;">
+          <t t-if="state.loading">Saving...</t>
+          <t t-else="">Yes, values are correct — Save</t>
+        </button>
+      </div>
+
+    </div>
+  </t>
+</templates>

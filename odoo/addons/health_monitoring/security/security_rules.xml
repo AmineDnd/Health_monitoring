@@ -22,5 +22,55 @@
             <field name="groups" eval="[(4, ref('health_monitoring.group_health_admin')), (4, ref('health_monitoring.group_health_nurse'))]"/>
         </record>
 
+        <!-- ============================================================
+             ALERT RECORD RULES
+             Doctors see alerts for patients in their wards, or unassigned,
+             or assigned to them directly.
+             ============================================================ -->
+        <record id="rule_doctor_alert_ward" model="ir.rule">
+            <field name="name">Doctor Ward Alerts</field>
+            <field name="model_id" ref="model_health_alert"/>
+            <field name="domain_force">['|', '|',
+                ('assigned_doctor_id', '=', user.id),
+                ('patient_id.ward_id', '=', False),
+                ('patient_id.ward_id.doctor_ids', 'in', [user.id])]</field>
+            <field name="groups" eval="[(4, ref('health_monitoring.group_health_doctor'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="rule_all_alert_admin_nurse" model="ir.rule">
+            <field name="name">Admin/Nurse All Alerts</field>
+            <field name="model_id" ref="model_health_alert"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('health_monitoring.group_health_admin')), (4, ref('health_monitoring.group_health_nurse'))]"/>
+        </record>
+
+        <!-- ============================================================
+             VITAL RECORD RULES
+             Doctors see vitals for patients in their wards or unassigned.
+             ============================================================ -->
+        <record id="rule_doctor_vital_ward" model="ir.rule">
+            <field name="name">Doctor Ward Vitals</field>
+            <field name="model_id" ref="model_health_vital_record"/>
+            <field name="domain_force">['|',
+                ('patient_id.ward_id', '=', False),
+                ('patient_id.ward_id.doctor_ids', 'in', [user.id])]</field>
+            <field name="groups" eval="[(4, ref('health_monitoring.group_health_doctor'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <record id="rule_all_vital_admin_nurse" model="ir.rule">
+            <field name="name">Admin/Nurse All Vitals</field>
+            <field name="model_id" ref="model_health_vital_record"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('health_monitoring.group_health_admin')), (4, ref('health_monitoring.group_health_nurse'))]"/>
+        </record>
+
     </data>
 </odoo>

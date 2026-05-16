@@ -14,6 +14,10 @@ class HealthVitalRecord(models.Model):
         """Dummy method just to give users a 'Save & Close' button that closes the popup wizard"""
         return {'type': 'ir.actions.act_window_close'}
 
+    def action_check_and_save(self):
+        """Reverted — just save and close, no confirmation wizard."""
+        return self.action_manual_save_close()
+
     @api.model
     def action_retrain_ai_model(self):
         """Collect all real vitals and send to AI service for retraining."""
@@ -328,10 +332,33 @@ class HealthVitalRecord(models.Model):
                     'vital_record_id': self.id,
                     'severity': alert_severity,
                     'message': clean_msg,
-                    'ai_confidence': score, 
+                    'ai_confidence': score,
                     'state': 'new'
                 })
                 patient.sudo().write({'last_alert_id': alert.id})
+
+                # Send in-app notification to all doctors assigned to the patient's ward
+                # This fires only for critical anomalies to avoid notification fatigue
+                if alert_severity == 'critical' and patient.ward_id and patient.ward_id.doctor_ids:
+                    for doctor in patient.ward_id.doctor_ids:
+                        try:
+                            self.env['mail.message'].sudo().create({
+                                'message_type': 'notification',
+                                'subtype_id': self.env.ref('mail.mt_note').id,
+                                'body': (
+                                    f'🚨 CRITICAL ALERT: Patient <b>{patient.name}</b> has extreme vital readings. '
+                                    f'AI Risk Score: {score:.0f}%. '
+                                    f'Immediate review required.'
+                                ),
+                                'partner_ids': [doctor.partner_id.id],
+                                'res_id': patient.id,
+                                'model': 'health.patient',
+                                'author_id': self.env.ref('base.user_root').partner_id.id,
+                            })
+                        except Exception as notify_err:
+                            _logger.warning(
+                                f'Failed to send in-app notification to doctor {doctor.name}: {notify_err}'
+                            )
             elif "STABILIZING" in result.get('message', ''):
                 # Auto-resolve active alerts if the patient is returning to normal
                 active_alerts = self.env['health.alert'].sudo().search([

@@ -5,12 +5,14 @@
 
       <!-- Dark header bar -->
       <div class="sl-admin-header">
-        <div>
+        <div style="display:flex;align-items:baseline;gap:12px;">
           <h1 class="sl-title">Hospital Operations</h1>
-          <p class="sl-subtitle">SmartLab Control Center · Real-time analytics · <t t-esc="state.currentTime"/></p>
+          <span class="sl-live-badge">
+            <span class="sl-live-dot"/>
+            Live · <t t-esc="state.currentTime"/>
+          </span>
         </div>
-        <div style="display:flex;align-items:center;gap:12px;">
-          <div style="display:flex;gap:6px;">
+        <div style="display:flex;gap:6px;">
             <button t-on-click="() => this.setRange('today')"
                     t-att-class="state.dateRange === 'today' ? 'sl-header-btn active' : 'sl-header-btn'">
               <t t-esc="'Today'"/>
@@ -23,11 +25,6 @@
                     t-att-class="state.dateRange === 'month' ? 'sl-header-btn active' : 'sl-header-btn'">
               <t t-esc="'Month'"/>
             </button>
-          </div>
-          <span class="sl-live-badge">
-            <span class="sl-live-dot"/>
-            <t t-esc="'Live'"/>
-          </span>
         </div>
       </div>
 

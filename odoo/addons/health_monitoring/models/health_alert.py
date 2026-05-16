@@ -253,6 +253,12 @@ class HealthAlert(models.Model):
         
     def action_resolve(self):
         self.ensure_one()
+        # Auto-claim if not yet assigned, so doctor can resolve in one step
+        if not self.assigned_doctor_id:
+            self.write({
+                'assigned_doctor_id': self.env.user.id,
+                'state': 'investigating',
+            })
         return {
             'name': 'Resolve Alert',
             'type': 'ir.actions.act_window',
@@ -262,6 +268,7 @@ class HealthAlert(models.Model):
             'target': 'new',
             'context': {'default_alert_id': self.id}
         }
+
 
     def _send_telegram(self, chat_id, message, bot_type='doctor'):
         if not chat_id: return

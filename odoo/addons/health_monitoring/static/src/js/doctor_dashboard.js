@@ -22,6 +22,7 @@ export class DoctorDashboard extends Component {
             myActiveAlerts: [],
             selectedPatient: null,
             vitals: {},
+            showVitalsChart: false,
             risk: {
                 arrhythmia: 0, arrhythmiaColor: '#10b981',
                 hypoxia: 0, hypoxiaColor: '#10b981',
@@ -218,20 +219,40 @@ export class DoctorDashboard extends Component {
                 ['headline', 'severity', 'patient_id', 'create_date'],
                 { order: 'create_date desc', limit: 50 });
             unclaimed.forEach(a => a.timeAgo = this.timeAgo(a.create_date));
-            this.state.unclaimedAlerts = unclaimed;
 
             const active = await this.orm.searchRead("health.alert",
                 [['state', '=', 'investigating'], ['assigned_doctor_id', '=', this.user.userId]],
                 ['headline', 'severity', 'patient_id', 'create_date'],
                 { order: 'create_date desc' });
             active.forEach(a => a.timeAgo = this.timeAgo(a.create_date));
-            this.state.myActiveAlerts = active;
 
-            this.state.activeCaseCount = unclaimed.length + active.length;
+            // Deduplicate by patient — one card per patient, keep most severe alert
+            // Severity order: critical > high > warning > info/other
+            const sevOrder = { critical: 4, high: 3, warning: 2, info: 1 };
+            const dedupe = (alerts) => {
+                const seen = new Map(); // patient_id → alert
+                for (const a of alerts) {
+                    const pid = Array.isArray(a.patient_id) ? a.patient_id[0] : a.patient_id;
+                    if (!seen.has(pid)) {
+                        seen.set(pid, a);
+                    } else {
+                        const existing = seen.get(pid);
+                        const newSev  = sevOrder[a.severity]        || 0;
+                        const exSev   = sevOrder[existing.severity]  || 0;
+                        if (newSev > exSev) seen.set(pid, a); // replace with more severe
+                    }
+                }
+                return Array.from(seen.values());
+            };
+
+            this.state.unclaimedAlerts = dedupe(unclaimed);
+            this.state.myActiveAlerts  = dedupe(active);
+            this.state.activeCaseCount = this.state.unclaimedAlerts.length + this.state.myActiveAlerts.length;
         } catch (e) {
             console.error("Doctor queue fetch error:", e);
         }
     }
+
 
     async fetchPatientData(patientId) {
         try {
@@ -250,47 +271,99 @@ export class DoctorDashboard extends Component {
             // Vitals
             const vitals = await this.orm.searchRead("health.vital.record",
                 [['patient_id', '=', patientId]],
-                ["heart_rate", "bp_systolic", "bp_diastolic", "spo2", "temperature", "recorded_at"],
+                ["heart_rate", "bp_systolic", "bp_diastolic", "spo2", "temperature", "respiratory_rate", "glucose", "recorded_at", "ai_score"],
                 { limit: 20, order: 'recorded_at desc' });
+
+            // Fetch active alert for this patient (most recent non-resolved)
+            const patientAlerts = await this.orm.searchRead("health.alert",
+                [['patient_id', '=', patientId], ['state', '!=', 'resolved']],
+                ["headline", "severity", "create_date", "state"],
+                { limit: 1, order: 'create_date desc' });
+            this.state.activeAlert = patientAlerts.length > 0 ? {
+                ...patientAlerts[0],
+                timeAgo: this.timeAgo(patientAlerts[0].create_date),
+            } : null;
 
             if (vitals.length > 0) {
                 const latest = vitals[0];
+                const hr = latest.heart_rate || 0;
+                const bpSys = latest.bp_systolic || 0;
+                const bpDia = latest.bp_diastolic || 0;
+                const spo2 = latest.spo2 || 0;
+                const temp = latest.temperature || 0;
+                const rr = latest.respiratory_rate || 0;
+                const glu = latest.glucose || 0;
+
                 this.state.vitals = {
-                    heart_rate: Math.round(latest.heart_rate) || 0,
-                    bp_systolic: Math.round(latest.bp_systolic) || 0,
-                    bp_diastolic: Math.round(latest.bp_diastolic) || 0,
-                    spo2: Math.round(latest.spo2) || 0,
-                    temperature: latest.temperature ? latest.temperature.toFixed(1) : 0,
-                    hr_abnormal: latest.heart_rate > 100 || latest.heart_rate < 60,
-                    spo2_abnormal: latest.spo2 < 94,
-                    bp_abnormal: latest.bp_systolic > 140,
-                    temp_abnormal: latest.temperature > 38.5,
+                    heart_rate: Math.round(hr),
+                    bp_systolic: Math.round(bpSys),
+                    bp_diastolic: Math.round(bpDia),
+                    spo2: Math.round(spo2),
+                    temperature: temp ? temp.toFixed(1) : 0,
+                    respiratory_rate: Math.round(rr),
+                    glucose: Math.round(glu),
+                    ai_score: latest.ai_score ? Math.round(latest.ai_score) : null,
+                    // Abnormal flags — clinically correct ranges
+                    hr_abnormal: hr > 100 || hr < 60,
+                    spo2_abnormal: spo2 < 94,
+                    bp_abnormal: bpSys > 140 || bpSys < 90 || bpDia > 90 || bpDia < 60,
+                    temp_abnormal: temp > 38.5 || temp < 35.5,
+                    rr_abnormal: rr > 20 || rr < 12,
+                    glucose_abnormal: glu > 200 || glu < 70,
                 };
 
-                // Risk factors as percentages (0-100)
-                const hr = latest.heart_rate || 70;
-                const spo2 = latest.spo2 || 98;
-                const bp = latest.bp_systolic || 120;
-                const temp = latest.temperature || 37;
-
-                const arrRisk = Math.min(100, Math.max(0, Math.abs(hr - 75) * 2));
-                const hypRisk = Math.min(100, Math.max(0, (100 - spo2) * 10));
-                const bpRisk = Math.min(100, Math.max(0, (bp - 120) * 2));
-                const feverRisk = Math.min(100, Math.max(0, (temp - 37) * 40));
-
-                const bradyRisk = Math.min(100, Math.max(0, hr < 60 ? (60 - hr) * 3 : 0));
-
+                // Risk factors — clinically meaningful deviation from normal ranges
                 const riskColor = (v) => v > 60 ? '#F87171' : v > 30 ? '#FBBF24' : '#34D399';
 
+                // Cardiac: deviation from 60-100 bpm range
+                let cardiacRisk = 0;
+                if (hr > 0) {
+                    if (hr > 100) cardiacRisk = Math.min(100, (hr - 100) * 3);
+                    else if (hr < 60) cardiacRisk = Math.min(100, (60 - hr) * 3);
+                }
+
+                // Respiratory: deviation from 12-20 breaths/min
+                let respRisk = 0;
+                if (rr > 0) {
+                    if (rr > 20) respRisk = Math.min(100, (rr - 20) * 2);
+                    else if (rr < 12) respRisk = Math.min(100, (12 - rr) * 5);
+                }
+
+                // Hypoxia: deviation below 95%
+                const hypoxiaRisk = spo2 > 0 ? Math.min(100, Math.max(0, (95 - spo2) * 8)) : 0;
+
+                // Blood Pressure: deviation from 90-140 systolic
+                let bpRisk = 0;
+                if (bpSys > 0) {
+                    if (bpSys > 140) bpRisk = Math.min(100, (bpSys - 140) * 2);
+                    else if (bpSys < 90) bpRisk = Math.min(100, (90 - bpSys) * 3);
+                }
+
+                // Thermoregulation: deviation from 36.1-38.0
+                let thermoRisk = 0;
+                if (temp > 0) {
+                    if (temp > 38.0) thermoRisk = Math.min(100, (temp - 38.0) * 50);
+                    else if (temp < 36.1) thermoRisk = Math.min(100, (36.1 - temp) * 50);
+                }
+
+                // Metabolic: glucose deviation from 70-200
+                let metabolicRisk = 0;
+                if (glu > 0) {
+                    if (glu > 200) metabolicRisk = Math.min(100, (glu - 200) * 0.5);
+                    else if (glu < 70) metabolicRisk = Math.min(100, (70 - glu) * 2);
+                }
+
                 this.state.risk = {
-                    arrhythmia: arrRisk, arrhythmiaColor: riskColor(arrRisk),
-                    hypoxia: hypRisk, hypoxiaColor: riskColor(hypRisk),
-                    hypertension: bpRisk, hypertensionColor: riskColor(bpRisk),
-                    fever: feverRisk, feverColor: riskColor(feverRisk),
-                    bradycardia: bradyRisk, bradycardiaColor: riskColor(bradyRisk),
+                    cardiac: cardiacRisk, cardiacColor: riskColor(cardiacRisk),
+                    respiratory: respRisk, respiratoryColor: riskColor(respRisk),
+                    hypoxia: hypoxiaRisk, hypoxiaColor: riskColor(hypoxiaRisk),
+                    bloodPressure: bpRisk, bloodPressureColor: riskColor(bpRisk),
+                    thermoregulation: thermoRisk, thermoregulationColor: riskColor(thermoRisk),
+                    metabolic: metabolicRisk, metabolicColor: riskColor(metabolicRisk),
                 };
             } else {
                 this.state.vitals = {};
+                this.state.activeAlert = null;
             }
 
             this._patientVitals = vitals.reverse();
@@ -307,17 +380,12 @@ export class DoctorDashboard extends Component {
 
         const data = this._patientVitals || [];
 
-        if (data.length === 0) {
-            // Draw empty state message on canvas
-            const canvas = this.trendChartRef.el;
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#94A3B8';
-            ctx.font = '12px Inter, system-ui';
-            ctx.textAlign = 'center';
-            ctx.fillText('No vitals recorded yet', canvas.width / 2, canvas.height / 2);
+        // Need at least 3 data points to show a meaningful trend
+        if (data.length < 3) {
+            this.state.showVitalsChart = false;
             return;
         }
+        this.state.showVitalsChart = true;
 
         const labels = data.map(v => {
             if (!v.recorded_at) return '';

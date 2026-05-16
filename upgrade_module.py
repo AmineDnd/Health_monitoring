@@ -2,7 +2,7 @@ import xmlrpc.client
 import sys
 
 URL = "http://localhost:8069"
-DB = "health_monitor"
+DB = "smartlab_db"
 USER = "admin"
 PASSWORD = "admin"
 

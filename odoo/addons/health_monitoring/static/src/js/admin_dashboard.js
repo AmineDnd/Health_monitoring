@@ -82,19 +82,23 @@ export class AdminDashboard extends Component {
         return `${Math.floor(diffHrs / 24)}d ago`;
     }
 
+    _utcPad(n) { return String(n).padStart(2, '0'); }
+
+    _utcDateStr(d) {
+        return `${d.getUTCFullYear()}-${this._utcPad(d.getUTCMonth()+1)}-${this._utcPad(d.getUTCDate())}`;
+    }
+
     getDateDomain(field) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        let start = new Date(today);
+        const now = new Date();
+        let start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
         if (this.state.dateRange === 'today') {
-            // today only — start is already midnight today
+            // start is already UTC midnight today
         } else if (this.state.dateRange === 'week') {
-            start.setDate(start.getDate() - 7);
+            start.setUTCDate(start.getUTCDate() - 7);
         } else if (this.state.dateRange === 'month') {
-            start.setMonth(start.getMonth() - 1);
+            start.setUTCMonth(start.getUTCMonth() - 1);
         }
-        const startStr = start.toISOString().split('T')[0] + ' 00:00:00';
-        return [[field, '>=', startStr]];
+        return [[field, '>=', this._utcDateStr(start) + ' 00:00:00']];
     }
 
     // --- Navigation ---
@@ -180,15 +184,33 @@ export class AdminDashboard extends Component {
     async fetchAll() {
         this.state.isLoading = true;
         try {
-            // KPI: Active Patients
+            // UTC date helpers for real delta computation
+            const now = new Date();
+            const todayStr = this._utcDateStr(now);
+            const yesterday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1));
+            const yesterdayStr = this._utcDateStr(yesterday);
+
+            // KPI: Active Patients (real delta = new admissions today)
             const activePatients = await this.orm.searchCount("health.patient", [['admission_status', 'in', ['triage', 'admitted']]]);
             this.state.kpi.activePatients = activePatients;
-            this.state.kpi.activeDelta = Math.floor(Math.random() * 15);
+            const newPatientsToday = await this.orm.searchCount("health.patient", [
+                ['create_date', '>=', todayStr + ' 00:00:00'],
+                ['admission_status', 'in', ['triage', 'admitted']]
+            ]);
+            this.state.kpi.activeDelta = newPatientsToday;
 
-            // KPI: Critical Alerts
+            // KPI: Critical Alerts (real delta = new critical alerts today vs yesterday)
             const criticalAlerts = await this.orm.searchCount("health.alert", [['state', '!=', 'resolved'], ['severity', '=', 'critical']]);
             this.state.kpi.criticalAlerts = criticalAlerts;
-            this.state.kpi.criticalDelta = Math.max(0, Math.floor(Math.random() * 5));
+            const critToday = await this.orm.searchCount("health.alert", [
+                ['create_date', '>=', todayStr + ' 00:00:00'], ['severity', '=', 'critical']
+            ]);
+            const critYesterday = await this.orm.searchCount("health.alert", [
+                ['create_date', '>=', yesterdayStr + ' 00:00:00'],
+                ['create_date', '<', todayStr + ' 00:00:00'],
+                ['severity', '=', 'critical']
+            ]);
+            this.state.kpi.criticalDelta = critToday - critYesterday;
 
             // KPI: SLA Compliance
             const respondedAlerts = await this.orm.searchRead(
@@ -202,11 +224,10 @@ export class AdminDashboard extends Component {
                 : 100;
             this.state.slaCompliance = slaPercent;
 
-            // KPI: AI Anomalies (alerts created today)
-            const today = new Date().toISOString().split('T')[0];
+            // KPI: AI Anomalies (alerts created today — UTC)
             const aiAnomalies = await this.orm.searchCount("health.alert", [
-                ['create_date', '>=', today + ' 00:00:00'],
-                ['create_date', '<=', today + ' 23:59:59'],
+                ['create_date', '>=', todayStr + ' 00:00:00'],
+                ['create_date', '<=', todayStr + ' 23:59:59'],
             ]);
             this.state.kpi.aiAnomalies = aiAnomalies;
 
@@ -247,24 +268,35 @@ export class AdminDashboard extends Component {
                     };
                 });
 
-            // Patient Status breakdown for donut
+            // Patient Status breakdown for donut — separate HIGH from CRITICAL
             let psStable = 0, psWarning = 0, psCritical = 0;
             patients.forEach(p => {
-                if (p.risk_level === 'critical' || p.risk_level === 'high') psCritical++;
-                else if (p.risk_level === 'medium') psWarning++;
+                if (p.risk_level === 'critical') psCritical++;
+                else if (p.risk_level === 'high' || p.risk_level === 'medium') psWarning++;
                 else psStable++;
             });
             this.state.patientStatus = { stable: psStable, warning: psWarning, critical: psCritical };
 
-            // Leaderboard — show ALL doctors in the system, overlay alert stats on top
-            // Step 1: get all users in the Doctor group (so doctors with 0 alerts still appear)
+            // Leaderboard — show ONLY real doctors (not admins who inherit the Doctor group)
+            // Step 1: get all users in the Doctor group
             const doctorGroupRes = await this.orm.searchRead('res.groups',
                 [['full_name', 'like', 'Doctor']],
                 ['id', 'users'], { limit: 5 });
             const allDocUsers = doctorGroupRes.length > 0 ? doctorGroupRes[0].users : [];
-            const allDoctors = allDocUsers.length > 0
+
+            // Step 1b: get admin group users so we can exclude them
+            // Admins imply Doctor via implied_ids — we must exclude them from the leaderboard
+            const adminGroupRes = await this.orm.searchRead('res.groups',
+                [['full_name', 'like', 'Admin']],
+                ['id', 'users'], { limit: 5 });
+            const adminUserIds = new Set(adminGroupRes.length > 0 ? adminGroupRes[0].users : []);
+
+            // Doctor-only IDs: members of Doctor group who are NOT in Admin group
+            const doctorOnlyIds = allDocUsers.filter(uid => !adminUserIds.has(uid));
+
+            const allDoctors = doctorOnlyIds.length > 0
                 ? await this.orm.searchRead('res.users',
-                    [['id', 'in', allDocUsers], ['id', '!=', 1], ['active', '=', true]],
+                    [['id', 'in', doctorOnlyIds], ['id', '!=', 1], ['active', '=', true]],
                     ['id', 'name'])
                 : [];
 

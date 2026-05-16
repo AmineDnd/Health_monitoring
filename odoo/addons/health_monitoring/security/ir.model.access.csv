@@ -19,3 +19,4 @@ access_ward_doc,health.ward.doc,model_health_ward,group_health_doctor,1,0,0,0
 access_ward_nurse,health.ward.nurse,model_health_ward,group_health_nurse,1,0,0,0
 access_health_handoff,health.handoff,model_health_handoff,base.group_user,1,1,1,1
 access_alert_resolve_wizard,health.alert.resolve.wizard,model_health_alert_resolve_wizard,base.group_user,1,1,1,1
+access_vital_confirm_wizard,health.vital.confirm.wizard,model_health_vital_confirm_wizard,base.group_user,1,1,1,1

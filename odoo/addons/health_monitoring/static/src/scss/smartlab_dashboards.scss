@@ -218,30 +218,24 @@
     align-items: center;
     flex-shrink: 0;
 
-    .sl-title   { color: #F1F5F9; font-size: 20px; font-weight: 700; margin: 0; letter-spacing: -0.3px; }
-    .sl-subtitle { color: #64748B; font-size: 12px; margin: 3px 0 0; }
+    .sl-title   { color: #F1F5F9; font-size: 16px; font-weight: 600; margin: 0; letter-spacing: -0.2px; }
   }
 
-  // ── Live badge (in header)
+  // ── Live badge (inline with title)
   .sl-live-badge {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    background: #0F3A2A;
+    gap: 5px;
     color: #34D399;
-    border: 1px solid #1D6B49;
-    border-radius: 20px;
     font-size: 11px;
-    font-weight: 600;
-    padding: 4px 12px;
-    letter-spacing: 0.03em;
+    font-weight: 500;
 
     .sl-live-dot {
-      width: 7px;
-      height: 7px;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
       background: #34D399;
-      animation: sl-pulse-dot 1.5s infinite;
+      animation: sl-pulse-dot 2.5s infinite;
     }
   }
 
