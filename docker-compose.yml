@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
 
   # ── 1. PostgreSQL ──────────────────────────────────────────
@@ -33,6 +31,7 @@ services:
       PASSWORD: ${POSTGRES_PASSWORD}
       DB_NAME: ${POSTGRES_DB}
       AI_SERVICE_URL: ${AI_SERVICE_URL}
+      AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN}
     volumes:
       - ./odoo/config/odoo.conf:/etc/odoo/odoo.conf:ro
       - ./odoo/addons:/mnt/extra-addons
@@ -41,21 +40,20 @@ services:
       - '8069:8069' # http://localhost:8069
     networks:
       - smartlab_net
-    command: odoo -d smartlab_db
+    command: odoo -d ${POSTGRES_DB}
 
   # ── 3. FastAPI AI Service ───────────────────────────────────
   ai_service:
     build:
       context: ./ai_service
     restart: unless-stopped
-    volumes:
-      - ./ai_service:/app # hot reload: edit code, uvicorn reloads instantly
-    ports:
-      - '8000:8000' # http://localhost:8000/docs (Swagger UI)
+    expose:
+      - '8000'
     environment:
       - PYTHONUNBUFFERED=1
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:8069}
+      - AI_SERVICE_TOKEN=${AI_SERVICE_TOKEN}
     networks:
       - smartlab_net
 
