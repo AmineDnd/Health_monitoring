@@ -14,6 +14,7 @@ export class NurseDashboard extends Component {
         this.sparklineInstances = {};
         this.prevCriticalCount = undefined;
         this.prevOverdueCount = undefined;
+        this.chartLoaded = false;
 
         this.state = useState({
             nurseName: '',
@@ -25,12 +26,18 @@ export class NurseDashboard extends Component {
             activityFeed: [],
             handoffList: [],
             stats: { total: 0, upToDate: 0, dueSoon: 0, overdue: 0, critical: 0 },
+            statusPatientIds: { total: [], critical: [], overdue: [], due_soon: [], up_to_date: [] },
             showHandoff: false,
             filterModal: { show: false, title: '', patients: [] },
         });
 
         onWillStart(async () => {
-            await loadJS("https://cdn.jsdelivr.net/npm/chart.js");
+            try {
+                await loadJS("https://cdn.jsdelivr.net/npm/chart.js");
+                this.chartLoaded = Boolean(window.Chart);
+            } catch (e) {
+                console.warn("Chart.js load failed; nurse dashboard will continue without sparklines.", e);
+            }
             // Get user
             const userRec = await this.orm.read("res.users", [this.user.userId], ["name"]);
             if (userRec.length > 0) this.state.nurseName = userRec[0].name;
@@ -113,6 +120,13 @@ export class NurseDashboard extends Component {
 
     onCloseHandoffModal() {
         this.state.showHandoff = false;
+    }
+
+    async onOpenKpi(kpi) {
+        const action = await this.orm.call("health.dashboard", "get_nurse_kpi_action", [kpi]);
+        this.action.doAction(action, {
+            onClose: () => this.fetchData(),
+        });
     }
 
     // --- KPI filter modal ---
@@ -205,226 +219,30 @@ export class NurseDashboard extends Component {
     // --- Data ---
     async fetchData() {
         try {
-            // Show all admitted or triage patients (not just 'active' which requires doctor validation)
-            const domain = [['admission_status', 'in', ['triage', 'admitted']]];
+            const data = await this.orm.call("health.dashboard", "get_nurse_dashboard_data", []);
 
-            const patients = await this.orm.searchRead("health.patient", domain,
-                ["id", "name", "admission_status", "risk_level", "age", "gender", "vitals_frequency_hours"]);
+            this.state.wardName = data.wardName || 'All Wards';
+            this.state.patients = data.patients || [];
+            this.state.stats = data.stats || { total: 0, upToDate: 0, dueSoon: 0, overdue: 0, critical: 0 };
+            this.state.statusPatientIds = data.statusPatientIds || { total: [], critical: [], overdue: [], due_soon: [], up_to_date: [] };
+            this.state.schedule = data.schedule || [];
+            this.state.handoffList = data.handoffList || [];
+            this.state.activityFeed = data.activityFeed || [];
 
-            const patientIds = patients.map(p => p.id);
-            let vitals = [];
-            let alerts = [];
-
-            if (patientIds.length > 0) {
-                vitals = await this.orm.searchRead("health.vital.record",
-                    [['patient_id', 'in', patientIds]],
-                    ["id", "patient_id", "recorded_at", "heart_rate", "bp_systolic", "bp_diastolic", "spo2", "temperature"],
-                    { order: "recorded_at desc" });
-                alerts = await this.orm.searchRead("health.alert",
-                    [['patient_id', 'in', patientIds]],
-                    ["id", "headline", "create_date", "severity", "patient_id"],
-                    { limit: 20, order: "create_date desc" });
-            }
-
-            const vitalsByPatient = {};
-            for (const v of vitals) {
-                const pid = v.patient_id[0];
-                if (!vitalsByPatient[pid]) vitalsByPatient[pid] = [];
-                vitalsByPatient[pid].push(v);
-            }
-
-            let stable = 0, due = 0, overdue = 0, critical = 0;
-            const now = new Date();
-
-            const processed = patients.map(p => {
-                const pv = vitalsByPatient[p.id] || [];
-                const latest = pv[0];
-                let status = 'overdue';
-                let hours = 999;
-
-                if (latest && latest.recorded_at) {
-                    const recDate = new Date(latest.recorded_at.replace(' ', 'T') + 'Z');
-                    hours = (now - recDate) / (1000 * 60 * 60);
-                    
-                    const freq = p.vitals_frequency_hours || 4; // Default to 4h if missing
-                    const soonThreshold = Math.max(freq - 1, freq * 0.75); // Due soon 1 hr before or at 75% of time
-
-                    if (hours >= freq) status = 'overdue';
-                    else if (hours >= soonThreshold) status = 'due_soon';
-                    else status = 'up_to_date';
-                }
-
-                if (p.risk_level === 'critical') critical++;
-                else if (status === 'overdue') overdue++;
-                else if (status === 'due_soon') due++;
-                else stable++;
-
-                // Build composite latest vitals to handle partial submissions
-                let cHR = null, cSpO2 = null, cBpSys = null, cBpDia = null, cTemp = null;
-                for (const v of pv) {
-                    if (cHR === null && v.heart_rate) cHR = v.heart_rate;
-                    if (cSpO2 === null && v.spo2) cSpO2 = v.spo2;
-                    if (cBpSys === null && v.bp_systolic) cBpSys = v.bp_systolic;
-                    if (cBpDia === null && v.bp_diastolic) cBpDia = v.bp_diastolic;
-                    if (cTemp === null && v.temperature) cTemp = v.temperature;
-                }
-
-                const hrAbnormal  = cHR ? (cHR > 100 || cHR < 60) : false;
-                const hrWarn      = !hrAbnormal && cHR ? (cHR > 90 || cHR < 65) : false;
-                const spo2Abnormal = cSpO2 ? (cSpO2 < 90) : false;
-                const spo2Warn    = !spo2Abnormal && cSpO2 ? (cSpO2 < 95) : false;
-                const bpAbnormal  = cBpSys ? (cBpSys > 140 || cBpSys < 90) : false;
-                const bpWarn      = !bpAbnormal && cBpSys ? (cBpSys > 130) : false;
-                const bpLow       = cBpSys ? (cBpSys < 90) : false;
-                const bpEqual     = (cBpSys && cBpDia) ? (Math.abs(cBpSys - cBpDia) < 5) : false;
-                const tempAbnormal= cTemp ? (cTemp > 38.5 || cTemp < 35.5) : false;
-
-                let timeSince = 'No vitals';
-                if (hours < 1) timeSince = `${Math.round(hours * 60)}min since vitals`;
-                else if (hours < 999) timeSince = `${hours.toFixed(1)}h since vitals`;
-
-                // Due label for schedule
-                let dueLabel = '';
-                let statusLabel = '';
-                const freq = p.vitals_frequency_hours || 4;
-                if (status === 'overdue') {
-                    statusLabel = `${(hours - freq).toFixed(0)}h overdue`;
-                    dueLabel = `Was due ${(hours - freq).toFixed(0)}h ago`;
-                } else if (status === 'due_soon') {
-                    statusLabel = 'Due in ' + Math.round((freq - hours) * 60) + 'min';
-                    dueLabel = statusLabel;
-                } else {
-                    statusLabel = 'Next check';
-                    dueLabel = 'Next check';
-                }
-
-                return {
-                    ...p,
-                    vitalsStatus: status,
-                    timeSinceVitals: timeSince,
-                    statusLabel,
-                    dueLabel,
-                    hoursSort: hours,
-                    latestHR: pv.length > 0 ? (cHR ? Math.round(cHR) : '--') : null,
-                    latestSpO2: pv.length > 0 ? (cSpO2 ? Math.round(cSpO2) : '--') : null,
-                    latestBP: pv.length > 0 ? ((cBpSys && cBpDia) ? `${Math.round(cBpSys)}/${Math.round(cBpDia)}` : '--/--') : null,
-                    latestTemp: pv.length > 0 ? (cTemp ? cTemp.toFixed(1) : '--') : null,
-                    rawBpSys: cBpSys,
-                    rawBpDia: cBpDia,
-                    rawTemp: cTemp,
-                    hrAbnormal, hrWarn,
-                    spo2Abnormal, spo2Warn,
-                    bpAbnormal, bpWarn, bpLow, bpEqual,
-                    tempAbnormal,
-                    recentVitals: pv.slice(0, 5).reverse()
-                };
-            });
-
-            processed.sort((a, b) => {
-                if (a.risk_level === 'critical' && b.risk_level !== 'critical') return -1;
-                if (b.risk_level === 'critical' && a.risk_level !== 'critical') return 1;
-                if (a.vitalsStatus === 'overdue' && b.vitalsStatus !== 'overdue') return -1;
-                if (b.vitalsStatus === 'overdue' && a.vitalsStatus !== 'overdue') return 1;
-                return b.hoursSort - a.hoursSort;
-            });
-
-            // Store all processed patients — used by filter modal
-            this.state.patients = processed;
-
-            this.state.stats = {
-                total: patients.length,
-                upToDate: stable,
-                dueSoon: due, overdue, critical,
-            };
-
-            // Schedule: overdue + due_soon + patients with no vitals at all
-            this.state.schedule = processed
-                .filter(p => p.vitalsStatus === 'overdue' || p.vitalsStatus === 'due_soon')
-                .sort((a, b) => {
-                    if (a.vitalsStatus === 'overdue' && b.vitalsStatus !== 'overdue') return -1;
-                    if (b.vitalsStatus === 'overdue' && a.vitalsStatus !== 'overdue') return 1;
-                    return b.hoursSort - a.hoursSort;
-                })
-                .slice(0, 8);
-
-            // Handoff list: high-risk + critical patients
-            this.state.handoffList = processed
-                .filter(p => p.risk_level === 'critical' || p.risk_level === 'high')
-                .slice(0, 15);
-
-            // Activity Feed — cross-reference vitals with alerts to show real status
-            const feed = [];
-
-            // Build a map: patient_id → list of alerts
-            const patientAlertMap = {};
-            alerts.forEach(a => {
-                if (!a.patient_id) return;
-                const pid = Array.isArray(a.patient_id) ? a.patient_id[0] : a.patient_id;
-                if (!patientAlertMap[pid]) patientAlertMap[pid] = [];
-                patientAlertMap[pid].push(a);
-            });
-
-            // Alert entries
-            alerts.forEach(a => {
-                if (!a.create_date) return;
-                const sevLabel = (a.severity || 'alert').toUpperCase();
-                const icon = a.severity === 'critical' ? '🚨' : a.severity === 'warning' ? '⚠️' : '🔔';
-                feed.push({
-                    id: `a${a.id}`, type: 'alert',
-                    text: `${icon} ${sevLabel}: ${a.headline || 'Anomaly detected'}`,
-                    timeAgo: this.timeAgo(a.create_date),
-                    timeSort: new Date(a.create_date.replace(' ', 'T') + 'Z').getTime()
-                });
-            });
-
-            // Vitals entries — look for a matching alert within 5 minutes of the vital
-            vitals.slice(0, 8).forEach(v => {
-                if (!v.recorded_at) return;
-                const pid = Array.isArray(v.patient_id) ? v.patient_id[0] : v.patient_id;
-                const pName = patients.find(p => p.id === pid)?.name || 'Patient';
-                const vTime = new Date(v.recorded_at.replace(' ', 'T') + 'Z').getTime();
-
-                // Find closest alert for this patient within 5 min of the vital
-                const patAlerts = patientAlertMap[pid] || [];
-                const nearAlert = patAlerts.find(a => {
-                    if (!a.create_date) return false;
-                    const aTime = new Date(a.create_date.replace(' ', 'T') + 'Z').getTime();
-                    return Math.abs(aTime - vTime) < 5 * 60 * 1000;
-                });
-
-                let statusText, feedType;
-                if (nearAlert) {
-                    const sev = (nearAlert.severity || 'alert').toUpperCase();
-                    statusText = `${sev} alert triggered`;
-                    feedType = 'alert';
-                } else {
-                    statusText = 'Values within normal range';
-                    feedType = 'vitals';
-                }
-
-                feed.push({
-                    id: `v${v.id}`, type: feedType,
-                    text: `Vitals logged — ${pName}. ${statusText}`,
-                    timeAgo: this.timeAgo(v.recorded_at),
-                    timeSort: vTime
-                });
-            });
-            this.state.activityFeed = feed.sort((a, b) => b.timeSort - a.timeSort).slice(0, 8);
-
-            // Audio alert
-            if (this.prevCriticalCount !== undefined && critical > this.prevCriticalCount) this.playAlertSound();
-            else if (this.prevOverdueCount !== undefined && overdue > this.prevOverdueCount) this.playAlertSound();
-            this.prevCriticalCount = critical;
-            this.prevOverdueCount = overdue;
+            if (this.prevCriticalCount !== undefined && this.state.stats.critical > this.prevCriticalCount) this.playAlertSound();
+            else if (this.prevOverdueCount !== undefined && this.state.stats.overdue > this.prevOverdueCount) this.playAlertSound();
+            this.prevCriticalCount = this.state.stats.critical;
+            this.prevOverdueCount = this.state.stats.overdue;
 
             setTimeout(() => this.renderSparklines(), 80);
+            return;
         } catch (e) {
             console.error("Nurse dashboard fetch error:", e);
         }
     }
 
     renderSparklines() {
-        if (!window.Chart) return;
+        if (!this.chartLoaded || !window.Chart) return;
         for (const patient of this.state.patients) {
             const canvas = document.getElementById(`sparkline_${patient.id}`);
             if (!canvas) continue;

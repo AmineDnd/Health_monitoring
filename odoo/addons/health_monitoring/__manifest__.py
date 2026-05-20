@@ -11,6 +11,8 @@
         'security/security_rules.xml',
         'security/mail_security_rules.xml',
         'security/ir.model.access.csv',
+        'data/performance_indexes.xml',
+        'data/sequence.xml',
         'reports/patient_history_report.xml',
         'reports/alert_statistics_report.xml',
         'views/health_vital_record_views.xml',
@@ -25,12 +27,13 @@
         'views/menus.xml',
         'views/res_users_views.xml',
         'data/cron.xml',
-        'data/demo_action.xml',
+    ],
+    'demo': [
         'data/demo_hospital_data.xml',
+        'data/demo_action.xml',
     ],
     'assets': {
         'web.assets_backend': [
-            'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
             'health_monitoring/static/src/scss/smartlab_theme.scss',
             'health_monitoring/static/src/scss/smartlab_dashboards.scss',
             'health_monitoring/static/src/xml/nurse_dashboard.xml',

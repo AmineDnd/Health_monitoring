@@ -43,14 +43,14 @@
                   <field name="parsed_message_html" widget="html"/>
                 </div>
 
-                <!-- AI Confidence + state -->
+                <!-- AI anomaly score + state -->
                 <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid #F1F5F9;margin-bottom:8px;">
                   <div style="display:flex;align-items:center;gap:6px;">
-                    <span style="font-size:11px;font-weight:600;color:#185FA5;">AI CONF: <t t-esc="Math.round(record.ai_confidence.raw_value)"/>%</span>
+                    <span style="font-size:11px;font-weight:600;color:#185FA5;">AI SCORE: <t t-esc="Math.round(record.ai_confidence.raw_value)"/>%</span>
                     <span t-attf-style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;color:#fff;background:#{record.ai_confidence.raw_value >= 80 ? '#16A34A' : record.ai_confidence.raw_value >= 50 ? '#F59E0B' : '#E24B4A'};">
-                      <t t-if="record.ai_confidence.raw_value >= 80">HIGH CONFIDENCE</t>
+                      <t t-if="record.ai_confidence.raw_value >= 80">HIGH ANOMALY</t>
                       <t t-elif="record.ai_confidence.raw_value >= 50">MODERATE</t>
-                      <t t-else="">LOW CONFIDENCE</t>
+                      <t t-else="">LOW ANOMALY</t>
                     </span>
                   </div>
                   <div>
@@ -108,7 +108,7 @@
                decoration-warning="severity=='high'"
                decoration-muted="severity in ['medium', 'low']"/>
         <field name="headline" string="Clinical Headline"/>
-        <field name="ai_confidence" string="AI Conf." widget="progressbar"
+        <field name="ai_confidence" string="AI Score" widget="progressbar"
                decoration-danger="ai_confidence >= 70"
                decoration-warning="ai_confidence >= 40 and ai_confidence &lt; 70"
                decoration-success="ai_confidence &lt; 40"
@@ -124,11 +124,14 @@
                decoration-success="response_time_minutes > 0 and response_time_minutes &lt;= 5"/>
         <field name="assigned_doctor_id" widget="many2one_avatar_user" string="Claimed By"/>
         <button name="action_claim_alert" type="object" string="Claim"
-                invisible="assigned_doctor_id != False"/>
+                invisible="assigned_doctor_id != False"
+                groups="health_monitoring.group_health_doctor,health_monitoring.group_health_admin"/>
         <button name="action_acknowledge" type="object" string="Hold"
-                invisible="state != 'new' or assigned_doctor_id == False"/>
+                invisible="state != 'new' or assigned_doctor_id == False"
+                groups="health_monitoring.group_health_doctor,health_monitoring.group_health_admin"/>
         <button name="action_resolve" type="object" string="Done"
-                invisible="state != 'investigating' or assigned_doctor_id == False"/>
+                invisible="state != 'investigating' or assigned_doctor_id == False"
+                groups="health_monitoring.group_health_doctor,health_monitoring.group_health_admin"/>
       </tree>
     </field>
   </record>
@@ -177,7 +180,7 @@
                   <field name="vital_record_id" readonly="1"/>
                   <field name="created_at" readonly="1" string="Triggered At"/>
                   <field name="handled_at" readonly="1" invisible="status != 'handled'"/>
-                  <field name="ai_confidence" widget="percentpie" string="AI Confidence"/>
+                  <field name="ai_confidence" widget="percentpie" string="AI Anomaly Score"/>
                   <field name="assigned_doctor_id" widget="many2one_avatar_user"/>
                   <field name="escalation_level" invisible="status != 'escalated'"/>
                 </group>
@@ -215,6 +218,24 @@
               </div>
             </div>
           </div>
+          <notebook>
+            <page string="Notification Audit">
+              <field name="notification_log_ids" readonly="1">
+                <tree create="0" edit="0" delete="0">
+                  <field name="create_date" string="When"/>
+                  <field name="channel"/>
+                  <field name="purpose"/>
+                  <field name="user_id"/>
+                  <field name="recipient"/>
+                  <field name="result" widget="badge"
+                         decoration-success="result == 'sent'"
+                         decoration-warning="result in ['skipped', 'cooldown']"
+                         decoration-danger="result == 'failed'"/>
+                  <field name="result_detail"/>
+                </tree>
+              </field>
+            </page>
+          </notebook>
         </sheet>
         <div class="oe_chatter">
           <field name="message_follower_ids"/>

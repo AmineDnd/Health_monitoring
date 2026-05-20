@@ -1,6 +1,6 @@
 import os
 import logging
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -19,6 +19,8 @@ app = FastAPI(
 
 environment = os.environ.get('ENVIRONMENT', 'production')
 allowed_origins_str = os.environ.get('ALLOWED_ORIGINS', 'http://localhost:8069')
+ai_service_token = os.environ.get('AI_SERVICE_TOKEN')
+model_version = os.environ.get('AI_MODEL_VERSION', 'smartlab-iforest-v1')
 
 if environment == 'development':
     origins = ["*"]
@@ -41,6 +43,25 @@ async def validation_exception_handler(request, exc):
         content={"detail": exc.errors(), "body": str(exc.body)},
     )
 
+def require_service_token(x_smartlab_token: Optional[str] = Header(default=None)):
+    """Protect internal AI endpoints with a shared service token."""
+    if not ai_service_token:
+        if environment == 'production':
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail='AI service token is not configured',
+            )
+        logger.warning('AI_SERVICE_TOKEN is not configured; allowing request outside production')
+        return True
+
+    if x_smartlab_token != ai_service_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Invalid AI service token',
+        )
+
+    return True
+
 # ── Pydantic schemas — FastAPI validates input automatically ──
 class VitalsInput(BaseModel):
     patient_code:     str
@@ -60,18 +81,19 @@ class VitalsInput(BaseModel):
 
 class AnalysisResult(BaseModel):
     patient_code: str; is_anomaly: bool; severity: str
-    anomaly_score: float; message: str; violations: list; prediction_1h: dict
+    anomaly_score: float; message: str; violations: list; prediction_1h: dict; model_version: str
 
 # ── Endpoints ─────────────────────────────────────────────────
 @app.get('/')
 def health_check():
     return {'status':'healthy','service':'SmartLab AI','version':'1.0.0'}
 
-@app.post('/analyze', response_model=AnalysisResult)
+@app.post('/analyze', response_model=AnalysisResult, dependencies=[Depends(require_service_token)])
 def analyze_vitals(vitals: VitalsInput):
     logger.info(f'Analyzing patient: {vitals.patient_code}')
     try:
         result = analyze(vitals.model_dump())
+        result['model_version'] = model_version
         if result['is_anomaly']:
             logger.warning(f'ANOMALY: {vitals.patient_code} severity={result["severity"]} score={result["anomaly_score"]}')
         return AnalysisResult(patient_code=vitals.patient_code, **result)
@@ -79,20 +101,21 @@ def analyze_vitals(vitals: VitalsInput):
         logger.error(f'Analysis failed: {e}')
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get('/thresholds')
+@app.get('/thresholds', dependencies=[Depends(require_service_token)])
 def get_thresholds():
     return {'warning': WARNING_RANGES, 'critical': CRITICAL_RANGES, 'features': FEATURES}
 
-@app.get('/model-info')
+@app.get('/model-info', dependencies=[Depends(require_service_token)])
 def model_info():
     return {'algorithm':'IsolationForest','n_estimators':MODEL.n_estimators,
-            'contamination':float(MODEL.contamination),'features':FEATURES}
+            'contamination':float(MODEL.contamination),'features':FEATURES,
+            'model_version': model_version}
 
 class RetrainRequest(BaseModel):
     records: list
     n_samples: int = Field(default=500)
 
-@app.post('/retrain')
+@app.post('/retrain', dependencies=[Depends(require_service_token)])
 def retrain_model(req: RetrainRequest):
     try:
         import pandas as pd
@@ -211,6 +234,7 @@ def retrain_model(req: RetrainRequest):
         logger.warning("NOTE: With --workers 4, only this worker process got the new model in memory. Restart the service to apply to all workers.")
         return {
             "status": "success",
+            "model_version": model_version,
             "samples": len(normal_rows),
             "total_records": len(rows),
             "normal_records": len(normal_rows),

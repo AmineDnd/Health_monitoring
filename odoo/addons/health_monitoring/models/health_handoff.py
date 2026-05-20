@@ -5,10 +5,21 @@ class HealthHandoff(models.Model):
     _description = 'Nurse Shift Handoff'
     _order = 'create_date desc'
 
-    outgoing_nurse_id = fields.Many2one('res.users', 'Outgoing Nurse', default=lambda self: self.env.user, required=True)
-    incoming_nurse_id = fields.Many2one('res.users', 'Incoming Nurse', required=True)
+    def _auto_init(self):
+        res = super()._auto_init()
+        self._create_performance_indexes()
+        return res
+
+    def init(self):
+        self._create_performance_indexes()
+
+    def _create_performance_indexes(self):
+        self.env.cr.execute("CREATE INDEX IF NOT EXISTS health_handoff_ward_create_idx ON health_handoff (ward_id, create_date DESC)")
+
+    outgoing_nurse_id = fields.Many2one('res.users', 'Outgoing Nurse', default=lambda self: self.env.user, required=True, index=True)
+    incoming_nurse_id = fields.Many2one('res.users', 'Incoming Nurse', required=True, index=True)
     notes = fields.Text('Handoff Notes', required=True)
-    ward_id = fields.Many2one('health.ward', 'Ward')
+    ward_id = fields.Many2one('health.ward', 'Ward', index=True)
 
     @api.model_create_multi
     def create(self, vals_list):

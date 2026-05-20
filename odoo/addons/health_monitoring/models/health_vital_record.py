@@ -1,29 +1,120 @@
-import os, json, logging, requests
+﻿import os, json, logging, requests
 from odoo import models, fields, api, _
-from odoo.exceptions import ValidationError
+from odoo.exceptions import AccessError, ValidationError
 
 _logger = logging.getLogger(__name__)
 AI_URL = os.environ.get('AI_SERVICE_URL', 'http://ai_service:8000')
+AI_SERVICE_TOKEN = os.environ.get('AI_SERVICE_TOKEN')
+
+def _ai_headers():
+    headers = {'Content-Type': 'application/json'}
+    if AI_SERVICE_TOKEN:
+        headers['X-SmartLab-Token'] = AI_SERVICE_TOKEN
+    return headers
 
 class HealthVitalRecord(models.Model):
     _name = 'health.vital.record'
     _description = 'Patient Vital Record'
     _order = 'recorded_at desc'
 
+    def _auto_init(self):
+        res = super()._auto_init()
+        self._create_performance_indexes()
+        return res
+
+    def init(self):
+        self._create_performance_indexes()
+
+    def _create_performance_indexes(self):
+        self.env.cr.execute("CREATE INDEX IF NOT EXISTS health_vital_patient_recorded_idx ON health_vital_record (patient_id, recorded_at DESC)")
+        self.env.cr.execute("CREATE INDEX IF NOT EXISTS health_vital_recorded_idx ON health_vital_record (recorded_at DESC)")
+        self.env.cr.execute("CREATE INDEX IF NOT EXISTS health_vital_create_idx ON health_vital_record (create_date DESC)")
+        self.env.cr.execute("CREATE INDEX IF NOT EXISTS health_vital_ai_state_idx ON health_vital_record (ai_analysis_state)")
+
+    VITAL_FIELDS = [
+        'heart_rate', 'bp_systolic', 'bp_diastolic', 'spo2',
+        'temperature', 'glucose', 'respiratory_rate'
+    ]
+    HARD_LIMITS = {
+        'heart_rate': (1, 260, 'Heart Rate', 'bpm'),
+        'bp_systolic': (40, 300, 'Systolic BP', 'mmHg'),
+        'bp_diastolic': (20, 220, 'Diastolic BP', 'mmHg'),
+        'spo2': (1, 100, 'SpO2', '%'),
+        'temperature': (25, 45, 'Temperature', 'C'),
+        'glucose': (10, 1000, 'Glucose', 'mg/dL'),
+        'respiratory_rate': (1, 80, 'Respiratory Rate', '/min'),
+    }
+    EXTREME_LIMITS = {
+        'heart_rate': (35, 160, 'Heart Rate', 'bpm'),
+        'bp_systolic': (70, 200, 'Systolic BP', 'mmHg'),
+        'bp_diastolic': (35, 130, 'Diastolic BP', 'mmHg'),
+        'spo2': (75, 100, 'SpO2', '%'),
+        'temperature': (34.0, 41.0, 'Temperature', 'C'),
+        'glucose': (30, 500, 'Glucose', 'mg/dL'),
+        'respiratory_rate': (6, 35, 'Respiratory Rate', '/min'),
+    }
+
     def action_manual_save_close(self):
         """Dummy method just to give users a 'Save & Close' button that closes the popup wizard"""
         return {'type': 'ir.actions.act_window_close'}
 
     def action_check_and_save(self):
-        """Reverted — just save and close, no confirmation wizard."""
+        """Open confirmation when extreme readings were saved pending review."""
+        self.ensure_one()
+        if self.confirmation_state == 'pending':
+            return self._action_open_confirmation_wizard()
+        return self.action_manual_save_close()
+
+    def _action_open_confirmation_wizard(self):
+        self.ensure_one()
+        return {
+            'name': 'Verify Vital Readings',
+            'type': 'ir.actions.act_window',
+            'res_model': 'health.vital.confirm.wizard',
+            'view_mode': 'form',
+            'views': [[False, 'form']],
+            'target': 'new',
+            'context': {
+                'default_vital_record_id': self.id,
+                'default_warnings_text': self.confirmation_warnings,
+            },
+        }
+
+    def action_confirm_extreme_values(self, confirmation_notes):
+        self.ensure_one()
+        if self.confirmation_state != 'pending':
+            return self.action_manual_save_close()
+        if not confirmation_notes or not confirmation_notes.strip():
+            raise ValidationError(_("Confirmation notes are required for extreme vital readings."))
+        self.with_context(no_ai=True).write({
+            'confirmation_state': 'confirmed',
+            'confirmation_required': False,
+            'confirmed_by': self.env.user.id,
+            'confirmed_at': fields.Datetime.now(),
+            'confirmation_notes': confirmation_notes.strip(),
+        })
+        self._enqueue_ai_analysis(reason='confirmed_extreme')
         return self.action_manual_save_close()
 
     @api.model
     def action_retrain_ai_model(self):
         """Collect all real vitals and send to AI service for retraining."""
+        if not self.env.user.has_group('health_monitoring.group_health_admin'):
+            raise AccessError(_("Only SmartLab administrators can retrain the AI model."))
+
         records = self.search([], order='patient_id, recorded_at asc', limit=5000)
+        model_event = self.env['health.ai.model.event'].sudo().create({
+            'event_type': 'retrain',
+            'source': 'odoo_vital_records',
+            'records_count': len(records),
+            'status': 'requested',
+        })
         
         if len(records) < 50:
+            model_event.write({
+                'status': 'failed',
+                'result_message': f'Only {len(records)} vital records found. Need at least 50 to retrain.',
+            })
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -52,10 +143,16 @@ class HealthVitalRecord(models.Model):
             resp = req_lib.post(
                 f'{AI_URL}/retrain',
                 json={'records': payload_records},
+                headers=_ai_headers(),
                 timeout=60
             )
             resp.raise_for_status()
             result = resp.json()
+            model_event.write({
+                'status': 'success' if result.get('status') != 'error' else 'failed',
+                'model_version': result.get('model_version'),
+                'result_message': result.get('message', ''),
+            })
             
             return {
                 'type': 'ir.actions.client',
@@ -68,6 +165,10 @@ class HealthVitalRecord(models.Model):
                 }
             }
         except Exception as e:
+            model_event.write({
+                'status': 'failed',
+                'result_message': str(e),
+            })
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -100,7 +201,7 @@ class HealthVitalRecord(models.Model):
         ('normal', 'Normal'),
         ('warning', 'Warning'),
         ('critical', 'Critical')
-    ], string='AI Severity', readonly=True)
+    ], string='AI Severity', readonly=True, index=True)
     anomaly_detected = fields.Boolean('Anomaly Detected', readonly=True, help="True if ML or Rule thresholds were violated.")
     
     # NEW FIELDS DEMANDED BY THE VIEW
@@ -117,11 +218,34 @@ class HealthVitalRecord(models.Model):
         ('normal', 'Normal'),
         ('warning', 'Warning'),
         ('critical', 'Critical')
-    ], string='Status', compute='_compute_status', store=True)
+    ], string='Status', compute='_compute_status', store=True, index=True)
+    confirmation_state = fields.Selection([
+        ('not_required', 'Not Required'),
+        ('pending', 'Pending Confirmation'),
+        ('confirmed', 'Confirmed Extreme'),
+    ], string='Confirmation State', default='not_required', readonly=True, index=True)
+    confirmation_required = fields.Boolean('Needs Confirmation', default=False, readonly=True)
+    confirmation_warnings = fields.Text('Confirmation Warnings', readonly=True)
+    confirmed_by = fields.Many2one('res.users', 'Confirmed By', readonly=True)
+    confirmed_at = fields.Datetime('Confirmed At', readonly=True)
+    confirmation_notes = fields.Text('Confirmation Notes', readonly=True)
+    ai_payload_context = fields.Text('AI Payload Context', readonly=True)
+    ai_analysis_state = fields.Selection([
+        ('pending', 'Pending'),
+        ('retrying', 'Retrying'),
+        ('analyzed', 'Analyzed'),
+        ('failed', 'Failed'),
+    ], string='AI Analysis Status', default='pending', readonly=True, index=True)
+    ai_analysis_job_id = fields.Many2one('health.ai.analysis.job', 'Latest AI Job', readonly=True)
+    ai_analysis_error = fields.Text('AI Analysis Error', readonly=True)
+    ai_model_version = fields.Char('AI Model Version', readonly=True)
 
-    @api.depends('ai_severity', 'ai_score', 'anomaly_detected')
+    @api.depends('ai_severity', 'ai_score', 'anomaly_detected', 'confirmation_state')
     def _compute_status(self):
         for rec in self:
+            if rec.confirmation_state == 'pending':
+                rec.status = 'warning'
+                continue
             # Priority 1: Use AI severity if we have it
             if rec.ai_severity:
                 rec.status = rec.ai_severity
@@ -174,7 +298,7 @@ class HealthVitalRecord(models.Model):
             'blood_pressure': 'mmHg',
             'heart_rate': 'bpm',
             'glucose': 'mg/dL',
-            'temperature': '°C',
+            'temperature': 'C',
             'oxygen': '%',
             'respiratory_rate': '/min'
         }
@@ -183,20 +307,133 @@ class HealthVitalRecord(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        self._prepare_vital_vals_list(vals_list)
         records = super().create(vals_list)
         for rec in records:
-            rec._call_ai_service()
+            if rec.confirmation_state != 'pending':
+                rec._enqueue_ai_analysis(reason='created')
         return records
 
     def write(self, vals):
+        vals = dict(vals)
+        if any(field in vals for field in self.VITAL_FIELDS + ['patient_id']):
+            self._prepare_vital_vals_for_write(vals)
         res = super().write(vals)
         # Only call AI if physiological vitals actually changed. This prevents infinite loops
         # and prevents double-triggering when merely opening/saving a form without edits.
-        vital_fields = ['heart_rate', 'bp_systolic', 'bp_diastolic', 'spo2', 'temperature', 'glucose', 'respiratory_rate']
-        if any(f in vals for f in vital_fields):
+        if any(f in vals for f in self.VITAL_FIELDS):
             for rec in self:
-                rec._call_ai_service()
+                if rec.confirmation_state != 'pending':
+                    rec._enqueue_ai_analysis(reason='updated')
         return res
+
+    @api.model
+    def _prepare_vital_vals_list(self, vals_list):
+        patient_ids = {vals.get('patient_id') for vals in vals_list if vals.get('patient_id')}
+        patients_by_id = {patient.id: patient for patient in self.env['health.patient'].browse(patient_ids)}
+        for vals in vals_list:
+            patient = patients_by_id.get(vals.get('patient_id'))
+            if patient:
+                self._validate_patient_can_record(patient)
+            self._validate_hard_ranges(vals)
+            self._apply_confirmation_state(vals)
+
+    def _prepare_vital_vals_for_write(self, vals):
+        patients = self.env['health.patient']
+        if vals.get('patient_id'):
+            patients |= self.env['health.patient'].browse(vals['patient_id'])
+        else:
+            patients |= self.mapped('patient_id')
+        for patient in patients:
+            self._validate_patient_can_record(patient)
+        for rec in self:
+            candidate = {field: vals.get(field, getattr(rec, field)) for field in self.VITAL_FIELDS}
+            self._validate_hard_ranges(candidate)
+        self._apply_confirmation_state(vals, current_records=self)
+
+    @api.model
+    def _validate_patient_can_record(self, patient):
+        if self.env.context.get('allow_discharged_vitals'):
+            return
+        if not patient.active:
+            raise ValidationError(_("Cannot record vitals for archived patients: %s") % patient.name)
+        if patient.admission_status not in ['triage', 'admitted']:
+            raise ValidationError(_(
+                "Cannot record vitals for patients outside triage/admitted care. "
+                "Reactivate the patient first: %s"
+            ) % patient.name)
+
+    @api.model
+    def _validate_hard_ranges(self, vals):
+        errors = []
+        for field, (min_value, max_value, label, unit) in self.HARD_LIMITS.items():
+            value = vals.get(field)
+            if value in [None, False, '']:
+                continue
+            value = float(value)
+            if value == 0:
+                continue
+            if value < min_value or value > max_value:
+                errors.append(_("%s %.1f %s is outside the allowed recording range (%s-%s %s).") % (
+                    label, value, unit, min_value, max_value, unit
+                ))
+        if errors:
+            raise ValidationError("\n".join(errors))
+
+    @api.model
+    def _extreme_warnings_for_vals(self, vals):
+        warnings = []
+        for field, (min_value, max_value, label, unit) in self.EXTREME_LIMITS.items():
+            value = vals.get(field)
+            if value in [None, False, '']:
+                continue
+            value = float(value)
+            if value == 0:
+                continue
+            if value < min_value or value > max_value:
+                warnings.append(_("%s: %.1f %s is outside the extreme safety range (%s-%s %s).") % (
+                    label, value, unit, min_value, max_value, unit
+                ))
+        return warnings
+
+    @api.model
+    def _apply_confirmation_state(self, vals, current_records=False):
+        candidate = dict(vals)
+        if current_records and len(current_records) == 1:
+            for field in self.VITAL_FIELDS:
+                candidate.setdefault(field, getattr(current_records, field))
+        warnings = self._extreme_warnings_for_vals(candidate)
+        if not warnings:
+            if any(field in vals for field in self.VITAL_FIELDS):
+                vals.update({
+                    'confirmation_state': 'not_required',
+                    'confirmation_required': False,
+                    'confirmation_warnings': False,
+                    'confirmed_by': False,
+                    'confirmed_at': False,
+                    'confirmation_notes': False,
+                })
+            return
+
+        warning_text = "\n".join(warnings)
+        if self.env.context.get('extreme_confirmed'):
+            notes = (self.env.context.get('extreme_confirmation_notes') or '').strip()
+            if not notes:
+                raise ValidationError(_("Confirmation notes are required for extreme vital readings."))
+            vals.update({
+                'confirmation_state': 'confirmed',
+                'confirmation_required': False,
+                'confirmation_warnings': warning_text,
+                'confirmed_by': self.env.user.id,
+                'confirmed_at': fields.Datetime.now(),
+                'confirmation_notes': notes,
+            })
+        else:
+            vals.update({
+                'confirmation_state': 'pending',
+                'confirmation_required': True,
+                'confirmation_warnings': warning_text,
+            })
 
     @api.constrains('patient_id', 'heart_rate', 'bp_systolic', 'bp_diastolic', 'spo2', 'temperature', 'glucose', 'respiratory_rate')
     def _check_first_record_completeness(self):
@@ -205,12 +442,12 @@ class HealthVitalRecord(models.Model):
             # The user specifically said: "when i put the first data for a patient it should be all obligatoire"
             
             # Count existing records for this patient
-            other_records_count = self.env['health.vital.record'].search_count([
+            existing_record = self.env['health.vital.record'].search([
                 ('patient_id', '=', record.patient_id.id),
                 ('id', '!=', record.id)
-            ])
+            ], limit=1)
             
-            if other_records_count == 0:
+            if not existing_record:
                 # This is the first record, all core vitals must be > 0
                 missing = []
                 if not record.heart_rate: missing.append("Heart Rate")
@@ -227,19 +464,52 @@ class HealthVitalRecord(models.Model):
                           "Please provide a complete baseline by filling: %s") % ", ".join(missing)
                     )
 
-    def _call_ai_service(self):
+    def _enqueue_ai_analysis(self, reason='vitals_saved'):
         if self.env.context.get('no_ai'):
-            return
+            return False
+
+        Job = self.env['health.ai.analysis.job'].sudo()
+        created_jobs = Job
+        for rec in self:
+            if rec.confirmation_state == 'pending':
+                continue
+
+            existing_job = Job.search([
+                ('vital_record_id', '=', rec.id),
+                ('state', 'in', ['pending', 'retrying']),
+            ], order='requested_at desc', limit=1)
+            if existing_job:
+                rec.sudo().with_context(no_ai=True).write({
+                    'ai_analysis_state': existing_job.state,
+                    'ai_analysis_job_id': existing_job.id,
+                })
+                created_jobs |= existing_job
+                continue
+
+            job = Job.create({
+                'vital_record_id': rec.id,
+                'patient_id': rec.patient_id.id,
+                'state': 'pending',
+                'result_message': reason,
+            })
+            rec.sudo().with_context(no_ai=True).write({
+                'ai_analysis_state': 'pending',
+                'ai_analysis_job_id': job.id,
+                'ai_analysis_error': False,
+            })
+            created_jobs |= job
+        return created_jobs
+
+    def _prepare_ai_analysis_payload(self):
+        self.ensure_one()
         patient = self.patient_id
 
-        # Fast single-query history — replaces the old O(N²) nested loop
         latest_recs = self.env['health.vital.record'].search([
             ('patient_id', '=', patient.id),
             ('id', '!=', self.id)
         ], order='recorded_at desc', limit=5)
 
         is_first = not bool(latest_recs)
-
         history = [{
             'bp_systolic': r.bp_systolic or 0,
             'bp_diastolic': r.bp_diastolic or 0,
@@ -254,6 +524,26 @@ class HealthVitalRecord(models.Model):
             'bp_systolic': 0, 'bp_diastolic': 0, 'heart_rate': 0,
             'glucose': 0, 'temperature': 0, 'spo2': 0, 'respiratory_rate': 0
         }
+        field_values = {
+            'bp_systolic': self.bp_systolic,
+            'bp_diastolic': self.bp_diastolic,
+            'heart_rate': self.heart_rate,
+            'glucose': self.glucose,
+            'temperature': self.temperature,
+            'spo2': self.spo2,
+            'respiratory_rate': self.respiratory_rate,
+        }
+        measured_fields = [field for field, value in field_values.items() if value not in [None, False, 0]]
+        carried_forward_fields = {
+            field: baseline.get(field, 0.0)
+            for field, value in field_values.items()
+            if value in [None, False, 0]
+        }
+        payload_context = {
+            'measured_fields': measured_fields,
+            'carried_forward_fields': carried_forward_fields,
+            'partial_record': bool(carried_forward_fields),
+        }
 
         payload = {
             'patient_code': str(patient.id),
@@ -261,155 +551,30 @@ class HealthVitalRecord(models.Model):
             'gender': patient.gender or 'unknown',
             'category': patient.category or 'unknown',
             'lifestyle_profile': patient.lifestyle_profile or 'standard',
-            'bp_systolic': self.bp_systolic or baseline.get('bp_systolic', 0.0),
-            'bp_diastolic': self.bp_diastolic or baseline.get('bp_diastolic', 0.0),
-            'heart_rate': self.heart_rate or baseline.get('heart_rate', 0.0),
-            'glucose': self.glucose or baseline.get('glucose', 0.0),
-            'temperature': self.temperature or baseline.get('temperature', 0.0),
-            'spo2': self.spo2 or baseline.get('spo2', 0.0),
-            'respiratory_rate': self.respiratory_rate or baseline.get('respiratory_rate', 0.0),
+            'bp_systolic': field_values['bp_systolic'] or baseline.get('bp_systolic', 0.0),
+            'bp_diastolic': field_values['bp_diastolic'] or baseline.get('bp_diastolic', 0.0),
+            'heart_rate': field_values['heart_rate'] or baseline.get('heart_rate', 0.0),
+            'glucose': field_values['glucose'] or baseline.get('glucose', 0.0),
+            'temperature': field_values['temperature'] or baseline.get('temperature', 0.0),
+            'spo2': field_values['spo2'] or baseline.get('spo2', 0.0),
+            'respiratory_rate': field_values['respiratory_rate'] or baseline.get('respiratory_rate', 0.0),
             'history': history,
-            'is_initial': is_first
+            'is_initial': is_first,
+            'measurement_context': payload_context,
         }
+        self.sudo().with_context(no_ai=True).write({
+            'ai_payload_context': json.dumps(payload_context, sort_keys=True)
+        })
+        return payload
 
-        try:
-            resp = requests.post(
-                f'{AI_URL}/analyze',
-                json=payload,
-                timeout=12,
-                headers={'Content-Type': 'application/json'}
-            )
-            resp.raise_for_status()
-            result = resp.json()
-            score = result.get('anomaly_score', 0.0)
-            is_anomaly = result.get('is_anomaly', False)
-            # Align severity with Odoo's Choice fields
-            # AI returns: 'normal', 'warning', 'critical'
-            ai_sev = result.get('severity', 'normal')
-            record_severity = ai_sev if ai_sev in ['normal', 'warning', 'critical'] else 'normal'
-            
-            self.sudo().with_context(no_ai=True).write({
-                'ai_score': score,
-                'ai_severity': record_severity,
-                'anomaly_detected': is_anomaly,
-                'clinical_hints': result.get('message', '')
-            })
-            
-            patient.sudo().write({
-                'last_score': score
-            })
-
-            if is_anomaly:
-                raw_msg = result.get('message', 'Anomaly detected')
-                # Clean up the message to look "normal" by removing [WARNING], etc.
-                clean_msg = raw_msg.replace('[WARNING]', '').replace('[CRITICAL]', '').replace('[INFO]', '').strip()
-                
-                # Severity mapping for the Alert record
-                alert_sev_map = {
-                    'normal': 'low',
-                    'warning': 'high',
-                    'critical': 'critical'
-                }
-                alert_severity = alert_sev_map.get(record_severity, 'low')
-                if is_anomaly and alert_severity == 'low':
-                    alert_severity = 'medium'
-
-                # AI Ward Recommendation
-                icu_ward = self.env['health.ward'].sudo().search([('ward_type', '=', 'icu')], limit=1)
-                gen_ward = self.env['health.ward'].sudo().search([('ward_type', '=', 'general')], limit=1)
-                
-                rec_ward = icu_ward if alert_severity == 'critical' else gen_ward
-                rec_msg = "Critical Situation. AI explicitly recommends ICU." if alert_severity == 'critical' else "Patient requires attention. AI Recommends General Admission."
-                
-                patient.sudo().write({
-                    'last_alert_id': False, # Will be set below
-                    'ai_recommended_ward_id': rec_ward.id if rec_ward else False,
-                    'ai_recommendation_msg': rec_msg
-                })
-
-                alert = self.env['health.alert'].sudo().create({
-                    'patient_id': patient.id,
-                    'vital_record_id': self.id,
-                    'severity': alert_severity,
-                    'message': clean_msg,
-                    'ai_confidence': score,
-                    'state': 'new'
-                })
-                patient.sudo().write({'last_alert_id': alert.id})
-
-                # Send in-app notification to all doctors assigned to the patient's ward
-                # This fires only for critical anomalies to avoid notification fatigue
-                if alert_severity == 'critical' and patient.ward_id and patient.ward_id.doctor_ids:
-                    for doctor in patient.ward_id.doctor_ids:
-                        try:
-                            self.env['mail.message'].sudo().create({
-                                'message_type': 'notification',
-                                'subtype_id': self.env.ref('mail.mt_note').id,
-                                'body': (
-                                    f'🚨 CRITICAL ALERT: Patient <b>{patient.name}</b> has extreme vital readings. '
-                                    f'AI Risk Score: {score:.0f}%. '
-                                    f'Immediate review required.'
-                                ),
-                                'partner_ids': [doctor.partner_id.id],
-                                'res_id': patient.id,
-                                'model': 'health.patient',
-                                'author_id': self.env.ref('base.user_root').partner_id.id,
-                            })
-                        except Exception as notify_err:
-                            _logger.warning(
-                                f'Failed to send in-app notification to doctor {doctor.name}: {notify_err}'
-                            )
-            elif "STABILIZING" in result.get('message', ''):
-                # Auto-resolve active alerts if the patient is returning to normal
-                active_alerts = self.env['health.alert'].sudo().search([
-                    ('patient_id', '=', patient.id),
-                    ('state', 'in', ['new', 'acknowledged'])
-                ])
-                if active_alerts:
-                    active_alerts.sudo().write({
-                        'state': 'resolved',
-                        'status': 'handled',
-                        'handled_at': fields.Datetime.now(),
-                        'resolution_notes': _(
-                            "System: Patient vitals returned to normal range "
-                            "(Verified by AI in Vital Record #%s)"
-                        ) % self.id
-                    })
-                
-                # Update stable recommendation
-                gen_ward = self.env['health.ward'].sudo().search([('ward_type', '=', 'general')], limit=1)
-                patient.sudo().write({
-                    'ai_recommended_ward_id': gen_ward.id if gen_ward else False,
-                    'ai_recommendation_msg': "Patient Stable. AI Recommends General Admission."
-                })
-            else:
-                # If normal and no stabilizing needed
-                gen_ward = self.env['health.ward'].sudo().search([('ward_type', '=', 'general')], limit=1)
-                patient.sudo().write({
-                    'ai_recommended_ward_id': gen_ward.id if gen_ward else False,
-                    'ai_recommendation_msg': "Patient Stable. AI Recommends General Admission."
-                })
-
-        except requests.exceptions.Timeout:
-            _logger.warning(f'AI service timeout for vital record {self.id}. Record saved without AI analysis.')
-        except requests.exceptions.ConnectionError:
-            _logger.warning(f'AI service unreachable for vital record {self.id}. Record saved without AI analysis.')
-        except Exception as e:
-            _logger.error(f'AI service unexpected error for vital record {self.id}: {e}')
+    def _call_ai_service(self):
+        return self._enqueue_ai_analysis(reason='legacy_call')
 
     @api.model
     def cron_reanalyze_recent(self):
-        from datetime import timedelta
-        cutoff = fields.Datetime.now() - timedelta(hours=2)
-        recent = self.search([
-            ('recorded_at', '>=', cutoff),
-        ])
-        for rec in recent:
-            if not rec.anomaly_detected:
-                rec._call_ai_service()
-        _logger.info(f'Cron: reanalyzed {len(recent)} recent vital records')
+        processed = self.env['health.ai.analysis.job'].sudo().process_pending_jobs(limit=25)
+        _logger.info('Cron: processed %s pending AI analysis jobs', processed)
 
     @api.model
     def cron_process_unanalysed_vitals(self):
-        """Dummy method to satisfy old cron job and prevent tracebacks"""
-        pass
+        return self.env['health.ai.analysis.job'].sudo().process_pending_jobs(limit=25)

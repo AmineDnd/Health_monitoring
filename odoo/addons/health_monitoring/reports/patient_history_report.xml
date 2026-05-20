@@ -24,6 +24,7 @@
                                 <tr>
                                     <td style="width: 50%; vertical-align: top;">
                                         <strong>Name:</strong> <span t-field="doc.name"/><br/>
+                                        <strong>MRN:</strong> <span t-field="doc.mrn"/><br/>
                                         <strong>Age:</strong> <span t-field="doc.age"/> yrs<br/>
                                         <strong>Gender:</strong> <span style="text-transform: capitalize;" t-field="doc.gender"/>
                                     </td>

@@ -8,13 +8,16 @@
     <field name="arch" type="xml">
       <form>
         <header>
-          <button string="Analyze &amp; Save" type="object" name="action_manual_save_close" class="btn-primary ms-2" invisible="id"/>
+          <button string="Analyze &amp; Save" type="object" name="action_check_and_save" class="btn-primary ms-2" invisible="id"/>
           <field name="status" widget="statusbar" statusbar_visible="normal,warning,critical"/>
         </header>
         <sheet>
           <field name="anomaly_detected" invisible="1"/>
+          <field name="confirmation_state" invisible="1"/>
+          <field name="confirmation_required" invisible="1"/>
+          <field name="ai_analysis_state" invisible="1"/>
 
-          <!-- Page title — no fa icon -->
+          <!-- Page title - no fa icon -->
           <div class="oe_title mb-4">
             <div style="margin-bottom:14px;">
               <div style="font-size:18px;font-weight:600;color:#0F172A;letter-spacing:-0.3px;">Clinical Checkup</div>
@@ -73,7 +76,7 @@
                     <div class="row">
                       <div class="col-md-6">
                         <group>
-                          <field name="temperature" class="sl-numeric" string="Body Temp (°C)"/>
+                          <field name="temperature" class="sl-numeric" string="Body Temp (C)"/>
                         </group>
                       </div>
                       <div class="col-md-6">
@@ -92,8 +95,18 @@
               <div style="background:#fff;border:1px solid #EEF2F7;border-radius:12px;padding:16px;min-height:400px;display:flex;flex-direction:column;gap:12px;">
 
                 <!-- Status banner -->
+                <div invisible="ai_analysis_state not in ['pending', 'retrying', 'failed']"
+                     style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:#EFF6FF;border:1px solid #BFDBFE;">
+                  <div style="width:32px;height:32px;border-radius:8px;background:#185FA5;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700;">
+                    AI
+                  </div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:13px;font-weight:700;color:#0C447C;line-height:1.2;">AI Analysis <field name="ai_analysis_state" nolabel="1"/></div>
+                    <div style="font-size:11px;color:#185FA5;margin-top:2px;">Vitals are saved while analysis runs in the background.</div>
+                  </div>
+                </div>
                 <!-- ANOMALY: red pill header -->
-                <div invisible="not anomaly_detected"
+                <div invisible="not anomaly_detected or ai_analysis_state in ['pending', 'retrying']"
                      style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:#FFF1F2;border:1px solid #FECDD3;">
                   <div style="width:32px;height:32px;border-radius:8px;background:#E24B4A;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -106,7 +119,7 @@
                   </div>
                 </div>
                 <!-- NORMAL: green pill header -->
-                <div invisible="anomaly_detected"
+                <div invisible="anomaly_detected or ai_analysis_state in ['pending', 'retrying']"
                      style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:#F0FDF4;border:1px solid #BBF7D0;">
                   <div style="width:32px;height:32px;border-radius:8px;background:#16A34A;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -131,10 +144,26 @@
                 <div style="background:#F8FAFC;border:1px solid #EEF2F7;border-radius:8px;padding:12px;flex:1;overflow-y:auto;">
                   <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#94A3B8;margin-bottom:6px;">Clinical Analysis</div>
                   <field name="parsed_clinical_hints" nolabel="1"/>
+                  <field name="ai_analysis_error" invisible="not ai_analysis_error" readonly="1"/>
                 </div>
               </div>
             </div>
           </div>
+          <div invisible="confirmation_state != 'pending'"
+               style="margin-top:12px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:10px;padding:12px 14px;color:#7C2D12;">
+            <strong>Extreme values require confirmation before AI analysis.</strong>
+            <div style="white-space:pre-line;font-size:12px;margin-top:6px;">
+              <field name="confirmation_warnings" nolabel="1" readonly="1"/>
+            </div>
+          </div>
+          <group invisible="confirmation_state == 'not_required'">
+            <field name="confirmed_by" readonly="1"/>
+            <field name="confirmed_at" readonly="1"/>
+            <field name="confirmation_notes" readonly="1"/>
+            <field name="ai_payload_context" readonly="1"/>
+            <field name="ai_model_version" readonly="1"/>
+            <field name="ai_analysis_job_id" readonly="1"/>
+          </group>
         </sheet>
       </form>
     </field>
@@ -153,12 +182,21 @@
         <field name="spo2" string="SpO2 %" widget="integer"
                decoration-danger="spo2 &lt; 90"
                decoration-warning="spo2 &lt; 94 and spo2 >= 90"/>
-        <field name="temperature" string="Temp°C" widget="integer" optional="show"/>
+        <field name="temperature" string="Temp C" widget="integer" optional="show"/>
         <field name="glucose" string="Glucose" widget="integer" optional="show"/>
         <field name="ai_score" string="AI Risk" widget="progressbar"
                decoration-danger="ai_score >= 70"
                decoration-warning="ai_score >= 40 and ai_score &lt; 70"
                decoration-success="ai_score &lt; 40"/>
+        <field name="ai_analysis_state" string="AI Status" widget="badge"
+               decoration-info="ai_analysis_state in ['pending', 'retrying']"
+               decoration-success="ai_analysis_state == 'analyzed'"
+               decoration-danger="ai_analysis_state == 'failed'"
+               optional="show"/>
+        <field name="confirmation_state" string="Confirmation" widget="badge"
+               decoration-warning="confirmation_state=='pending'"
+               decoration-info="confirmation_state=='confirmed'"
+               optional="show"/>
         <field name="status" string="Triage" widget="badge"
                decoration-danger="status=='critical'"
                decoration-warning="status=='warning'"
@@ -203,6 +241,7 @@
       <search>
         <field name="patient_id"/>
         <filter string="Anomalies Detected" name="anomalies" domain="[('anomaly_detected', '=', True)]"/>
+        <filter string="Pending Confirmation" name="pending_confirmation" domain="[('confirmation_state', '=', 'pending')]"/>
         <filter string="Normal Records" name="normal" domain="[('anomaly_detected', '=', False)]"/>
         <separator/>
         <filter string="Today's Vitals" name="today" domain="[('recorded_at', '&gt;=', context_today().strftime('%Y-%m-%d 00:00:00')), ('recorded_at', '&lt;=', context_today().strftime('%Y-%m-%d 23:59:59'))]"/>

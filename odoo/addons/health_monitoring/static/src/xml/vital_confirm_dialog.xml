@@ -44,7 +44,7 @@
                 t-att-disabled="state.loading"
                 style="padding:8px 18px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;background:#E24B4A;color:#fff;border:none;">
           <t t-if="state.loading">Saving...</t>
-          <t t-else="">Yes, values are correct — Save</t>
+          <t t-else="">Yes, values are correct - Save</t>
         </button>
       </div>
 

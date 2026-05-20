@@ -41,6 +41,15 @@
           </div>
 
           <!-- ── ADVISORY NOTE ──────────────────────────────────── -->
+          <div style="padding:12px 24px 0;">
+            <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#94A3B8;margin-bottom:8px;">
+              Confirmation notes
+            </div>
+            <field name="confirmation_notes" nolabel="1"
+                   placeholder="Example: repeated measurement manually, second device matched, patient assessed at bedside."
+                   style="min-height:76px;font-size:12.5px;color:#0F172A;line-height:1.6;"/>
+          </div>
+
           <div style="padding:12px 24px 20px;">
             <div style="background:#F0F7FF;border:1px solid #BFDBFE;border-radius:8px;padding:10px 14px;display:flex;align-items:flex-start;gap:10px;">
               <svg style="flex-shrink:0;margin-top:1px;" width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -48,7 +57,7 @@
                       stroke="#185FA5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
               <div style="font-size:11.5px;color:#1E3A5F;line-height:1.6;">
-                If this is a real emergency, confirm to save — the system will alert the care team.
+                If this is a real emergency, confirm to save - the system will alert the care team.
                 If these were entry errors, click <b>Re-enter Values</b> to correct them.
               </div>
             </div>

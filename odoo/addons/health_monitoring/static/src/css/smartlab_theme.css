@@ -1,11 +1,10 @@
 /* ============================================================
-   SmartLab Clinical SaaS Theme
-   Design System — Applied to all non-dashboard views
+   SmartLab Clinical ERP Theme
+   Design system applied to all non-dashboard views.
+   Uses the system UI font stack without external font imports.
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-/* ── Global Font Override ── */
+/* Global Font Override */
 .o_form_view,
 .o_list_view,
 .o_kanban_view,

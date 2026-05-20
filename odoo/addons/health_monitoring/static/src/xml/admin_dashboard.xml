@@ -9,7 +9,7 @@
           <h1 class="sl-title">Hospital Operations</h1>
           <span class="sl-live-badge">
             <span class="sl-live-dot"/>
-            Live · <t t-esc="state.currentTime"/>
+            Live &#183; <t t-esc="state.currentTime"/>
           </span>
         </div>
         <div style="display:flex;gap:6px;">
@@ -48,21 +48,21 @@
             <div class="sl-kpi-card kpi-patients" style="cursor:pointer;" t-on-click="openAllPatients">
               <div class="sl-kpi-label">Active Patients</div>
               <div class="sl-kpi-value"><t t-esc="state.kpi.activePatients"/></div>
-              <div class="sl-kpi-delta up">+<t t-esc="state.kpi.activeDelta"/> since yesterday</div>
+              <div class="sl-kpi-delta up">+<t t-esc="state.kpi.activeDelta"/> admitted today</div>
             </div>
             <div class="sl-kpi-card kpi-critical" style="cursor:pointer;" t-on-click="openAllAlerts">
               <div class="sl-kpi-label">Critical Alerts</div>
               <div class="sl-kpi-value"><t t-esc="state.kpi.criticalAlerts"/></div>
-              <div class="sl-kpi-delta"><t t-esc="state.kpi.criticalDelta"/> in last hour</div>
+              <div class="sl-kpi-delta"><t t-esc="state.kpi.criticalDelta"/> vs yesterday</div>
             </div>
-            <div class="sl-kpi-card kpi-response">
+            <div class="sl-kpi-card kpi-response" style="cursor:pointer;" t-on-click="openSlaAlerts">
               <div class="sl-kpi-label">SLA Compliance</div>
               <div class="sl-kpi-value" t-attf-style="color: #{state.slaCompliance >= 80 ? '#10B981' : state.slaCompliance >= 60 ? '#F59E0B' : '#E24B4A'};">
                   <t t-esc="state.slaCompliance"/>%
               </div>
               <div class="sl-kpi-delta">Responded within 5 min</div>
             </div>
-            <div class="sl-kpi-card kpi-anomalies">
+            <div class="sl-kpi-card kpi-anomalies" style="cursor:pointer;" t-on-click="openAiAnomalies">
               <div class="sl-kpi-label">AI Anomalies Today</div>
               <div class="sl-kpi-value"><t t-esc="state.kpi.aiAnomalies"/></div>
               <div class="sl-kpi-delta">alerts triggered today</div>
@@ -90,7 +90,7 @@
                       <t t-esc="ward.occupancy_percentage"/>%
                     </span>
                     <span style="font-size:11px;color:#94A3B8;width:44px;flex-shrink:0;">
-                      · <t t-esc="ward.current_occupancy"/> pts
+                      &#183; <t t-esc="ward.current_occupancy"/> pts
                     </span>
                   </div>
                 </t>
@@ -152,7 +152,7 @@
           <!-- Row 3: Alert Trend + AI Insights -->
           <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:16px;">
             <div class="sl-glass-card">
-              <div class="sl-card-title">Alert Trend — Last 7 Days</div>
+              <div class="sl-card-title">Alert Trend</div>
               <div style="height:160px;position:relative;">
                 <canvas t-ref="trendChart"/>
               </div>
@@ -186,7 +186,7 @@
                       <t t-if="esc.patient_id">
                         <span style="margin-left:6px;color:#185FA5;cursor:pointer;"
                               t-on-click.stop="() => this.openPatient(esc.patient_id[0])">
-                          · <t t-esc="esc.patient_id[1]"/>
+                          &#183; <t t-esc="esc.patient_id[1]"/>
                         </span>
                       </t>
                     </div>

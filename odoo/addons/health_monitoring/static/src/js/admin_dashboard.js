@@ -33,6 +33,8 @@ export class AdminDashboard extends Component {
             escalations: [],
             insights: [],
             patientStatus: { stable: 0, warning: 0, critical: 0 },
+            alertTrend: [],
+            slaCompliance: 100,
         });
 
         onWillStart(async () => {
@@ -102,12 +104,24 @@ export class AdminDashboard extends Component {
     }
 
     // --- Navigation ---
-    openAllPatients() {
-        this.action.doAction('health_monitoring.action_patients');
+    async openAllPatients() {
+        const action = await this.orm.call("health.dashboard", "get_admin_kpi_action", ["active_patients"]);
+        this.action.doAction(action);
     }
 
-    openAllAlerts() {
-        this.action.doAction('health_monitoring.action_all_alerts');
+    async openAllAlerts() {
+        const action = await this.orm.call("health.dashboard", "get_admin_kpi_action", ["critical_alerts"]);
+        this.action.doAction(action);
+    }
+
+    async openAiAnomalies() {
+        const action = await this.orm.call("health.dashboard", "get_admin_kpi_action", ["ai_anomalies"]);
+        this.action.doAction(action);
+    }
+
+    async openSlaAlerts() {
+        const action = await this.orm.call("health.dashboard", "get_admin_kpi_action", ["sla"]);
+        this.action.doAction(action);
     }
 
     openAlert(alertId) {
@@ -133,7 +147,7 @@ export class AdminDashboard extends Component {
     openDoctorAlerts(doctorId, doctorName) {
         this.action.doAction({
             type: 'ir.actions.act_window',
-            name: `Alerts — ${doctorName}`,
+            name: `Alerts - ${doctorName}`,
             res_model: 'health.alert',
             views: [[false, 'list'], [false, 'form']],
             domain: [['assigned_doctor_id', '=', doctorId]],
@@ -165,7 +179,7 @@ export class AdminDashboard extends Component {
     async setRange(range) {
         this.state.dateRange = range;
         await this.fetchAll();
-        // Small delay to let OWL re-render the loading→content swap before drawing canvas
+        // Small delay to let OWL re-render the loading/content swap before drawing canvas
         setTimeout(() => this.renderCharts(), 80);
     }
 
@@ -184,179 +198,18 @@ export class AdminDashboard extends Component {
     async fetchAll() {
         this.state.isLoading = true;
         try {
-            // UTC date helpers for real delta computation
-            const now = new Date();
-            const todayStr = this._utcDateStr(now);
-            const yesterday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1));
-            const yesterdayStr = this._utcDateStr(yesterday);
-
-            // KPI: Active Patients (real delta = new admissions today)
-            const activePatients = await this.orm.searchCount("health.patient", [['admission_status', 'in', ['triage', 'admitted']]]);
-            this.state.kpi.activePatients = activePatients;
-            const newPatientsToday = await this.orm.searchCount("health.patient", [
-                ['create_date', '>=', todayStr + ' 00:00:00'],
-                ['admission_status', 'in', ['triage', 'admitted']]
-            ]);
-            this.state.kpi.activeDelta = newPatientsToday;
-
-            // KPI: Critical Alerts (real delta = new critical alerts today vs yesterday)
-            const criticalAlerts = await this.orm.searchCount("health.alert", [['state', '!=', 'resolved'], ['severity', '=', 'critical']]);
-            this.state.kpi.criticalAlerts = criticalAlerts;
-            const critToday = await this.orm.searchCount("health.alert", [
-                ['create_date', '>=', todayStr + ' 00:00:00'], ['severity', '=', 'critical']
-            ]);
-            const critYesterday = await this.orm.searchCount("health.alert", [
-                ['create_date', '>=', yesterdayStr + ' 00:00:00'],
-                ['create_date', '<', todayStr + ' 00:00:00'],
-                ['severity', '=', 'critical']
-            ]);
-            this.state.kpi.criticalDelta = critToday - critYesterday;
-
-            // KPI: SLA Compliance
-            const respondedAlerts = await this.orm.searchRead(
-                'health.alert',
-                [['response_time_minutes', '>', 0]],
-                ['response_time_minutes']
-            );
-            const withinSla = respondedAlerts.filter(a => a.response_time_minutes <= 5).length;
-            const slaPercent = respondedAlerts.length > 0
-                ? Math.round((withinSla / respondedAlerts.length) * 100)
-                : 100;
-            this.state.slaCompliance = slaPercent;
-
-            // KPI: AI Anomalies (alerts created today — UTC)
-            const aiAnomalies = await this.orm.searchCount("health.alert", [
-                ['create_date', '>=', todayStr + ' 00:00:00'],
-                ['create_date', '<=', todayStr + ' 23:59:59'],
-            ]);
-            this.state.kpi.aiAnomalies = aiAnomalies;
-
-            // Ward Capacity — deduplicated
-            const wardsList = await this.orm.searchRead("health.ward", [], ['id', 'name', 'capacity']);
-            const patients = await this.orm.searchRead("health.patient", [['admission_status', 'in', ['triage', 'admitted']]], ['ward_id', 'risk_level', 'id']);
-
-            // Build ward → patient count map
-            const wardCounts = {};
-            patients.forEach(p => {
-                if (p.ward_id) {
-                    wardCounts[p.ward_id[0]] = (wardCounts[p.ward_id[0]] || 0) + 1;
-                }
-            });
-
-            // Deduplicate wards by name
-            const wardDeduped = {};
-            wardsList.forEach(w => {
-                const key = w.name.trim();
-                if (!wardDeduped[key]) {
-                    wardDeduped[key] = { id: w.id, name: key, capacity: w.capacity || 10, count: 0 };
-                }
-                wardDeduped[key].count += wardCounts[w.id] || 0;
-                wardDeduped[key].capacity = Math.max(wardDeduped[key].capacity, w.capacity || 10);
-            });
-
-            this.state.wards = Object.values(wardDeduped)
-                .sort((a, b) => b.count - a.count)
-                .map(w => {
-                    const pct = Math.min(100, Math.round((w.count / w.capacity) * 100));
-                    return {
-                        id: w.id,
-                        name: w.name,
-                        occupancy_percentage: pct,
-                        current_occupancy: w.count,
-                        capacity: w.capacity,
-                        isFull: pct >= 100
-                    };
-                });
-
-            // Patient Status breakdown for donut — separate HIGH from CRITICAL
-            let psStable = 0, psWarning = 0, psCritical = 0;
-            patients.forEach(p => {
-                if (p.risk_level === 'critical') psCritical++;
-                else if (p.risk_level === 'high' || p.risk_level === 'medium') psWarning++;
-                else psStable++;
-            });
-            this.state.patientStatus = { stable: psStable, warning: psWarning, critical: psCritical };
-
-            // Leaderboard — show ONLY real doctors (not admins who inherit the Doctor group)
-            // Step 1: get all users in the Doctor group
-            const doctorGroupRes = await this.orm.searchRead('res.groups',
-                [['full_name', 'like', 'Doctor']],
-                ['id', 'users'], { limit: 5 });
-            const allDocUsers = doctorGroupRes.length > 0 ? doctorGroupRes[0].users : [];
-
-            // Step 1b: get admin group users so we can exclude them
-            // Admins imply Doctor via implied_ids — we must exclude them from the leaderboard
-            const adminGroupRes = await this.orm.searchRead('res.groups',
-                [['full_name', 'like', 'Admin']],
-                ['id', 'users'], { limit: 5 });
-            const adminUserIds = new Set(adminGroupRes.length > 0 ? adminGroupRes[0].users : []);
-
-            // Doctor-only IDs: members of Doctor group who are NOT in Admin group
-            const doctorOnlyIds = allDocUsers.filter(uid => !adminUserIds.has(uid));
-
-            const allDoctors = doctorOnlyIds.length > 0
-                ? await this.orm.searchRead('res.users',
-                    [['id', 'in', doctorOnlyIds], ['id', '!=', 1], ['active', '=', true]],
-                    ['id', 'name'])
-                : [];
-
-            // Step 2: fetch all handled alerts (no date filter)
-            const handled = await this.orm.searchRead("health.alert",
-                [['assigned_doctor_id', '!=', false]],
-                ['assigned_doctor_id', 'state', 'severity']);
-
-            // Step 3: build map starting with ALL doctors at 0
-            const docMap = {};
-            allDoctors.forEach(u => {
-                docMap[u.id] = { id: u.id, name: u.name, total: 0, resolved: 0, critical: 0 };
-            });
-            // Overlay alert stats
-            handled.forEach(a => {
-                const did = a.assigned_doctor_id[0];
-                const dname = a.assigned_doctor_id[1];
-                if (!docMap[did]) docMap[did] = { id: did, name: dname, total: 0, resolved: 0, critical: 0 };
-                docMap[did].total++;
-                if (a.state === 'resolved') docMap[did].resolved++;
-                if (a.severity === 'critical') docMap[did].critical++;
-            });
-
-            this.state.leaderboard = Object.values(docMap)
-                .sort((a, b) => {
-                    if (b.resolved !== a.resolved) return b.resolved - a.resolved;
-                    if (b.total !== a.total) return b.total - a.total;
-                    return a.name.localeCompare(b.name);
-                })
-                .map(d => ({
-                    ...d,
-                    borderColor: d.critical >= 3 ? '#E24B4A' : d.critical >= 1 ? '#F59E0B' : '#185FA5'
-                }));
-
-            // Escalations with timeAgo pre-computed
-            const escs = await this.orm.searchRead("health.alert",
-                [['severity', 'in', ['high', 'critical']]],
-                ['headline', 'patient_id', 'create_date', 'severity', 'state', 'assigned_doctor_id'],
-                { limit: 6, order: 'create_date desc' });
-            this.state.escalations = escs.map(e => ({
-                id: e.id,
-                headline: e.headline || 'Clinical Alert',
-                severity: e.severity,
-                state: e.state,
-                patient_id: e.patient_id,
-                timeAgo: this.timeAgo(e.create_date),
-                doctorName: e.assigned_doctor_id ? e.assigned_doctor_id[1] : 'Unassigned'
-            }));
-
-            // AI Insights
-            const insights = [];
-            const overdueWards = this.state.wards.filter(w => w.pct >= 90).map(w => w.name);
-            if (overdueWards.length > 0) insights.push(`[!] Wards near capacity: ${overdueWards.slice(0, 2).join(', ')}`);
-            if (this.state.kpi.criticalAlerts > 5) insights.push(`[ALERT] ${this.state.kpi.criticalAlerts} critical alerts pending - escalation risk high.`);
-            if (this.state.kpi.avgResponse !== 'N/A' && this.state.kpi.avgResponse !== '--') insights.push(`[TIME] Avg response time is ${this.state.kpi.avgResponse} - monitor for SLA breach.`);
-            if (insights.length === 0) insights.push('[OK] All systems nominal. No anomalies detected.');
-            this.state.insights = insights;
-
-            this._patientData = patients;
-            this._trendData = await this.orm.searchRead("health.alert", this.getDateDomain('create_date'), ['create_date', 'severity']);
+            const data = await this.orm.call("health.dashboard", "get_admin_dashboard_data", [this.state.dateRange]);
+            this.state.kpi = data.kpi || this.state.kpi;
+            this.state.slaCompliance = data.slaCompliance;
+            this.state.wards = data.wards || [];
+            this.state.leaderboard = data.leaderboard || [];
+            this.state.escalations = data.escalations || [];
+            this.state.insights = data.insights || [];
+            this.state.patientStatus = data.patientStatus || { stable: 0, warning: 0, critical: 0 };
+            this.state.alertTrend = data.alertTrend || [];
+            this._patientData = [];
+            this._trendData = [];
+            return;
         } catch (e) {
             console.error("Admin dashboard fetch error:", e);
             this.notification.add("Failed to load dashboard data", { type: 'warning' });
@@ -376,22 +229,11 @@ export class AdminDashboard extends Component {
         Chart.defaults.font.family = "'Inter', sans-serif";
 
         // Alert Trend Line Chart
-        if (this.trendChartRef.el && this._trendData) {
-            const dateMap = {};
-            this._trendData.forEach(a => {
-                if (!a.create_date) return;
-                const d = a.create_date.split(' ')[0];
-                if (!dateMap[d]) dateMap[d] = { total: 0, critical: 0 };
-                dateMap[d].total++;
-                if (a.severity === 'critical') dateMap[d].critical++;
-            });
-            const dates = Object.keys(dateMap).sort().slice(-7);
-            const dayNames = dates.map(d => {
-                const dt = new Date(d + 'T00:00:00');
-                return dt.toLocaleDateString('en', { weekday: 'short' });
-            });
-            const totals = dates.map(d => dateMap[d].total);
-            const criticals = dates.map(d => dateMap[d].critical);
+        if (this.trendChartRef.el && this.state.alertTrend) {
+            const trend = this.state.alertTrend || [];
+            const dayNames = trend.map(d => d.label);
+            const totals = trend.map(d => d.total);
+            const criticals = trend.map(d => d.critical);
 
             this.charts.trend = new Chart(this.trendChartRef.el, {
                 type: 'line',

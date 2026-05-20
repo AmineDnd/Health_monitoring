@@ -32,8 +32,8 @@ export const EXTREME_THRESHOLDS = {
         min: 34.0,
         max: 41.0,
         label: 'Temperature',
-        unit: '°C',
-        message: (val) => `Temperature of ${val}°C is life-threatening. Please verify this reading.`
+        unit: 'C',
+        message: (val) => `Temperature of ${val} C is life-threatening. Please verify this reading.`
     },
     respiratory_rate: {
         min: 6,

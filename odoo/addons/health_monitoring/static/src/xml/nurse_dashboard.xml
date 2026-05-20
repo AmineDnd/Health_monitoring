@@ -8,7 +8,7 @@
         <div>
           <h1 style="font-size:17px;font-weight:600;color:#0F172A;margin:0;letter-spacing:-0.2px;">Central Monitor</h1>
           <p style="font-size:12px;color:#64748B;margin:3px 0 0;">
-            <t t-esc="state.wardName"/> · Nurse <t t-esc="state.nurseName"/> · <t t-esc="state.patients.length"/> patients assigned
+            <t t-esc="state.wardName"/> &#183; Nurse <t t-esc="state.nurseName"/> &#183; <t t-esc="state.patients.length"/> patients assigned
           </p>
         </div>
         <div style="display:flex;gap:8px;">
@@ -23,27 +23,27 @@
         <!-- Stats bar -->
         <div class="sl-stats-bar">
           <div class="sl-stat-pill" style="cursor:pointer;"
-               t-on-click="() => this.action.doAction('health_monitoring.action_patients')">
+               t-on-click="() => this.onOpenKpi('total')">
             <div class="sl-stat-num"><t t-esc="state.patients.length"/></div>
             <div class="sl-stat-label"><t t-esc="'Total'"/></div>
           </div>
           <div class="sl-stat-pill stat-critical" style="cursor:pointer;"
-               t-on-click="onFilterCritical">
+               t-on-click="() => this.onOpenKpi('critical')">
             <div class="sl-stat-num"><t t-esc="state.stats.critical"/></div>
             <div class="sl-stat-label"><t t-esc="'Critical'"/></div>
           </div>
           <div class="sl-stat-pill stat-overdue" style="cursor:pointer;"
-               t-on-click="onFilterOverdue">
+               t-on-click="() => this.onOpenKpi('overdue')">
             <div class="sl-stat-num"><t t-esc="state.stats.overdue"/></div>
             <div class="sl-stat-label"><t t-esc="'Overdue'"/></div>
           </div>
           <div class="sl-stat-pill stat-due-soon" style="cursor:pointer;"
-               t-on-click="onFilterDueSoon">
+               t-on-click="() => this.onOpenKpi('due_soon')">
             <div class="sl-stat-num"><t t-esc="state.stats.dueSoon"/></div>
             <div class="sl-stat-label"><t t-esc="'Due Soon'"/></div>
           </div>
           <div class="sl-stat-pill stat-ok" style="cursor:pointer;"
-               t-on-click="onFilterUpToDate">
+               t-on-click="() => this.onOpenKpi('up_to_date')">
             <div class="sl-stat-num"><t t-esc="state.stats.upToDate"/></div>
             <div class="sl-stat-label"><t t-esc="'Up to Date'"/></div>
           </div>
@@ -109,7 +109,7 @@
                   SpO&#8322; <t t-esc="patient.latestSpO2"/>%
                 </span>
                 <span t-attf-class="sl-chip #{patient.bpEqual ? 'chip-danger' : patient.bpAbnormal ? 'chip-danger' : patient.bpWarn ? 'chip-warn' : 'chip-ok'}"
-                      t-att-title="patient.bpEqual ? 'Warning: systolic and diastolic nearly equal — check entry' : patient.bpLow ? 'Hypotension — risk of shock' : ''">
+                      t-att-title="patient.bpEqual ? 'Warning: systolic and diastolic nearly equal - check entry' : patient.bpLow ? 'Hypotension - risk of shock' : ''">
                   BP <t t-esc="patient.latestBP"/><t t-if="patient.bpEqual"> &#9888;</t>
                 </span>
                 <t t-if="patient.latestTemp">

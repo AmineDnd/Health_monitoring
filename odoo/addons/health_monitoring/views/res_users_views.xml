@@ -9,7 +9,15 @@
             <notebook position="inside">
                 <page string="Telegram Notifications">
                     <group>
-                        <field name="telegram_chat_id" placeholder="e.g., 123456789"/>
+                        <field name="telegram_chat_verified" readonly="1"/>
+                        <field name="telegram_chat_id" readonly="1"/>
+                        <field name="telegram_pending_chat_id" placeholder="e.g., 123456789"/>
+                        <field name="telegram_verification_input" password="True"/>
+                        <field name="telegram_verification_sent_at" readonly="1"/>
+                        <field name="telegram_verified_at" readonly="1"/>
+                        <button name="action_request_telegram_verification" type="object" string="Send Verification Code" class="btn-primary"/>
+                        <button name="action_confirm_telegram_verification" type="object" string="Confirm Code" class="btn-secondary"/>
+                        <button name="action_clear_telegram_chat" type="object" string="Clear Telegram" class="btn-link"/>
                     </group>
                 </page>
             </notebook>
@@ -24,7 +32,15 @@
         <field name="arch" type="xml">
             <group name="preferences" position="inside">
                 <group string="Telegram Integration">
-                    <field name="telegram_chat_id" string="Telegram Chat ID" placeholder="e.g., 123456789"/>
+                    <field name="telegram_chat_verified" readonly="1"/>
+                    <field name="telegram_chat_id" readonly="1"/>
+                    <field name="telegram_pending_chat_id" string="Telegram Chat ID to Verify" placeholder="e.g., 123456789"/>
+                    <field name="telegram_verification_input" password="True"/>
+                    <field name="telegram_verification_sent_at" readonly="1"/>
+                    <field name="telegram_verified_at" readonly="1"/>
+                    <button name="action_request_telegram_verification" type="object" string="Send Verification Code" class="btn-primary"/>
+                    <button name="action_confirm_telegram_verification" type="object" string="Confirm Code" class="btn-secondary"/>
+                    <button name="action_clear_telegram_chat" type="object" string="Clear Telegram" class="btn-link"/>
                 </group>
             </group>
         </field>

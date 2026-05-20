@@ -1,5 +1,7 @@
-from odoo import models, fields, api
+﻿from odoo import models, fields, api
+from odoo.exceptions import AccessError, ValidationError
 from markupsafe import Markup
+from datetime import timedelta
 import requests
 import logging
 
@@ -11,27 +13,42 @@ class HealthAlert(models.Model):
     _order = 'create_date desc'
     _inherit = ['mail.thread', 'mail.activity.mixin']
 
-    patient_id = fields.Many2one('health.patient', 'Patient', required=True, ondelete='cascade', tracking=True)
-    vital_record_id = fields.Many2one('health.vital.record', 'Triggering Vital')
-    doctor_id = fields.Many2one('res.users', related='patient_id.doctor_id', string='Assigned Doctor', store=True)
+    def _auto_init(self):
+        res = super()._auto_init()
+        self._create_performance_indexes()
+        return res
+
+    def init(self):
+        self._create_performance_indexes()
+
+    def _create_performance_indexes(self):
+        self.env.cr.execute("CREATE INDEX IF NOT EXISTS health_alert_patient_state_idx ON health_alert (patient_id, state)")
+        self.env.cr.execute("CREATE INDEX IF NOT EXISTS health_alert_state_status_severity_idx ON health_alert (state, status, severity)")
+        self.env.cr.execute("CREATE INDEX IF NOT EXISTS health_alert_create_severity_idx ON health_alert (create_date DESC, severity)")
+        self.env.cr.execute("CREATE INDEX IF NOT EXISTS health_alert_assigned_state_idx ON health_alert (assigned_doctor_id, state)")
+        self.env.cr.execute("CREATE INDEX IF NOT EXISTS health_alert_escalation_idx ON health_alert (status, escalation_level, create_date DESC)")
+
+    patient_id = fields.Many2one('health.patient', 'Patient', required=True, ondelete='cascade', tracking=True, index=True)
+    vital_record_id = fields.Many2one('health.vital.record', 'Triggering Vital', index=True)
+    doctor_id = fields.Many2one('res.users', related='patient_id.doctor_id', string='Assigned Doctor', store=True, index=True)
     
     severity = fields.Selection([
         ('low', 'Low'),
         ('medium', 'Medium'),
         ('high', 'High'),
         ('critical', 'Critical')
-    ], 'Severity', required=True, tracking=True)
+    ], 'Severity', required=True, tracking=True, index=True)
     
     status = fields.Selection([
         ('pending', 'Pending'),
         ('handled', 'Handled'),
         ('escalated', 'Escalated')
-    ], 'Status', default='pending', tracking=True)
+    ], 'Status', default='pending', tracking=True, index=True)
     
-    created_at = fields.Datetime('Created At', default=fields.Datetime.now, readonly=True)
-    handled_at = fields.Datetime('Handled At', readonly=True)
-    assigned_doctor_id = fields.Many2one('res.users', 'Assigned Doctor')
-    escalation_level = fields.Integer('Escalation Level', default=0)
+    created_at = fields.Datetime('Created At', default=fields.Datetime.now, readonly=True, index=True)
+    handled_at = fields.Datetime('Handled At', readonly=True, index=True)
+    assigned_doctor_id = fields.Many2one('res.users', 'Assigned Doctor', index=True)
+    escalation_level = fields.Integer('Escalation Level', default=0, index=True)
     
     headline = fields.Char('Alert Headline', compute='_compute_headline', store=True)
     
@@ -43,6 +60,7 @@ class HealthAlert(models.Model):
     )
     
     resolution_notes = fields.Text('Resolution Notes', tracking=True)
+    notification_log_ids = fields.One2many('health.notification.log', 'alert_id', 'Notification Audit Logs')
 
     @api.depends('created_at', 'handled_at', 'status')
     def _compute_response_time(self):
@@ -73,7 +91,10 @@ class HealthAlert(models.Model):
 
     message = fields.Text('Message')
     parsed_message_html = fields.Html('AI Clinical Analysis', compute='_compute_parsed_message')
-    ai_confidence = fields.Float('AI Confidence (%)', help="Confidence score from the AI model (0-100%).")
+    ai_confidence = fields.Float(
+        'AI Anomaly Score (%)',
+        help="Anomaly score from the AI model (0-100%). This is not a clinical confidence value.",
+    )
     
     @api.depends('message')
     def _compute_parsed_message(self):
@@ -166,7 +187,7 @@ class HealthAlert(models.Model):
                         
                     if recommended_ward:
                         doctors_to_ping |= recommended_ward.doctor_ids
-                        ward_name = f"Triage ➡️ Routing to {recommended_ward.name}"
+                        ward_name = f"Triage -> Routing to {recommended_ward.name}"
                 
                 if rec.patient_id.doctor_id:
                     doctors_to_ping |= rec.patient_id.doctor_id
@@ -175,46 +196,52 @@ class HealthAlert(models.Model):
                 alert_url = f"{base_url}/web#id={rec.id}&model=health.alert&view_type=form"
                 
                 # Telegram Message Payload
-                confidence_text = f"{int(rec.ai_confidence)}%" if rec.ai_confidence else "N/A"
-                severity_icon = "🔴" if rec.severity == 'critical' else "🟠"
+                anomaly_score_text = f"{int(rec.ai_confidence)}%" if rec.ai_confidence else "N/A"
+                severity_label = "CRITICAL" if rec.severity == 'critical' else "HIGH"
                 tg_msg = (
-                    f"🏥 <b>SMARTLAB CLINICAL ALERT</b> 🏥\n"
-                    f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                    f"<b>SMARTLAB CLINICAL ALERT</b>\n"
+                    f"------------------------\n"
                     f"<b>Ward:</b> {ward_name}\n"
-                    f"<b>Priority:</b> {rec.severity.upper()} {severity_icon}\n\n"
-                    f"👤 <b>Patient Information</b>\n"
-                    f"• <b>Name:</b> {rec.patient_id.name}\n"
-                    f"• <b>Context:</b> Age {age} | {profile}\n\n"
-                    f"🤖 <b>AI Clinical Assessment</b>\n"
-                    f"• <b>Analysis:</b> {rec.headline}\n"
-                    f"• <b>Directive:</b> <i>{ai_action}</i>\n"
-                    f"• <b>Confidence:</b> {confidence_text}\n\n"
-                    f"⚡ <b>Status:</b> UNCLAIMED\n"
-                    f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                    f"👉 <a href='{alert_url}'>Tap here to securely Claim &amp; Review</a>"
+                    f"<b>Priority:</b> {severity_label}\n\n"
+                    f"<b>Patient Information</b>\n"
+                    f"- <b>Name:</b> {rec.patient_id.name}\n"
+                    f"- <b>Context:</b> Age {age} | {profile}\n\n"
+                    f"<b>AI Clinical Assessment</b>\n"
+                    f"- <b>Analysis:</b> {rec.headline}\n"
+                    f"- <b>Directive:</b> <i>{ai_action}</i>\n"
+                    f"- <b>Anomaly Score:</b> {anomaly_score_text}\n\n"
+                    f"<b>Status:</b> UNCLAIMED\n"
+                    f"------------------------\n"
+                    f"<a href='{alert_url}'>Open alert in SmartLab</a>"
                 )
                 
                 if doctors_to_ping:
                     # 1. Send Instant Telegrams
-                    for doc in doctors_to_ping:
-                        if doc.telegram_chat_id:
-                            rec._send_telegram(doc.telegram_chat_id, tg_msg)
+                    rec._notify_users(
+                        doctors_to_ping,
+                        'telegram',
+                        tg_msg,
+                        purpose='initial_alert',
+                        cooldown_minutes=10,
+                    )
                             
                     # 2. Loud Odoo Chatter Ping
                     partners_to_notify = doctors_to_ping.mapped('partner_id')
                     mentions = ", ".join([f"<a href='#' data-oe-model='res.users' data-oe-id='{u.id}'>@{u.name}</a>" for u in doctors_to_ping])
                     
                     odoo_msg = (
-                        f"<p><span class='text-danger fw-bold'>🚨 URGENT:</span> {mentions}</p>"
+                        f"<p><span class='text-danger fw-bold'>URGENT:</span> {mentions}</p>"
                         f"<p>A new <b>UNCLAIMED</b> alert has arrived in <b>{ward_name}</b>.</p>"
                         f"<p><b>AI Directive:</b> {ai_action}</p>"
                         f"<p>Please review and <a href='{alert_url}'>Claim the Alert</a> immediately.</p>"
                     )
                     
-                    rec.message_post(
-                        body=Markup(odoo_msg),
-                        message_type="notification",
-                        partner_ids=partners_to_notify.ids
+                    rec._notify_users(
+                        doctors_to_ping,
+                        'odoo_chatter',
+                        Markup(odoo_msg),
+                        purpose='initial_alert',
+                        cooldown_minutes=5,
                     )
         return records
 
@@ -226,20 +253,40 @@ class HealthAlert(models.Model):
         ('new', 'New'),
         ('investigating', 'Investigating'),
         ('resolved', 'Resolved')
-    ], 'State', default='new', tracking=True)
+    ], 'State', default='new', tracking=True, index=True)
+
+    def _ensure_can_handle_alert(self):
+        if not (
+            self.env.user.has_group('health_monitoring.group_health_doctor')
+            or self.env.user.has_group('health_monitoring.group_health_admin')
+        ):
+            raise AccessError("Only doctors and administrators can handle clinical alerts.")
+
+    def _ensure_alert_is_open(self):
+        for rec in self:
+            if rec.state == 'resolved' or rec.status == 'handled':
+                raise ValidationError("Resolved alerts cannot be claimed, acknowledged, or resolved again.")
 
     def action_claim_alert(self):
+        self._ensure_can_handle_alert()
+        self._ensure_alert_is_open()
         for rec in self:
+            if rec.assigned_doctor_id and rec.assigned_doctor_id != self.env.user and not self.env.user.has_group('health_monitoring.group_health_admin'):
+                raise AccessError("This alert is already assigned to another doctor.")
             if not rec.assigned_doctor_id:
                 rec.write({
                     'assigned_doctor_id': self.env.user.id,
                     'state': 'investigating',
                 })
-                rec.message_post(body=f"Alert claimed by {self.env.user.name}.")
+                rec.sudo().message_post(body=f"Alert claimed by {self.env.user.name}.")
         return True
 
     def action_acknowledge(self):
+        self._ensure_can_handle_alert()
+        self._ensure_alert_is_open()
         for rec in self:
+            if rec.assigned_doctor_id and rec.assigned_doctor_id != self.env.user and not self.env.user.has_group('health_monitoring.group_health_admin'):
+                raise AccessError("Only the assigned doctor or an administrator can acknowledge this alert.")
             # Auto-claim if acknowledging without being assigned
             if not rec.assigned_doctor_id:
                 rec.assigned_doctor_id = self.env.user.id
@@ -250,9 +297,14 @@ class HealthAlert(models.Model):
                 'acknowledged_at': fields.Datetime.now(),
                 'state': 'investigating'
             })
+        return True
         
     def action_resolve(self):
         self.ensure_one()
+        self._ensure_can_handle_alert()
+        self._ensure_alert_is_open()
+        if self.assigned_doctor_id and self.assigned_doctor_id != self.env.user and not self.env.user.has_group('health_monitoring.group_health_admin'):
+            raise AccessError("Only the assigned doctor or an administrator can resolve this alert.")
         # Auto-claim if not yet assigned, so doctor can resolve in one step
         if not self.assigned_doctor_id:
             self.write({
@@ -269,9 +321,144 @@ class HealthAlert(models.Model):
             'context': {'default_alert_id': self.id}
         }
 
+    def _notification_log_vals(self, user, channel, purpose, recipient, result, message, detail=False, cooldown_until=False):
+        self.ensure_one()
+        return {
+            'alert_id': self.id,
+            'patient_id': self.patient_id.id if self.patient_id else False,
+            'user_id': user.id if user else False,
+            'channel': channel,
+            'purpose': purpose,
+            'recipient': recipient,
+            'result': result,
+            'result_detail': detail,
+            'payload_excerpt': (str(message or '')[:500]),
+            'cooldown_until': cooldown_until,
+        }
 
-    def _send_telegram(self, chat_id, message, bot_type='doctor'):
-        if not chat_id: return
+    def _has_recent_notification(self, user, channel, purpose, cooldown_minutes):
+        if not cooldown_minutes or not self:
+            return False
+        cutoff = fields.Datetime.now() - timedelta(minutes=cooldown_minutes)
+        return bool(self.env['health.notification.log'].sudo().search([
+            ('alert_id', '=', self.id),
+            ('user_id', '=', user.id if user else False),
+            ('channel', '=', channel),
+            ('purpose', '=', purpose),
+            ('result', '=', 'sent'),
+            ('create_date', '>=', cutoff),
+        ], limit=1))
+
+    def _notify_users(self, users, channel, message, purpose, cooldown_minutes=0, bot_type='doctor'):
+        self.ensure_one()
+        if self.state == 'resolved' or self.status == 'handled':
+            for user in users:
+                self.env['health.notification.log'].sudo().create(
+                    self._notification_log_vals(user, channel, purpose, False, 'skipped', message, 'Alert already resolved or handled.')
+                )
+            return False
+
+        users = users.filtered(lambda user: bool(user.active))
+        if not users:
+            self.env['health.notification.log'].sudo().create(
+                self._notification_log_vals(False, channel, purpose, False, 'skipped', message, 'No active recipients.')
+            )
+            return False
+
+        if channel == 'telegram':
+            for user in users:
+                if self._has_recent_notification(user, channel, purpose, cooldown_minutes):
+                    self.env['health.notification.log'].sudo().create(
+                        self._notification_log_vals(
+                            user,
+                            channel,
+                            purpose,
+                            user.telegram_chat_id,
+                            'cooldown',
+                            message,
+                            'Recent successful notification exists.',
+                            fields.Datetime.now() + timedelta(minutes=cooldown_minutes),
+                        )
+                    )
+                    continue
+                if not user.telegram_chat_verified or not user.telegram_chat_id:
+                    self.env['health.notification.log'].sudo().create(
+                        self._notification_log_vals(user, channel, purpose, False, 'skipped', message, 'Telegram chat ID is not verified.')
+                    )
+                    continue
+                self._send_telegram_to_chat(
+                    user.telegram_chat_id,
+                    message,
+                    bot_type=bot_type,
+                    alert=self,
+                    user=user,
+                    purpose=purpose,
+                    cooldown_minutes=cooldown_minutes,
+                )
+            return True
+
+        if channel == 'odoo_chatter':
+            users_to_notify = self.env['res.users']
+            for user in users:
+                if self._has_recent_notification(user, channel, purpose, cooldown_minutes):
+                    self.env['health.notification.log'].sudo().create(
+                        self._notification_log_vals(user, channel, purpose, user.partner_id.email or user.name, 'cooldown', message, 'Recent chatter notification exists.')
+                    )
+                else:
+                    users_to_notify |= user
+            if users_to_notify:
+                self.message_post(
+                    body=message,
+                    message_type="notification",
+                    partner_ids=users_to_notify.mapped('partner_id').ids,
+                )
+                for user in users_to_notify:
+                    self.env['health.notification.log'].sudo().create(
+                        self._notification_log_vals(user, channel, purpose, user.partner_id.email or user.name, 'sent', message)
+                    )
+            return True
+
+        return False
+
+    @api.model
+    def _send_telegram_to_chat(self, chat_id, message, bot_type='doctor', alert=False, user=False, purpose='initial_alert', cooldown_minutes=0):
+        Log = self.env['health.notification.log'].sudo()
+        if not chat_id:
+            Log.create({
+                'alert_id': alert.id if alert else False,
+                'patient_id': alert.patient_id.id if alert and alert.patient_id else False,
+                'user_id': user.id if user else False,
+                'channel': 'telegram',
+                'purpose': purpose,
+                'recipient': False,
+                'result': 'skipped',
+                'result_detail': 'Missing Telegram chat ID.',
+                'payload_excerpt': str(message or '')[:500],
+            })
+            return False
+        if user and cooldown_minutes:
+            cutoff = fields.Datetime.now() - timedelta(minutes=cooldown_minutes)
+            if Log.search([
+                ('user_id', '=', user.id),
+                ('channel', '=', 'telegram'),
+                ('purpose', '=', purpose),
+                ('result', 'in', ['sent', 'failed']),
+                ('create_date', '>=', cutoff),
+            ], limit=1):
+                Log.create({
+                    'alert_id': alert.id if alert else False,
+                    'patient_id': alert.patient_id.id if alert and alert.patient_id else False,
+                    'user_id': user.id,
+                    'channel': 'telegram',
+                    'purpose': purpose,
+                    'recipient': chat_id,
+                    'result': 'cooldown',
+                    'result_detail': 'Recent Telegram notification attempt exists.',
+                    'payload_excerpt': str(message or '')[:500],
+                    'cooldown_until': fields.Datetime.now() + timedelta(minutes=cooldown_minutes),
+                })
+                return False
+
         # Securely pull the bot token from Odoo's internal configuration parameters
         sudo_env = self.env['ir.config_parameter'].sudo()
         if bot_type == 'admin':
@@ -281,117 +468,167 @@ class HealthAlert(models.Model):
         else:
             token = sudo_env.get_param('health_monitoring.telegram_bot_token')
             
-        if not token: 
+        if not token:
             _logger.warning("Telegram Bot Token missing.")
-            return
+            Log.create({
+                'alert_id': alert.id if alert else False,
+                'patient_id': alert.patient_id.id if alert and alert.patient_id else False,
+                'user_id': user.id if user else False,
+                'channel': 'telegram',
+                'purpose': purpose,
+                'recipient': chat_id,
+                'result': 'failed',
+                'result_detail': 'Telegram bot token missing.',
+                'payload_excerpt': str(message or '')[:500],
+            })
+            return False
             
         url = f"https://api.telegram.org/bot{token}/sendMessage"
         payload = {'chat_id': chat_id, 'text': message, 'parse_mode': 'HTML'}
         try:
-            requests.post(url, json=payload, timeout=5)
+            resp = requests.post(url, json=payload, timeout=5)
+            if 200 <= resp.status_code < 300:
+                Log.create({
+                    'alert_id': alert.id if alert else False,
+                    'patient_id': alert.patient_id.id if alert and alert.patient_id else False,
+                    'user_id': user.id if user else False,
+                    'channel': 'telegram',
+                    'purpose': purpose,
+                    'recipient': chat_id,
+                    'result': 'sent',
+                    'result_detail': 'Delivered to Telegram API.',
+                    'payload_excerpt': str(message or '')[:500],
+                    'cooldown_until': fields.Datetime.now() + timedelta(minutes=cooldown_minutes) if cooldown_minutes else False,
+                })
+                return True
+            Log.create({
+                'alert_id': alert.id if alert else False,
+                'patient_id': alert.patient_id.id if alert and alert.patient_id else False,
+                'user_id': user.id if user else False,
+                'channel': 'telegram',
+                'purpose': purpose,
+                'recipient': chat_id,
+                'result': 'failed',
+                'result_detail': f'Telegram API status {resp.status_code}: {resp.text[:200]}',
+                'payload_excerpt': str(message or '')[:500],
+            })
+            return False
         except Exception as e:
             _logger.error(f"Telegram Delivery Failed: {e}")
+            Log.create({
+                'alert_id': alert.id if alert else False,
+                'patient_id': alert.patient_id.id if alert and alert.patient_id else False,
+                'user_id': user.id if user else False,
+                'channel': 'telegram',
+                'purpose': purpose,
+                'recipient': chat_id,
+                'result': 'failed',
+                'result_detail': str(e),
+                'payload_excerpt': str(message or '')[:500],
+            })
+            return False
+
+    def _send_telegram(self, chat_id, message, bot_type='doctor'):
+        return self._send_telegram_to_chat(chat_id, message, bot_type=bot_type, alert=self if self else False)
 
     @api.model
     def _cron_escalate_alerts(self):
-        pending_alerts = self.search([('status', '=', 'pending')])
-        now = fields.Datetime.now()
-        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url', 'http://localhost:8069')
-        
-        for alert in pending_alerts:
-            start_time = alert.created_at or alert.create_date
-            if not start_time:
+        active_alerts = self.search([
+            ('state', '!=', 'resolved'),
+            ('status', '!=', 'handled'),
+            ('severity', 'in', ['medium', 'high', 'critical']),
+        ])
+        for alert in active_alerts:
+            level = alert._target_escalation_level()
+            if not level or level <= alert.escalation_level:
                 continue
-                
-            elapsed_mins = (now - start_time).total_seconds() / 60.0
-            
-            profile = alert.patient_id.lifestyle_profile.title() if alert.patient_id.lifestyle_profile else 'Standard'
-            age = alert.patient_id.age or 0
-            ward_name = alert.patient_id.ward_id.name if alert.patient_id.ward_id else 'No Ward'
-            alert_url = f"{base_url}/web#id={alert.id}&model=health.alert&view_type=form"
-            
-            if elapsed_mins > 30 and alert.escalation_level < 3:
-                alert.write({
-                    'escalation_level': 3,
-                    'status': 'escalated'
-                })
-                alert.message_post(
-                    body=Markup("<span class='text-danger fw-bold'>CRITICAL ESCALATION:</span> Alert unresolved for over 30 minutes. Status transition to Escalated."),
-                    message_type="notification"
-                )
-                
-            elif elapsed_mins > 15 and alert.escalation_level < 2:
-                alert.write({'escalation_level': 2})
-                boss_group = self.env.ref('health_monitoring.group_health_admin', raise_if_not_found=False)
-                boss_users = boss_group.users if boss_group else self.env['res.users']
-                if boss_users:
-                    mentions = ", ".join([f"<a href='#' data-oe-model='res.users' data-oe-id='{u.id}'>@{u.name}</a>" for u in boss_users])
-                    alert.message_post(
-                        body=Markup(f"<span class='text-warning fw-bold'>ESCALATION LEVEL 2:</span> Alert unresolved for over 15 minutes. Notifying Administrators: {mentions}"),
-                        partner_ids=boss_users.mapped('partner_id').ids,
-                        message_type="notification"
-                    )
-                    # Trigger Telegram Pipeline for all Admins
-                    for boss in boss_users:
-                        if boss.telegram_chat_id:
-                            tg_msg = (
-                                f"🚨 <b>SMARTLAB ESCALATION - LEVEL 2</b> 🚨\n"
-                                f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                                f"<b>Ward:</b> {ward_name}\n"
-                                f"<b>Delay:</b> 15+ Minutes Unclaimed ⏱️\n\n"
-                                f"👤 <b>Patient Information</b>\n"
-                                f"• <b>Name:</b> {alert.patient_id.name}\n"
-                                f"• <b>Context:</b> Age {age} | {profile}\n\n"
-                                f"🤖 <b>AI Clinical Assessment</b>\n"
-                                f"• <b>Analysis:</b> {alert.headline}\n\n"
-                                f"<i>⚠️ This alert has been ignored by the {ward_name} staff and routed to Administration.</i>\n"
-                                f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                                f"👉 <a href='{alert_url}'>Tap here to securely View Alert</a>"
-                            )
-                            alert._send_telegram(boss.telegram_chat_id, tg_msg, bot_type='admin')
-                else:
-                    alert.message_post(
-                        body=Markup("<span class='text-warning fw-bold'>ESCALATION LEVEL 2:</span> Alert unresolved for over 15 minutes. (No administrators found to notify)."),
-                        message_type="notification"
-                    )
-            
-            elif elapsed_mins > 5 and alert.escalation_level < 1:
-                alert.write({'escalation_level': 1})
-                doctors_to_ping = self.env['res.users']
-                if alert.assigned_doctor_id:
-                    doctors_to_ping |= alert.assigned_doctor_id
-                elif alert.patient_id.ward_id:
-                    doctors_to_ping |= alert.patient_id.ward_id.doctor_ids
-                elif alert.patient_id.doctor_id:
-                    doctors_to_ping |= alert.patient_id.doctor_id
-                    
-                if doctors_to_ping:
-                    mentions = ", ".join([f"<a href='#' data-oe-model='res.users' data-oe-id='{u.id}'>@{u.name}</a>" for u in doctors_to_ping])
-                    alert.message_post(
-                        body=Markup(f"<span class='text-info fw-bold'>ESCALATION LEVEL 1:</span> Alert unresolved for over 5 minutes. Pinging: {mentions}"),
-                        partner_ids=doctors_to_ping.mapped('partner_id').ids,
-                        message_type="notification"
-                    )
-                    # Trigger Telegram Pipeline
-                    for doc in doctors_to_ping:
-                        if doc.telegram_chat_id:
-                            tg_msg = (
-                                f"⚠️ <b>SMARTLAB ESCALATION - LEVEL 1</b> ⚠️\n"
-                                f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                                f"<b>Ward:</b> {ward_name}\n"
-                                f"<b>Delay:</b> 5+ Minutes Unclaimed ⏱️\n\n"
-                                f"👤 <b>Patient Information</b>\n"
-                                f"• <b>Name:</b> {alert.patient_id.name}\n"
-                                f"• <b>Context:</b> Age {age} | {profile}\n\n"
-                                f"🤖 <b>AI Clinical Assessment</b>\n"
-                                f"• <b>Analysis:</b> {alert.headline}\n\n"
-                                f"<i>⚡ Immediate clinical review required by ward staff!</i>\n"
-                                f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                                f"👉 <a href='{alert_url}'>Tap here to securely View Alert</a>"
-                            )
-                            alert._send_telegram(doc.telegram_chat_id, tg_msg)
-                else:
-                    alert.message_post(
-                        body=Markup("<span class='text-info fw-bold'>ESCALATION LEVEL 1:</span> Alert unresolved for over 5 minutes. (No specific doctor to notify)."),
-                        message_type="notification"
-                    )
+            alert._apply_escalation_level(level)
+        return True
+
+    def _target_escalation_level(self):
+        self.ensure_one()
+        if self.state == 'resolved' or self.status == 'handled':
+            return 0
+        thresholds = {
+            'critical': (5, 15, 30),
+            'high': (15, 30, 60),
+            'medium': (60, 120, 240),
+        }.get(self.severity)
+        if not thresholds:
+            return 0
+
+        start_time = self.acknowledged_at or self.created_at or self.create_date
+        if not start_time:
+            return 0
+        elapsed_mins = (fields.Datetime.now() - start_time).total_seconds() / 60.0
+
+        if elapsed_mins >= thresholds[2]:
+            return 3
+        if elapsed_mins >= thresholds[1]:
+            return 2
+        if elapsed_mins >= thresholds[0]:
+            return 1
+        return 0
+
+    def _apply_escalation_level(self, level):
+        self.ensure_one()
+        if self.state == 'resolved' or self.status == 'handled':
+            return False
+
+        purpose = f'escalation_l{level}'
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url', 'http://localhost:8069')
+        alert_url = f"{base_url}/web#id={self.id}&model=health.alert&view_type=form"
+        ward_name = self.patient_id.ward_id.name if self.patient_id.ward_id else 'No Ward'
+        acknowledged_label = 'acknowledged' if self.acknowledged_at else 'unacknowledged'
+        assigned_label = self.assigned_doctor_id.name if self.assigned_doctor_id else 'unassigned'
+        delay_start = self.acknowledged_at or self.created_at or self.create_date
+        elapsed_mins = int((fields.Datetime.now() - delay_start).total_seconds() / 60.0) if delay_start else 0
+
+        if level >= 2:
+            self.write({'escalation_level': level, 'status': 'escalated'})
+        else:
+            self.write({'escalation_level': level})
+
+        if level == 1:
+            recipients = self._level_one_recipients()
+        else:
+            admin_group = self.env.ref('health_monitoring.group_health_admin', raise_if_not_found=False)
+            recipients = admin_group.users if admin_group else self.env['res.users']
+
+        if recipients:
+            mentions = ', '.join([f"<a href='#' data-oe-model='res.users' data-oe-id='{u.id}'>@{u.name}</a>" for u in recipients])
+            body = Markup(
+                f"<span class='text-warning fw-bold'>ESCALATION LEVEL {level}:</span> "
+                f"{self.severity.upper()} alert is still open after {elapsed_mins} minutes "
+                f"({acknowledged_label}, {assigned_label}). Notifying: {mentions}."
+            )
+            self._notify_users(recipients, 'odoo_chatter', body, purpose=purpose, cooldown_minutes=10)
+
+            tg_msg = (
+                f"<b>SMARTLAB ESCALATION - LEVEL {level}</b>\n"
+                f"<b>Ward:</b> {ward_name}\n"
+                f"<b>Priority:</b> {self.severity.upper()}\n"
+                f"<b>Status:</b> {acknowledged_label}, {assigned_label}\n"
+                f"<b>Delay:</b> {elapsed_mins} minutes\n"
+                f"<b>Patient:</b> {self.patient_id.name}\n"
+                f"<b>Alert:</b> {self.headline}\n"
+                f"<a href='{alert_url}'>Open alert</a>"
+            )
+            bot_type = 'admin' if level >= 2 else 'doctor'
+            self._notify_users(recipients, 'telegram', tg_msg, purpose=purpose, cooldown_minutes=10, bot_type=bot_type)
+        else:
+            self.env['health.notification.log'].sudo().create(
+                self._notification_log_vals(False, 'system', purpose, False, 'skipped', 'Escalation had no eligible recipients.', 'No recipients found.')
+            )
+        return True
+
+    def _level_one_recipients(self):
+        self.ensure_one()
+        recipients = self.env['res.users']
+        if self.assigned_doctor_id:
+            recipients |= self.assigned_doctor_id
+        elif self.patient_id.ward_id:
+            recipients |= self.patient_id.ward_id.doctor_ids
+        if self.patient_id.doctor_id:
+            recipients |= self.patient_id.doctor_id
+        return recipients

@@ -35,6 +35,7 @@ class PatientAdmitWizard(models.TransientModel):
     def action_confirm_admit(self):
         self.ensure_one()
         patient = self.patient_id
+        patient._ensure_can_admit()
 
         if patient.admission_status == 'admitted':
             raise ValidationError(f"{patient.name} is already admitted.")
@@ -45,7 +46,7 @@ class PatientAdmitWizard(models.TransientModel):
         if self.notes:
             body += f"<br/>Notes: {self.notes}"
 
-        patient.sudo().write({
+        patient.write({
             'ward_id': self.ward_id.id,
             'admission_status': 'admitted',
         })

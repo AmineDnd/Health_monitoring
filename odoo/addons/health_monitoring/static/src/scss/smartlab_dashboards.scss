@@ -814,3 +814,85 @@
     box-shadow: 0 24px 64px rgba(15, 23, 42, 0.12);
   }
 }
+
+// =============================================================================
+// PHASE 9 POLISH - ERP RESPONSIVENESS AND ACCESSIBILITY
+// =============================================================================
+.sl-dashboard-container {
+  button:focus-visible,
+  [role="button"]:focus-visible {
+    outline: 2px solid #185FA5 !important;
+    outline-offset: 2px !important;
+  }
+
+  .sl-glass-card,
+  .sl-kpi-card,
+  .sl-alert-card,
+  .sl-patient-card,
+  .sl-patient-header-card,
+  .sl-vital-box {
+    border-radius: 8px !important;
+  }
+}
+
+@media (max-width: 1200px) {
+  .sl-admin-dashboard .sl-kpi-row,
+  .sl-dashboard-container div[style*="grid-template-columns:repeat(4,1fr)"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .sl-admin-dashboard div[style*="grid-template-columns:1.6fr 1fr 1.4fr"],
+  .sl-admin-dashboard div[style*="grid-template-columns:1.4fr 1fr"],
+  .sl-dashboard-container div[style*="grid-template-columns:1.5fr 1fr"],
+  .sl-dashboard-container div[style*="grid-template-columns:2fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .sl-doctor-dashboard .sl-doctor-body {
+    grid-template-columns: 320px 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .sl-admin-dashboard .sl-admin-header,
+  .sl-nurse-dashboard .sl-nurse-header,
+  .sl-doctor-dashboard .sl-doctor-header > div {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  .sl-nurse-dashboard .sl-stats-bar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sl-nurse-dashboard .sl-bottom-row,
+  .sl-doctor-dashboard .sl-doctor-body,
+  .sl-doctor-dashboard .sl-vitals-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .sl-doctor-dashboard .sl-queue-pane {
+    border-right: none;
+    border-bottom: 1px solid #EEF2F7;
+    max-height: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .sl-admin-dashboard .sl-admin-body,
+  .sl-nurse-dashboard .sl-nurse-body,
+  .sl-doctor-dashboard .sl-analysis-pane,
+  .sl-dashboard-container {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .sl-admin-dashboard .sl-kpi-row,
+  .sl-dashboard-container div[style*="grid-template-columns:repeat(4,1fr)"],
+  .sl-nurse-dashboard .sl-stats-bar,
+  .sl-nurse-dashboard .sl-bed-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

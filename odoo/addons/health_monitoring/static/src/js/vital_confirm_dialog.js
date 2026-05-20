@@ -28,7 +28,7 @@ class VitalConfirmDialog extends Component {
     }
 
     async onConfirm() {
-        // Nurse confirmed the values are real — proceed with save
+        // Nurse confirmed the values are real; proceed with save.
         this.state.loading = true;
         try {
             await this.orm.call(
@@ -51,7 +51,7 @@ class VitalConfirmDialog extends Component {
     }
 
     onReEnter() {
-        // Nurse wants to fix the values — close the dialog, form stays open
+        // Nurse wants to fix the values; close the dialog and keep the form open.
         this.action.doAction({ type: 'ir.actions.act_window_close' });
     }
 }

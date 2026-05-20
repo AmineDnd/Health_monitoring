@@ -1,2 +1,1 @@
-/* SmartLab — Google Fonts import (must be plain CSS, not SCSS) */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* SmartLab uses the system UI font stack; no external font imports. */

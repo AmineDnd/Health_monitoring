@@ -15,6 +15,7 @@ export class AnalyticsDashboard extends Component {
         this.trendRef = useRef("trendChart");
         this.severityRef = useRef("severityChart");
         this.scoreRef = useRef("scoreChart");
+        this.chartLoaded = false;
 
         this.state = useState({
             loading: true,
@@ -27,7 +28,12 @@ export class AnalyticsDashboard extends Component {
         });
 
         onWillStart(async () => {
-            await loadJS("https://cdn.jsdelivr.net/npm/chart.js");
+            try {
+                await loadJS("https://cdn.jsdelivr.net/npm/chart.js");
+                this.chartLoaded = Boolean(window.Chart);
+            } catch (e) {
+                console.warn("Chart.js load failed; analytics dashboard will continue without charts.", e);
+            }
         });
 
         onMounted(async () => {
@@ -38,94 +44,26 @@ export class AnalyticsDashboard extends Component {
     }
 
     async fetchAll() {
-        const days = parseInt(this.state.period);
-        const since = new Date();
-        since.setDate(since.getDate() - days);
-        const sinceStr = since.toISOString().slice(0, 19).replace('T', ' ');
-
-        // Fetch vitals
-        const vitals = await this.orm.searchRead(
-            'health.vital.record',
-            [['recorded_at', '>=', sinceStr]],
-            ['recorded_at', 'ai_score', 'status', 'patient_id']
-        );
-
-        // Fetch alerts
-        const alerts = await this.orm.searchRead(
-            'health.alert',
-            [['create_date', '>=', sinceStr]],
-            ['severity', 'state', 'create_date']
-        );
-
-        // Fetch live patient triage state
-        const patients = await this.orm.searchRead(
-            'health.patient',
-            [['admission_status', 'in', ['triage', 'admitted']]],
-            ['risk_level']
-        );
-
-        // Calculate triage distribution
-        const triageCounts = { low: 0, medium: 0, high: 0, critical: 0, handled: 0 };
-        patients.forEach(p => {
-            if (p.risk_level && triageCounts[p.risk_level] !== undefined) {
-                triageCounts[p.risk_level]++;
-            } else if (!p.risk_level) {
-                triageCounts.low++; // default to low if none
-            }
-        });
-        this.state.triage = triageCounts;
-
-        // Generate all dates in range
-        const allDays = [];
-        for (let i = days - 1; i >= 0; i--) {
-            const d = new Date();
-            d.setDate(d.getDate() - i);
-            allDays.push(d.toISOString().slice(0, 10));
-        }
-
-        const dayMap = {};
-        const scoreMap = {};
-        allDays.forEach(d => {
-            dayMap[d] = 0;
-            scoreMap[d] = [];
-        });
-
-        vitals.forEach(v => {
-            if (v.recorded_at) {
-                const day = v.recorded_at.slice(0, 10);
-                if (dayMap[day] !== undefined) {
-                    dayMap[day]++;
-                    scoreMap[day].push(v.ai_score || 0);
-                }
-            }
-        });
-
-        this.vitalsPerDay = allDays.map(d => ({ day: d.slice(5), count: dayMap[d] }));
-        this.avgScorePerDay = allDays.map(d => ({
-            day: d.slice(5),
-            avg: scoreMap[d].length ? Math.round(scoreMap[d].reduce((a,b) => a+b,0) / scoreMap[d].length) : 0
-        }));
-
-        // Alert severity breakdown
-        const sevCount = { low: 0, medium: 0, high: 0, critical: 0 };
-        alerts.forEach(a => { if (sevCount[a.severity] !== undefined) sevCount[a.severity]++; });
-        this.severityData = sevCount;
-
-        // Summary stats
-        this.state.totalVitals = vitals.length;
-        this.state.totalAlerts = alerts.length;
-        const scores = vitals.map(v => v.ai_score || 0).filter(s => s > 0);
-        this.state.avgAiScore = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : 0;
-        this.state.criticalRate = alerts.length
-            ? Math.round((sevCount.critical / alerts.length) * 100)
-            : 0;
+        const data = await this.orm.call('health.dashboard', 'get_analytics_dashboard_data', [this.state.period]);
+        this.state.period = data.period || this.state.period;
+        this.state.totalVitals = data.totalVitals || 0;
+        this.state.totalAlerts = data.totalAlerts || 0;
+        this.state.avgAiScore = data.avgAiScore || 0;
+        this.state.criticalRate = data.criticalRate || 0;
+        this.state.triage = data.triage || { low: 0, medium: 0, high: 0, critical: 0, handled: 0 };
+        this.vitalsPerDay = data.vitalsPerDay || [];
+        this.avgScorePerDay = data.avgScorePerDay || [];
+        this.severityData = data.severityData || { low: 0, medium: 0, high: 0, critical: 0 };
+        return;
     }
 
     renderCharts() {
+        if (!this.chartLoaded || !window.Chart) return;
+
         Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
         Chart.defaults.color = '#64748B';
 
-        // Chart 1 — Vitals logged per day (bar)
+        // Chart 1: vitals logged per day.
         if (this.charts.trend) this.charts.trend.destroy();
         if (this.trendRef.el) {
             this.charts.trend = new Chart(this.trendRef.el, {
@@ -154,7 +92,7 @@ export class AnalyticsDashboard extends Component {
             });
         }
 
-        // Chart 2 — Alert severity donut
+        // Chart 2: alert severity donut.
         if (this.charts.severity) this.charts.severity.destroy();
         if (this.severityRef.el) {
             this.charts.severity = new Chart(this.severityRef.el, {
@@ -185,7 +123,7 @@ export class AnalyticsDashboard extends Component {
             });
         }
 
-        // Chart 3 — Avg AI score per day (line)
+        // Chart 3: average AI score per day.
         if (this.charts.score) this.charts.score.destroy();
         if (this.scoreRef.el) {
             // Create gradient
@@ -237,24 +175,14 @@ export class AnalyticsDashboard extends Component {
     }
 
     // --- Actions ---
-    openVitals() {
-        this.action.doAction({
-            type: 'ir.actions.act_window',
-            name: 'Vitals History',
-            res_model: 'health.vital.record',
-            views: [[false, 'list'], [false, 'form']],
-            target: 'current'
-        });
+    async openVitals() {
+        const action = await this.orm.call('health.dashboard', 'get_analytics_kpi_action', ['vitals', this.state.period]);
+        this.action.doAction(action);
     }
 
-    openAlerts() {
-        this.action.doAction({
-            type: 'ir.actions.act_window',
-            name: 'Alert History',
-            res_model: 'health.alert',
-            views: [[false, 'list'], [false, 'form']],
-            target: 'current'
-        });
+    async openAlerts() {
+        const action = await this.orm.call('health.dashboard', 'get_analytics_kpi_action', ['alerts', this.state.period]);
+        this.action.doAction(action);
     }
 
     // From Task 6

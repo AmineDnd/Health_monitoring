@@ -8,9 +8,10 @@
     <field name="arch" type="xml">
       <form>
         <header>
-          <button name="action_admit" type="object" string="Admit to Ward" class="btn-primary" invisible="admission_status != 'triage'"/>
+          <button name="action_admit" type="object" string="Admit to Ward" class="btn-primary" invisible="admission_status != 'triage'" groups="health_monitoring.group_health_nurse,health_monitoring.group_health_doctor,health_monitoring.group_health_admin"/>
           <button name="action_validate" type="object" string="Validate Patient" class="btn-success" invisible="status == 'active'" groups="health_monitoring.group_health_doctor"/>
           <button name="action_discharge" type="object" string="Discharge Patient" class="btn-danger" invisible="admission_status != 'admitted'" groups="health_monitoring.group_health_doctor,health_monitoring.group_health_admin"/>
+          <button name="action_reactivate" type="object" string="Reactivate" class="btn-primary" invisible="admission_status != 'discharged'" groups="health_monitoring.group_health_nurse,health_monitoring.group_health_doctor,health_monitoring.group_health_admin"/>
           <button name="%(health_monitoring.action_report_patient_history)d"
                   string="Print Vitals Report"
                   type="action"
@@ -23,6 +24,9 @@
         <sheet>
           <!-- Smart Buttons -->
           <div class="oe_button_box" name="button_box">
+            <button class="oe_stat_button" type="object" name="action_review_possible_duplicates" icon="fa-clone">
+              <field string="Duplicates" name="possible_duplicate_count" widget="statinfo"/>
+            </button>
             <button class="oe_stat_button" type="action" name="%(action_patient_vitals)d" icon="fa-heartbeat">
               <field string="Vitals" name="vitals_count" widget="statinfo"/>
             </button>
@@ -63,12 +67,14 @@
                          style="font-size:11px;font-weight:600;flex-shrink:0;"/>
                 </div>
                 <div style="font-size:12px;color:#64748B;margin-top:4px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+                  <span><field name="mrn" nolabel="1" readonly="1" style="font-weight:700;color:#334155;display:inline;"/></span>
+                  <span style="color:#CBD5E1;">&#183;</span>
                   <span>Age <field name="age" nolabel="1" readonly="1" style="font-weight:600;color:#334155;display:inline;"/></span>
-                  <span style="color:#CBD5E1;">·</span>
+                  <span style="color:#CBD5E1;">&#183;</span>
                   <field name="gender" nolabel="1" readonly="1" style="color:#334155;font-weight:600;display:inline;"/>
-                  <span style="color:#CBD5E1;">·</span>
+                  <span style="color:#CBD5E1;">&#183;</span>
                   <field name="category" nolabel="1" readonly="1" style="color:#334155;font-weight:600;display:inline;"/>
-                  <span style="color:#CBD5E1;">·</span>
+                  <span style="color:#CBD5E1;">&#183;</span>
                   <field name="profile_male" nolabel="1" readonly="1" invisible="gender == 'female'" style="color:#334155;font-weight:600;display:inline;"/>
                   <field name="profile_female" nolabel="1" readonly="1" invisible="gender != 'female'" style="color:#334155;font-weight:600;display:inline;"/>
                 </div>
@@ -88,7 +94,7 @@
                   </div>
                   <div style="display:flex;align-items:center;gap:10px;">
                     <span style="font-size:12px;color:#64748B;">Target: <field name="ai_recommended_ward_id" readonly="1" nolabel="1" options="{'no_open': True}" style="font-weight:600;color:#0F172A;"/></span>
-                    <button name="action_admit_ai" type="object" string="Admit Patient" class="btn btn-sm btn-danger"/>
+                    <button name="action_admit_ai" type="object" string="Admit Patient" class="btn btn-sm btn-danger" groups="health_monitoring.group_health_nurse,health_monitoring.group_health_doctor,health_monitoring.group_health_admin"/>
                   </div>
                 </div>
               </div>
@@ -102,7 +108,7 @@
                   </div>
                   <div style="display:flex;align-items:center;gap:10px;">
                     <span style="font-size:12px;color:#64748B;">Target: <field name="ai_recommended_ward_id" readonly="1" nolabel="1" options="{'no_open': True}" style="font-weight:600;color:#0F172A;"/></span>
-                    <button name="action_admit_ai" type="object" string="Admit Patient" class="btn btn-sm btn-success"/>
+                    <button name="action_admit_ai" type="object" string="Admit Patient" class="btn btn-sm btn-success" groups="health_monitoring.group_health_nurse,health_monitoring.group_health_doctor,health_monitoring.group_health_admin"/>
                   </div>
                 </div>
               </div>
@@ -118,8 +124,9 @@
                   Personal Profile
                 </div>
                 <group>
+                  <field name="mrn" readonly="1"/>
                   <field name="date_of_birth"/>
-                  <field name="age"/>
+                  <field name="age" readonly="date_of_birth != False"/>
                   <field name="gender" widget="radio" options="{'horizontal': true}"/>
                   <field name="category" widget="badge"
                          decoration-info="category=='child'"
@@ -142,6 +149,9 @@
                   <field name="is_doctor" invisible="1"/>
                   <field name="ward_id" options="{'no_create': True}" placeholder="Select Ward for Admission"/>
                   <field name="doctor_id" widget="many2one_avatar_user" options="{'no_create': True}" readonly="not is_doctor"/>
+                  <field name="vitals_frequency_hours"/>
+                  <field name="discharged_at" readonly="1" invisible="not discharged_at"/>
+                  <field name="reactivated_at" readonly="1" invisible="not reactivated_at"/>
                   <field name="tag_ids" widget="many2many_tags" options="{'color_field': 'color'}" readonly="not is_doctor"/>
                 </group>
               </div>
@@ -278,6 +288,7 @@
     <field name="model">health.patient</field>
     <field name="arch" type="xml">
       <tree decoration-danger="risk_level=='critical'" class="sl-clinical-grid" limit="20">
+        <field name="mrn" string="MRN"/>
         <field name="name" string="Patient Identity" decoration-bf="1"/>
         <field name="admission_status" widget="badge" string="Admission"
                decoration-info="admission_status=='triage'"
@@ -308,6 +319,7 @@
     <field name="arch" type="xml">
       <kanban>
         <field name="id"/>
+        <field name="mrn"/>
         <field name="name"/>
         <field name="admission_status"/>
         <field name="risk_level"/>
@@ -325,7 +337,7 @@
                          t-att-alt="record.name.value"/>
                     <div>
                       <div style="font-size:14px;font-weight:600;color:#0F172A;line-height:1.2;"><field name="name"/></div>
-                      <div style="font-size:11px;color:#64748B;"><field name="doctor_id"/></div>
+                      <div style="font-size:11px;color:#64748B;"><field name="mrn"/> &#183; <field name="doctor_id"/></div>
                     </div>
                   </div>
                   <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
@@ -365,6 +377,7 @@
     <field name="arch" type="xml">
       <search>
         <field name="name"/>
+        <field name="mrn"/>
         <field name="doctor_id"/>
         <filter string="Critical Risk Patients" name="critical" domain="[('risk_level', '=', 'critical')]"/>
         <filter string="High &amp; Critical Risk" name="high_critical" domain="[('risk_level', 'in', ['high', 'critical'])]"/>
