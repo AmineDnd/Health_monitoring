@@ -213,7 +213,15 @@ class HealthDashboard(models.TransientModel):
             rec.avg_score = score_rows[0].get('last_score', 0.0) if score_rows else 0.0
 
     def action_open_patients(self):
-        return self._action_for_records('Patients', 'health.patient', [])
+        return {
+            'name': 'Registered Patients',
+            'type': 'ir.actions.act_window',
+            'res_model': 'health.patient',
+            'view_mode': 'kanban,tree,form',
+            'domain': self._active_patient_domain(),
+            'context': {'search_default_active_patients': 1},
+            'target': 'current',
+        }
 
     def action_open_alerts(self):
         return self._action_for_records('Active Alerts', 'health.alert', self._open_alert_domain())

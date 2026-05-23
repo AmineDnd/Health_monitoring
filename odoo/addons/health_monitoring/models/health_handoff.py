@@ -1,3 +1,4 @@
+from markupsafe import Markup, escape
 from odoo import models, fields, api
 
 class HealthHandoff(models.Model):
@@ -26,9 +27,14 @@ class HealthHandoff(models.Model):
         records = super().create(vals_list)
         for rec in records:
             if rec.ward_id:
-                msg = f"<p><b>Shift Handoff Logged</b><br/>"
-                msg += f"<b>Outgoing:</b> {rec.outgoing_nurse_id.name}<br/>"
-                msg += f"<b>Incoming:</b> {rec.incoming_nurse_id.name}<br/>"
-                msg += f"<b>Notes:</b> {rec.notes}</p>"
-                rec.ward_id.message_post(body=msg, subject="Shift Handoff")
+                msg = (
+                    Markup("<p><b>Shift Handoff Logged</b><br/>")
+                    + Markup(f"<b>Outgoing:</b> {escape(rec.outgoing_nurse_id.name)}<br/>")
+                    + Markup(f"<b>Incoming:</b> {escape(rec.incoming_nurse_id.name)}<br/>")
+                    + Markup(f"<b>Notes:</b> {escape(rec.notes)}</p>")
+                )
+                # sudo() is required: nurses have read-only access to health.ward
+                # but message_post() internally checks write access on the parent record.
+                # sudo() bypasses ACL while keeping env.user as the nurse (correct author).
+                rec.ward_id.sudo().message_post(body=msg, subject="Shift Handoff")
         return records

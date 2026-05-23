@@ -16,8 +16,11 @@ export class AdminDashboard extends Component {
         this.charts = {};
         this.chartLoaded = false;
 
+        this._initialized = false;
+
         this.state = useState({
             isLoading: true,
+            isRefreshing: false,
             currentTime: new Date().toLocaleTimeString(),
             dateRange: 'week',
             kpi: {
@@ -188,6 +191,17 @@ export class AdminDashboard extends Component {
         setTimeout(() => this.renderCharts(), 80);
     }
 
+    async onManualRefresh() {
+        if (this.state.isRefreshing) return;
+        this.state.isRefreshing = true;
+        try {
+            await this.fetchAll();
+            setTimeout(() => this.renderCharts(), 80);
+        } finally {
+            this.state.isRefreshing = false;
+        }
+    }
+
     async onDateRangeChange(ev) {
         this.state.dateRange = ev.target.value;
         await this.fetchAll();
@@ -196,11 +210,14 @@ export class AdminDashboard extends Component {
 
     // --- Data ---
     async fetchAll() {
-        this.state.isLoading = true;
+        // Only show the full loading skeleton on first load; subsequent refreshes update silently
+        if (!this._initialized) {
+            this.state.isLoading = true;
+        }
         try {
             const data = await this.orm.call("health.dashboard", "get_admin_dashboard_data", [this.state.dateRange]);
             this.state.kpi = data.kpi || this.state.kpi;
-            this.state.slaCompliance = data.slaCompliance;
+            this.state.slaCompliance = typeof data.slaCompliance === 'number' ? data.slaCompliance : 100;
             this.state.wards = data.wards || [];
             this.state.leaderboard = data.leaderboard || [];
             this.state.escalations = data.escalations || [];
@@ -209,10 +226,13 @@ export class AdminDashboard extends Component {
             this.state.alertTrend = data.alertTrend || [];
             this._patientData = [];
             this._trendData = [];
-            return;
+            this._initialized = true;
         } catch (e) {
             console.error("Admin dashboard fetch error:", e);
-            this.notification.add("Failed to load dashboard data", { type: 'warning' });
+            if (!this._initialized) {
+                // Only show the warning notification on first-load failures
+                this.notification.add("Failed to load dashboard data", { type: 'warning' });
+            }
         } finally {
             this.state.isLoading = false;
         }

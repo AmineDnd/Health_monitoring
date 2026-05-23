@@ -18,6 +18,7 @@ class HealthPatient(models.Model):
     _name = 'health.patient'
     _description = 'Patient Registry'
     _inherit = ['mail.thread', 'mail.activity.mixin']
+    _order = 'create_date desc'
 
     _sql_constraints = [
         ('mrn_unique', 'unique(mrn)', 'Medical record number must be unique.'),
@@ -43,7 +44,7 @@ class HealthPatient(models.Model):
         required=True,
         copy=False,
         readonly=True,
-        default=lambda self: self.env['ir.sequence'].next_by_code('health.patient.mrn') or 'New',
+        default='New',  # real MRN allocated only in create() — avoids consuming sequence on cancelled forms
         tracking=True,
         index=True,
         help="Unique medical record number used as the durable patient identifier.",
@@ -165,11 +166,33 @@ class HealthPatient(models.Model):
     reactivated_at = fields.Datetime('Reactivated At', readonly=True, tracking=True)
     possible_duplicate_count = fields.Integer('Possible Duplicates', compute='_compute_possible_duplicate_count')
     
+    # Clinical Notes — tracked so chatter records author + timestamp on every change
+    nurse_notes = fields.Text(
+        'Nurse Notes',
+        tracking=True,
+        help="Nursing team observations, care instructions, and handoff notes.",
+    )
+    doctor_notes = fields.Text(
+        'Doctor Notes',
+        tracking=True,
+        help="Clinical assessments, treatment plans, and medical observations from the attending doctor.",
+    )
+
     is_doctor = fields.Boolean(compute='_compute_is_doctor')
+    is_nurse = fields.Boolean(compute='_compute_is_nurse')
+    is_admin = fields.Boolean(compute='_compute_is_admin')
 
     def _compute_is_doctor(self):
         for rec in self:
             rec.is_doctor = self.env.user.has_group('health_monitoring.group_health_doctor')
+
+    def _compute_is_nurse(self):
+        for rec in self:
+            rec.is_nurse = self.env.user.has_group('health_monitoring.group_health_nurse')
+
+    def _compute_is_admin(self):
+        for rec in self:
+            rec.is_admin = self.env.user.has_group('health_monitoring.group_health_admin')
 
     @api.model_create_multi
     def create(self, vals_list):

@@ -5,10 +5,10 @@
 
       <!-- White header -->
       <div class="sl-doctor-header">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="sl-dh-inner">
           <div>
-            <h1 style="font-size:17px;font-weight:600;color:#0F172A;margin:0;letter-spacing:-0.3px;">Triage &amp; Analysis</h1>
-            <p style="font-size:12px;color:#64748B;margin:3px 0 0;">
+            <h1 class="sl-page-title">Triage &amp; Analysis</h1>
+            <p class="sl-page-subtitle">
               Dr. <t t-esc="state.doctorName"/> &#183;
               <t t-esc="state.wardName"/> &#183;
               <strong style="color:#A32D2D;font-weight:500;">
@@ -16,7 +16,7 @@
               </strong>
             </p>
           </div>
-          <button style="border-radius:50px;" class="sl-btn-primary" t-on-click="onRefresh"><t t-esc="'Refresh queue'"/></button>
+          <button class="sl-btn-primary" t-on-click="onRefresh"><t t-esc="'Refresh queue'"/></button>
         </div>
       </div>
 
@@ -29,17 +29,17 @@
           <!-- Unclaimed section -->
           <div class="sl-queue-section unclaimed">
             <div class="sl-queue-header">
-              <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#94A3B8;">Unclaimed</span>
-              <span style="background:#FCEBEB;color:#A32D2D;border:0.5px solid #F7C1C1;font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;">
+              <span class="sl-q-label">Unclaimed</span>
+              <span class="sl-q-badge sl-q-badge--critical">
                 <t t-esc="state.unclaimedAlerts.length"/>
               </span>
             </div>
-            <div class="sl-scrollable-list" style="flex:1;overflow-y:auto;">
+            <div class="sl-scrollable-list">
               <t t-foreach="state.unclaimedAlerts" t-as="alert" t-key="alert.id">
                 <div t-attf-class="sl-alert-card unclaimed-card #{alert.severity === 'high' ? 'severity-high' : ''}"
                      t-on-click="() => this.onViewPatient(alert)">
-                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
-                    <span style="font-size:13px;font-weight:500;color:#185FA5;text-decoration:underline;text-underline-offset:2px;cursor:pointer;"
+                  <div class="sl-row-between" style="margin-bottom:4px;">
+                    <span class="sl-alert-patient"
                           t-on-click.stop="() => this.openPatientForm(alert.patient_id[0])">
                       <t t-esc="alert.patient_id[1]"/>
                     </span>
@@ -47,20 +47,16 @@
                       <t t-esc="alert.severity"/>
                     </span>
                   </div>
-                  <div style="font-size:11px;color:#64748B;margin:4px 0 8px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;"
+                  <div class="sl-alert-headline"
                        t-on-click.stop="() => this.openAlertForm(alert.id)">
                     <t t-esc="alert.headline || 'Anomaly detected'"/>
                   </div>
-                  <div style="display:flex;gap:6px;">
-                    <button style="flex:1;padding:5px 10px;font-size:10px;font-weight:500;background:#FCEBEB;color:#A32D2D;border:0.5px solid #F7C1C1;border-radius:50px;cursor:pointer;font-family:inherit;transition:background 0.15s;"
-                            onmouseover="this.style.background='#F7C1C1'"
-                            onmouseout="this.style.background='#FCEBEB'"
+                  <div class="sl-alert-actions">
+                    <button class="sl-btn-claim"
                             t-on-click.stop="() => this.onClaimAlert(alert.id)">
                       Claim
                     </button>
-                    <button style="padding:5px 10px;font-size:10px;font-weight:500;background:transparent;border:1px solid #E2E8F0;color:#64748B;border-radius:50px;cursor:pointer;font-family:inherit;transition:background 0.15s;"
-                            onmouseover="this.style.background='#F1F5F9'"
-                            onmouseout="this.style.background='transparent'"
+                    <button class="sl-btn-trends"
                             t-on-click.stop="() => this.onViewPatient(alert)">
                       Trends
                     </button>
@@ -68,7 +64,7 @@
                 </div>
               </t>
               <t t-if="state.unclaimedAlerts.length === 0">
-                <div style="text-align:center;color:#94A3B8;padding:24px;font-size:12px;">Inbox Zero! All alerts claimed.</div>
+                <div class="sl-empty">Inbox Zero! All alerts claimed.</div>
               </t>
             </div>
           </div>
@@ -76,35 +72,33 @@
           <!-- My Cases section -->
           <div class="sl-queue-section claimed">
             <div class="sl-queue-header">
-              <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#94A3B8;">My Cases</span>
-              <span style="background:#E6F1FB;color:#0C447C;border:0.5px solid #B5D4F4;font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;">
+              <span class="sl-q-label">My Cases</span>
+              <span class="sl-q-badge sl-q-badge--info">
                 <t t-esc="state.myActiveAlerts.length"/>
               </span>
             </div>
-            <div class="sl-scrollable-list" style="flex:1;overflow-y:auto;">
+            <div class="sl-scrollable-list">
               <t t-foreach="state.myActiveAlerts" t-as="alert" t-key="alert.id">
                 <div class="sl-alert-card claimed-card" t-on-click="() => this.onViewPatient(alert)">
-                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
-                    <span style="font-size:13px;font-weight:500;color:#185FA5;text-decoration:underline;text-underline-offset:2px;cursor:pointer;"
+                  <div class="sl-row-between" style="margin-bottom:4px;">
+                    <span class="sl-alert-patient"
                           t-on-click.stop="() => this.openPatientForm(alert.patient_id[0])">
                       <t t-esc="alert.patient_id[1]"/>
                     </span>
                     <span class="sl-badge-info">In Progress</span>
                   </div>
-                  <div style="font-size:11px;color:#64748B;margin:4px 0 8px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;"
+                  <div class="sl-alert-headline"
                        t-on-click.stop="() => this.openAlertForm(alert.id)">
                     <t t-esc="alert.headline || 'Under investigation'"/>
                   </div>
-                  <button style="width:100%;padding:6px;font-size:11px;font-weight:500;background:#E6F1FB;color:#0C447C;border:0.5px solid #B5D4F4;border-radius:50px;cursor:pointer;font-family:inherit;transition:background 0.15s;"
-                          onmouseover="this.style.background='#B5D4F4'"
-                          onmouseout="this.style.background='#E6F1FB'"
+                  <button class="sl-btn-resolve"
                           t-on-click.stop="() => this.onResolveAlert(alert.id)">
                     Resolve case
                   </button>
                 </div>
               </t>
               <t t-if="state.myActiveAlerts.length === 0">
-                <div style="text-align:center;color:#94A3B8;padding:16px;font-size:12px;">No active cases.</div>
+                <div class="sl-empty">No active cases.</div>
               </t>
             </div>
           </div>
@@ -117,21 +111,21 @@
           <!-- Empty state -->
           <t t-if="!state.selectedPatient">
             <div class="sl-empty-state">
-              <div style="width:52px;height:52px;border-radius:8px;background:#E6F1FB;display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
-                <i class="fa fa-line-chart" aria-hidden="true" style="font-size:20px;color:#0C447C;"></i>
+              <div class="sl-empty-icon-wrap">
+                <i class="fa fa-line-chart" aria-hidden="true"></i>
               </div>
-              <h4 style="color:#0F172A;font-size:15px;font-weight:600;margin:0 0 8px;">Select a Patient</h4>
-              <p style="color:#64748B;font-size:13px;max-width:240px;line-height:1.5;margin:0 0 20px;">
+              <h4 class="sl-pt-name-lg" style="margin:0 0 8px;">Select a Patient</h4>
+              <p class="sl-empty-desc">
                 Patient trend and risk context will appear here.
               </p>
-              <div style="display:flex;gap:10px;">
-                <div style="background:#FCEBEB;border:1px solid #F7C1C1;border-radius:8px;padding:14px 18px;text-align:center;min-width:80px;">
-                  <div style="font-size:22px;font-weight:700;color:#A32D2D;"><t t-esc="state.unclaimedAlerts.length"/></div>
-                  <div style="font-size:9px;color:#64748B;text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;">Unclaimed</div>
+              <div class="sl-empty-stats">
+                <div class="sl-empty-stat sl-empty-stat--critical">
+                  <div class="sl-empty-stat-val"><t t-esc="state.unclaimedAlerts.length"/></div>
+                  <div class="sl-empty-stat-lbl">Unclaimed</div>
                 </div>
-                <div style="background:#E6F1FB;border:1px solid #B5D4F4;border-radius:8px;padding:14px 18px;text-align:center;min-width:80px;">
-                  <div style="font-size:22px;font-weight:700;color:#0C447C;"><t t-esc="state.myActiveAlerts.length"/></div>
-                  <div style="font-size:9px;color:#64748B;text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;">My Cases</div>
+                <div class="sl-empty-stat sl-empty-stat--info">
+                  <div class="sl-empty-stat-val"><t t-esc="state.myActiveAlerts.length"/></div>
+                  <div class="sl-empty-stat-lbl">My Cases</div>
                 </div>
               </div>
             </div>
@@ -142,31 +136,31 @@
 
             <!-- Patient header card -->
             <div class="sl-patient-header-card">
-              <div style="display:flex;align-items:center;gap:12px;">
-                <div style="width:44px;height:44px;border-radius:12px;background:#E6F1FB;color:#0C447C;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px;flex-shrink:0;">
+              <div class="sl-row sl-gap-3">
+                <div class="sl-pt-avatar-lg">
                   <t t-esc="state.selectedPatient.initials"/>
                 </div>
                 <div>
-                  <div style="font-size:16px;font-weight:600;color:#0F172A;letter-spacing:-0.2px;"><t t-esc="state.selectedPatient.name"/></div>
-                  <div style="font-size:12px;color:#64748B;margin-top:2px;">
+                  <div class="sl-pt-name-lg"><t t-esc="state.selectedPatient.name"/></div>
+                  <div class="sl-pt-meta-sm">
                     Age <t t-esc="state.selectedPatient.age"/> &#183;
                     <t t-esc="state.selectedPatient.gender"/> &#183;
                     <t t-esc="state.wardName"/>
                   </div>
                 </div>
               </div>
-              <div style="display:flex;align-items:center;gap:10px;">
+              <div class="sl-row sl-gap-3">
                 <span t-attf-class="sl-badge-#{state.selectedPatient.risk_level === 'critical' ? 'critical' : (state.selectedPatient.risk_level === 'high' ? 'warning' : (state.selectedPatient.risk_level === 'medium' ? 'medium' : 'stable'))}">
                   <t t-esc="(state.selectedPatient.risk_level || 'LOW').toUpperCase()"/>
                 </span>
-                <button class="sl-btn-primary" style="padding:7px 16px;font-size:12px;" t-on-click="onOpenPatientRecord">
+                <button class="sl-btn-primary" t-on-click="onOpenPatientRecord">
                   <t t-esc="'Open record'"/>
                 </button>
               </div>
             </div>
 
             <!-- Vitals grid -->
-            <div class="sl-vitals-grid" style="grid-template-columns:repeat(3,1fr);">
+            <div class="sl-vitals-grid sl-vitals-grid--3col">
               <div class="sl-vital-box">
                 <div t-attf-class="sl-vital-val #{state.vitals.hr_abnormal ? 'abnormal' : ''}">
                   <t t-esc="state.vitals.heart_rate || '--'"/>
@@ -210,86 +204,86 @@
 
             <!-- AI Alert Summary - explains why patient is flagged -->
             <t t-if="state.activeAlert">
-              <div t-attf-style="background:#{state.activeAlert.severity === 'critical' ? '#FCEBEB' : '#FAEEDA'};border:1px solid #{state.activeAlert.severity === 'critical' ? '#F7C1C1' : '#FAC775'};border-left:3px solid #{state.activeAlert.severity === 'critical' ? '#E24B4A' : '#F59E0B'};border-radius:8px;padding:10px 14px;margin-bottom:12px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                  <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;" t-attf-style="color:#{state.activeAlert.severity === 'critical' ? '#A32D2D' : '#854F0B'};">
+              <div t-attf-class="sl-alert-summary #{state.activeAlert.severity === 'critical' ? 'sl-alert-summary--critical' : 'sl-alert-summary--warning'}">
+                <div class="sl-row-between" style="margin-bottom:4px;">
+                  <span class="sl-alert-summary-label">
                     AI Alert - <t t-esc="(state.activeAlert.severity || '').toUpperCase()"/>
                   </span>
-                  <span style="font-size:10px;color:#64748B;"><t t-esc="state.activeAlert.timeAgo"/></span>
+                  <span class="sl-alert-summary-time"><t t-esc="state.activeAlert.timeAgo"/></span>
                 </div>
-                <div style="font-size:12px;font-weight:500;color:#0F172A;line-height:1.5;">
+                <div class="sl-alert-summary-headline">
                   <t t-esc="state.activeAlert.headline || 'Anomaly detected by AI analysis'"/>
                 </div>
                 <t t-if="state.vitals.ai_score">
-                  <div style="font-size:10px;color:#64748B;margin-top:4px;">AI Risk Score: <strong t-attf-style="color:#{state.vitals.ai_score >= 80 ? '#A32D2D' : state.vitals.ai_score >= 60 ? '#854F0B' : '#334155'};"><t t-esc="state.vitals.ai_score"/>%</strong></div>
+                  <div class="sl-alert-summary-score">AI Risk Score: <strong t-attf-style="color:#{state.vitals.ai_score >= 80 ? '#A32D2D' : state.vitals.ai_score >= 60 ? '#854F0B' : '#334155'};"><t t-esc="state.vitals.ai_score"/>%</strong></div>
                 </t>
               </div>
             </t>
 
             <!-- Critical value warning banners -->
-            <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;">
+            <div class="sl-banners-stack">
 
               <!-- SpO2 critically low -->
               <t t-if="state.vitals and state.vitals.spo2 and state.vitals.spo2 &lt; 90">
-                <div style="background:#FCEBEB;border:1px solid #F7C1C1;border-left:3px solid #E24B4A;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
-                  <div style="width:6px;height:6px;border-radius:50%;background:#E24B4A;flex-shrink:0;"/>
-                  <div style="font-size:11px;font-weight:600;color:#A32D2D;">SpO&#8322; critically low at <t t-esc="state.vitals.spo2"/>% - immediate oxygen intervention</div>
+                <div class="sl-crit-banner sl-crit-banner--critical">
+                  <div class="sl-crit-dot"/>
+                  <div class="sl-crit-msg">SpO&#8322; critically low at <t t-esc="state.vitals.spo2"/>% - immediate oxygen intervention</div>
                 </div>
               </t>
 
               <!-- Heart rate dangerously high -->
               <t t-if="state.vitals and state.vitals.heart_rate and state.vitals.heart_rate &gt; 120">
-                <div style="background:#FCEBEB;border:1px solid #F7C1C1;border-left:3px solid #E24B4A;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
-                  <div style="width:6px;height:6px;border-radius:50%;background:#E24B4A;flex-shrink:0;"/>
-                  <div style="font-size:11px;font-weight:600;color:#A32D2D;">Tachycardia at <t t-esc="state.vitals.heart_rate"/> bpm - risk of arrhythmia</div>
+                <div class="sl-crit-banner sl-crit-banner--critical">
+                  <div class="sl-crit-dot"/>
+                  <div class="sl-crit-msg">Tachycardia at <t t-esc="state.vitals.heart_rate"/> bpm - risk of arrhythmia</div>
                 </div>
               </t>
 
               <!-- Heart rate dangerously low -->
               <t t-if="state.vitals and state.vitals.heart_rate and state.vitals.heart_rate &lt; 50">
-                <div style="background:#FCEBEB;border:1px solid #F7C1C1;border-left:3px solid #E24B4A;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
-                  <div style="width:6px;height:6px;border-radius:50%;background:#E24B4A;flex-shrink:0;"/>
-                  <div style="font-size:11px;font-weight:600;color:#A32D2D;">Bradycardia at <t t-esc="state.vitals.heart_rate"/> bpm - risk of cardiac arrest</div>
+                <div class="sl-crit-banner sl-crit-banner--critical">
+                  <div class="sl-crit-dot"/>
+                  <div class="sl-crit-msg">Bradycardia at <t t-esc="state.vitals.heart_rate"/> bpm - risk of cardiac arrest</div>
                 </div>
               </t>
 
               <!-- BP critically high -->
               <t t-if="state.vitals and state.vitals.bp_systolic and state.vitals.bp_systolic &gt; 180">
-                <div style="background:#FCEBEB;border:1px solid #F7C1C1;border-left:3px solid #E24B4A;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
-                  <div style="width:6px;height:6px;border-radius:50%;background:#E24B4A;flex-shrink:0;"/>
-                  <div style="font-size:11px;font-weight:600;color:#A32D2D;">Hypertensive crisis at <t t-esc="state.vitals.bp_systolic"/>/<t t-esc="state.vitals.bp_diastolic"/> mmHg</div>
+                <div class="sl-crit-banner sl-crit-banner--critical">
+                  <div class="sl-crit-dot"/>
+                  <div class="sl-crit-msg">Hypertensive crisis at <t t-esc="state.vitals.bp_systolic"/>/<t t-esc="state.vitals.bp_diastolic"/> mmHg</div>
                 </div>
               </t>
 
               <!-- BP critically low (hypotension) -->
               <t t-if="state.vitals and state.vitals.bp_systolic and state.vitals.bp_systolic &lt; 90">
-                <div style="background:#FCEBEB;border:1px solid #F7C1C1;border-left:3px solid #E24B4A;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
-                  <div style="width:6px;height:6px;border-radius:50%;background:#E24B4A;flex-shrink:0;"/>
-                  <div style="font-size:11px;font-weight:600;color:#A32D2D;">Hypotension at <t t-esc="state.vitals.bp_systolic"/>/<t t-esc="state.vitals.bp_diastolic"/> mmHg - risk of shock</div>
+                <div class="sl-crit-banner sl-crit-banner--critical">
+                  <div class="sl-crit-dot"/>
+                  <div class="sl-crit-msg">Hypotension at <t t-esc="state.vitals.bp_systolic"/>/<t t-esc="state.vitals.bp_diastolic"/> mmHg - risk of shock</div>
                 </div>
               </t>
 
               <!-- Respiratory rate high (tachypnea) -->
               <t t-if="state.vitals and state.vitals.respiratory_rate and state.vitals.respiratory_rate &gt; 25">
-                <div style="background:#FCEBEB;border:1px solid #F7C1C1;border-left:3px solid #E24B4A;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
-                  <div style="width:6px;height:6px;border-radius:50%;background:#E24B4A;flex-shrink:0;"/>
-                  <div style="font-size:11px;font-weight:600;color:#A32D2D;">Tachypnea at <t t-esc="state.vitals.respiratory_rate"/> br/min - respiratory distress</div>
+                <div class="sl-crit-banner sl-crit-banner--critical">
+                  <div class="sl-crit-dot"/>
+                  <div class="sl-crit-msg">Tachypnea at <t t-esc="state.vitals.respiratory_rate"/> br/min - respiratory distress</div>
                 </div>
               </t>
 
               <!-- Glucose critically low -->
               <t t-if="state.vitals and state.vitals.glucose and state.vitals.glucose &lt; 70">
-                <div style="background:#FCEBEB;border:1px solid #F7C1C1;border-left:3px solid #E24B4A;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
-                  <div style="width:6px;height:6px;border-radius:50%;background:#E24B4A;flex-shrink:0;"/>
-                  <div style="font-size:11px;font-weight:600;color:#A32D2D;">Hypoglycemia at <t t-esc="state.vitals.glucose"/> mg/dL - immediate glucose needed</div>
+                <div class="sl-crit-banner sl-crit-banner--critical">
+                  <div class="sl-crit-dot"/>
+                  <div class="sl-crit-msg">Hypoglycemia at <t t-esc="state.vitals.glucose"/> mg/dL - immediate glucose needed</div>
                 </div>
               </t>
 
               <!-- Fever -->
               <t t-if="state.vitals and state.vitals.temperature and state.vitals.temperature &gt; 38.5">
-                <div style="background:#FAEEDA;border:1px solid #FAC775;border-left:3px solid #F59E0B;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
-                  <div style="width:6px;height:6px;border-radius:50%;background:#F59E0B;flex-shrink:0;"/>
-                  <div style="font-size:11px;font-weight:600;color:#854F0B;">Fever at <t t-esc="state.vitals.temperature"/>&#176;C - infection risk</div>
+                <div class="sl-crit-banner sl-crit-banner--warning">
+                  <div class="sl-crit-dot"/>
+                  <div class="sl-crit-msg">Fever at <t t-esc="state.vitals.temperature"/>&#176;C - infection risk</div>
                 </div>
               </t>
 
@@ -300,9 +294,9 @@
               <div class="sl-card-title"><t t-esc="'Vitals Trend - Last 12 Readings'"/></div>
 
               <t t-if="!state.showVitalsChart">
-                <div style="height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:#F8FAFC;border-radius:10px;border:1px dashed #E2E8F0;">
-                  <div style="font-size:13px;font-weight:500;color:#64748B;">No trend data yet</div>
-                  <div style="font-size:11px;color:#94A3B8;">Log 3 or more vitals to see the chart</div>
+                <div class="sl-chart-no-data">
+                  <div class="sl-chart-no-data-title">No trend data yet</div>
+                  <div class="sl-chart-no-data-sub">Log 3 or more vitals to see the chart</div>
                 </div>
               </t>
 
@@ -318,41 +312,41 @@
             <!-- Risk factors -->
             <div class="sl-glass-card">
               <div class="sl-card-title"><t t-esc="'Risk Factors'"/></div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                <div style="background:#FFFFFF;border:1px solid #EEF2F7;border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
-                  <span style="font-size:12px;color:#334155;">Cardiac</span>
-                  <div style="width:80px;height:4px;background:#F1F5F9;border-radius:3px;overflow:hidden;">
-                    <div t-attf-style="width:#{state.risk.cardiac}%;height:100%;border-radius:3px;background:#{state.risk.cardiacColor};transition:width 0.5s;"/>
+              <div class="sl-risk-grid">
+                <div class="sl-risk-item">
+                  <span class="sl-risk-label">Cardiac</span>
+                  <div class="sl-risk-bar-wrap">
+                    <div class="sl-risk-bar-fill" t-attf-style="width:#{state.risk.cardiac}%;background:#{state.risk.cardiacColor};"/>
                   </div>
                 </div>
-                <div style="background:#FFFFFF;border:1px solid #EEF2F7;border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
-                  <span style="font-size:12px;color:#334155;">Respiratory</span>
-                  <div style="width:80px;height:4px;background:#F1F5F9;border-radius:3px;overflow:hidden;">
-                    <div t-attf-style="width:#{state.risk.respiratory}%;height:100%;border-radius:3px;background:#{state.risk.respiratoryColor};transition:width 0.5s;"/>
+                <div class="sl-risk-item">
+                  <span class="sl-risk-label">Respiratory</span>
+                  <div class="sl-risk-bar-wrap">
+                    <div class="sl-risk-bar-fill" t-attf-style="width:#{state.risk.respiratory}%;background:#{state.risk.respiratoryColor};"/>
                   </div>
                 </div>
-                <div style="background:#FFFFFF;border:1px solid #EEF2F7;border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
-                  <span style="font-size:12px;color:#334155;">Hypoxia</span>
-                  <div style="width:80px;height:4px;background:#F1F5F9;border-radius:3px;overflow:hidden;">
-                    <div t-attf-style="width:#{state.risk.hypoxia}%;height:100%;border-radius:3px;background:#{state.risk.hypoxiaColor};transition:width 0.5s;"/>
+                <div class="sl-risk-item">
+                  <span class="sl-risk-label">Hypoxia</span>
+                  <div class="sl-risk-bar-wrap">
+                    <div class="sl-risk-bar-fill" t-attf-style="width:#{state.risk.hypoxia}%;background:#{state.risk.hypoxiaColor};"/>
                   </div>
                 </div>
-                <div style="background:#FFFFFF;border:1px solid #EEF2F7;border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
-                  <span style="font-size:12px;color:#334155;">Blood Pressure</span>
-                  <div style="width:80px;height:4px;background:#F1F5F9;border-radius:3px;overflow:hidden;">
-                    <div t-attf-style="width:#{state.risk.bloodPressure}%;height:100%;border-radius:3px;background:#{state.risk.bloodPressureColor};transition:width 0.5s;"/>
+                <div class="sl-risk-item">
+                  <span class="sl-risk-label">Blood Pressure</span>
+                  <div class="sl-risk-bar-wrap">
+                    <div class="sl-risk-bar-fill" t-attf-style="width:#{state.risk.bloodPressure}%;background:#{state.risk.bloodPressureColor};"/>
                   </div>
                 </div>
-                <div style="background:#FFFFFF;border:1px solid #EEF2F7;border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
-                  <span style="font-size:12px;color:#334155;">Thermoregulation</span>
-                  <div style="width:80px;height:4px;background:#F1F5F9;border-radius:3px;overflow:hidden;">
-                    <div t-attf-style="width:#{state.risk.thermoregulation}%;height:100%;border-radius:3px;background:#{state.risk.thermoregulationColor};transition:width 0.5s;"/>
+                <div class="sl-risk-item">
+                  <span class="sl-risk-label">Thermoregulation</span>
+                  <div class="sl-risk-bar-wrap">
+                    <div class="sl-risk-bar-fill" t-attf-style="width:#{state.risk.thermoregulation}%;background:#{state.risk.thermoregulationColor};"/>
                   </div>
                 </div>
-                <div style="background:#FFFFFF;border:1px solid #EEF2F7;border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
-                  <span style="font-size:12px;color:#334155;">Metabolic</span>
-                  <div style="width:80px;height:4px;background:#F1F5F9;border-radius:3px;overflow:hidden;">
-                    <div t-attf-style="width:#{state.risk.metabolic}%;height:100%;border-radius:3px;background:#{state.risk.metabolicColor};transition:width 0.5s;"/>
+                <div class="sl-risk-item">
+                  <span class="sl-risk-label">Metabolic</span>
+                  <div class="sl-risk-bar-wrap">
+                    <div class="sl-risk-bar-fill" t-attf-style="width:#{state.risk.metabolic}%;background:#{state.risk.metabolicColor};"/>
                   </div>
                 </div>
               </div>

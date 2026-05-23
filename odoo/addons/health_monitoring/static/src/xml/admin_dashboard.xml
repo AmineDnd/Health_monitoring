@@ -3,16 +3,16 @@
   <t t-name="health_monitoring.AdminDashboardTemplate" owl="1">
     <div class="sl-dashboard-container sl-admin-dashboard">
 
-      <!-- Dark header bar -->
+      <!-- Operations header -->
       <div class="sl-admin-header">
-        <div style="display:flex;align-items:baseline;gap:12px;">
+        <div class="sl-row-baseline sl-gap-3">
           <h1 class="sl-title">Hospital Operations</h1>
           <span class="sl-live-badge">
             <span class="sl-live-dot"/>
             Live &#183; <t t-esc="state.currentTime"/>
           </span>
         </div>
-        <div style="display:flex;gap:6px;">
+        <div class="sl-row sl-gap-2">
             <button t-on-click="() => this.setRange('today')"
                     t-att-class="state.dateRange === 'today' ? 'sl-header-btn active' : 'sl-header-btn'">
               <t t-esc="'Today'"/>
@@ -24,6 +24,13 @@
             <button t-on-click="() => this.setRange('month')"
                     t-att-class="state.dateRange === 'month' ? 'sl-header-btn active' : 'sl-header-btn'">
               <t t-esc="'Month'"/>
+            </button>
+            <button t-on-click="onManualRefresh"
+                    t-att-class="state.isRefreshing ? 'sl-header-btn sl-btn-refreshing' : 'sl-header-btn'"
+                    t-att-disabled="state.isRefreshing"
+                    title="Refresh dashboard data">
+              <t t-if="state.isRefreshing">&#8987;</t>
+              <t t-else="">&#8635; Refresh</t>
             </button>
         </div>
       </div>
@@ -45,24 +52,24 @@
 
           <!-- KPI Row -->
           <div class="sl-kpi-row sl-animate-in">
-            <div class="sl-kpi-card kpi-patients" style="cursor:pointer;" t-on-click="openAllPatients">
+            <div class="sl-kpi-card kpi-patients sl-clickable" t-on-click="openAllPatients">
               <div class="sl-kpi-label">Active Patients</div>
               <div class="sl-kpi-value"><t t-esc="state.kpi.activePatients"/></div>
               <div class="sl-kpi-delta up">+<t t-esc="state.kpi.activeDelta"/> admitted today</div>
             </div>
-            <div class="sl-kpi-card kpi-critical" style="cursor:pointer;" t-on-click="openAllAlerts">
+            <div class="sl-kpi-card kpi-critical sl-clickable" t-on-click="openAllAlerts">
               <div class="sl-kpi-label">Critical Alerts</div>
               <div class="sl-kpi-value"><t t-esc="state.kpi.criticalAlerts"/></div>
               <div class="sl-kpi-delta"><t t-esc="state.kpi.criticalDelta"/> vs yesterday</div>
             </div>
-            <div class="sl-kpi-card kpi-response" style="cursor:pointer;" t-on-click="openSlaAlerts">
+            <div class="sl-kpi-card kpi-response sl-clickable" t-on-click="openSlaAlerts">
               <div class="sl-kpi-label">SLA Compliance</div>
-              <div class="sl-kpi-value" t-attf-style="color: #{state.slaCompliance >= 80 ? '#10B981' : state.slaCompliance >= 60 ? '#F59E0B' : '#E24B4A'};">
+              <div t-attf-class="sl-kpi-value #{state.slaCompliance >= 80 ? 'sl-text-success' : state.slaCompliance >= 60 ? 'sl-text-warning' : 'sl-text-critical'}">
                   <t t-esc="state.slaCompliance"/>%
               </div>
               <div class="sl-kpi-delta">Responded within 5 min</div>
             </div>
-            <div class="sl-kpi-card kpi-anomalies" style="cursor:pointer;" t-on-click="openAiAnomalies">
+            <div class="sl-kpi-card kpi-anomalies sl-clickable" t-on-click="openAiAnomalies">
               <div class="sl-kpi-label">AI Anomalies Today</div>
               <div class="sl-kpi-value"><t t-esc="state.kpi.aiAnomalies"/></div>
               <div class="sl-kpi-delta">alerts triggered today</div>
@@ -70,103 +77,103 @@
           </div>
 
           <!-- Row 2: Ward Capacity + Patient Status + Doctor Performance -->
-          <div style="display:grid;grid-template-columns:1.6fr 1fr 1.4fr;gap:14px;margin-bottom:16px;align-items:flex-start;">
+          <div class="sl-grid-admin-row">
 
             <!-- Ward Capacity -->
-            <div class="sl-glass-card" style="height:auto;">
+            <div class="sl-glass-card">
               <div class="sl-card-title">Ward Capacity</div>
-              <div class="sl-ward-list" style="max-height:260px;overflow-y:auto;overflow-x:hidden;">
+              <div class="sl-ward-list sl-scrollable-list" style="max-height:260px;">
                 <t t-foreach="state.wards" t-as="ward" t-key="ward.id">
-                  <div t-on-click="() => this.openWard(ward.id)"
-                       style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #F8FAFC;cursor:pointer;">
-                    <span style="font-size:12px;color:#334155;width:150px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+                  <div class="sl-list-row sl-clickable" t-on-click="() => this.openWard(ward.id)">
+                    <span class="sl-truncate" style="width:150px;flex-shrink:0;font-size:12px;color:var(--sl-text-body);"
                           t-att-title="ward.name">
                       <t t-esc="ward.name"/>
                     </span>
-                    <div style="flex:1;background:#F1F5F9;border-radius:3px;height:6px;overflow:hidden;">
-                      <div t-attf-style="width:#{ward.occupancy_percentage}%;height:100%;border-radius:3px;background:#{ward.occupancy_percentage >= 85 ? '#E24B4A' : ward.occupancy_percentage >= 65 ? '#F59E0B' : '#34C48B'};"/>
+                    <div class="sl-progress-track">
+                      <div t-attf-class="sl-progress-fill #{ward.occupancy_percentage >= 85 ? 'sl-fill-critical' : ward.occupancy_percentage >= 65 ? 'sl-fill-warning' : 'sl-fill-success'}"
+                           t-attf-style="width:#{ward.occupancy_percentage}%;"/>
                     </div>
-                    <span t-attf-style="font-size:11px;font-weight:600;width:36px;text-align:right;color:#{ward.occupancy_percentage === 0 ? '#94A3B8' : ward.occupancy_percentage >= 85 ? '#E24B4A' : ward.occupancy_percentage >= 65 ? '#F59E0B' : '#34C48B'};">
+                    <span t-attf-class="sl-tabular #{ward.occupancy_percentage === 0 ? 'sl-text-faint' : ward.occupancy_percentage >= 85 ? 'sl-text-critical' : ward.occupancy_percentage >= 65 ? 'sl-text-warning' : 'sl-text-success'}"
+                          style="font-size:11px;font-weight:600;width:36px;text-align:right;">
                       <t t-esc="ward.occupancy_percentage"/>%
                     </span>
-                    <span style="font-size:11px;color:#94A3B8;width:44px;flex-shrink:0;">
+                    <span class="sl-text-faint sl-tabular" style="font-size:11px;width:44px;flex-shrink:0;">
                       &#183; <t t-esc="ward.current_occupancy"/> pts
                     </span>
                   </div>
                 </t>
                 <t t-if="!state.wards or state.wards.length === 0">
-                  <div style="text-align:center;color:#94A3B8;padding:24px;font-size:13px;">No ward data.</div>
+                  <div class="sl-empty">No ward data.</div>
                 </t>
               </div>
             </div>
 
             <!-- Patient Status Donut -->
-            <div class="sl-glass-card" style="display:flex;flex-direction:column;">
+            <div class="sl-glass-card sl-col">
               <div class="sl-card-title">Patient Status</div>
-              <div style="flex:1;position:relative;min-height:160px;">
+              <div class="sl-flex-1" style="position:relative;min-height:160px;">
                 <canvas t-ref="statusChart"/>
               </div>
-              <div style="display:flex;justify-content:space-around;padding-top:10px;border-top:1px solid #F1F5F9;margin-top:8px;">
-                <div style="text-align:center;">
-                  <div style="font-size:18px;font-weight:700;color:#10B981;"><t t-esc="state.patientStatus.stable"/></div>
-                  <div style="font-size:9px;color:#94A3B8;text-transform:uppercase;letter-spacing:0.06em;"><t t-esc="'STABLE'"/></div>
+              <div class="sl-donut-legend">
+                <div>
+                  <div class="sl-legend-num sl-legend-stable"><t t-esc="state.patientStatus.stable"/></div>
+                  <div class="sl-legend-label">STABLE</div>
                 </div>
-                <div style="text-align:center;">
-                  <div style="font-size:18px;font-weight:700;color:#FBBF24;"><t t-esc="state.patientStatus.warning"/></div>
-                  <div style="font-size:9px;color:#94A3B8;text-transform:uppercase;letter-spacing:0.06em;"><t t-esc="'WARNING'"/></div>
+                <div>
+                  <div class="sl-legend-num sl-legend-warning"><t t-esc="state.patientStatus.warning"/></div>
+                  <div class="sl-legend-label">WARNING</div>
                 </div>
-                <div style="text-align:center;">
-                  <div style="font-size:18px;font-weight:700;color:#FC8181;"><t t-esc="state.patientStatus.critical"/></div>
-                  <div style="font-size:9px;color:#94A3B8;text-transform:uppercase;letter-spacing:0.06em;"><t t-esc="'CRITICAL'"/></div>
+                <div>
+                  <div class="sl-legend-num sl-legend-critical"><t t-esc="state.patientStatus.critical"/></div>
+                  <div class="sl-legend-label">CRITICAL</div>
                 </div>
               </div>
             </div>
 
             <!-- Doctor Performance -->
-            <div class="sl-glass-card" style="display:flex;flex-direction:column;height:auto;align-self:start;">
+            <div class="sl-glass-card sl-col" style="align-self:start;">
               <div class="sl-card-title">Doctor Performance</div>
-              <div style="font-size:10px;color:#94A3B8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Ranked by alerts resolved</div>
-              <div class="sl-doctor-list" style="max-height:260px;overflow-y:auto;overflow-x:hidden;">
+              <div class="sl-card-sublabel">Ranked by alerts resolved</div>
+              <div class="sl-doctor-list sl-scrollable-list" style="max-height:260px;">
                 <t t-foreach="state.leaderboard" t-as="doc" t-key="doc.id">
-                  <div class="sl-doctor-row"
-                       style="display:flex;align-items:center;gap:10px;padding:8px 6px 8px 0;border-bottom:1px solid #F8FAFC;cursor:pointer;min-height:44px;"
-                       t-attf-style="border-left:3px solid #{doc.borderColor};padding-left:8px;"
+                  <div class="sl-doctor-row sl-list-row sl-clickable"
+                       t-attf-style="border-left:3px solid #{doc.borderColor};padding-left:8px;min-height:44px;"
                        t-on-click="() => this.openDoctorAlerts(doc.id, doc.name)">
-                    <div style="flex:1;min-width:0;">
-                      <div style="font-size:13px;font-weight:600;color:#0F172A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><t t-esc="doc.name"/></div>
-                      <div style="font-size:11px;color:#64748B;margin-top:1px;"><t t-esc="doc.total"/> handled</div>
+                    <div class="sl-flex-1">
+                      <div class="sl-truncate" style="font-size:13px;font-weight:600;color:var(--sl-text-strong);"><t t-esc="doc.name"/></div>
+                      <div class="sl-doctor-meta"><t t-esc="doc.total"/> handled</div>
                     </div>
-                    <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-shrink:0;">
+                    <div class="sl-row sl-gap-2" style="flex-shrink:0;justify-content:flex-end;">
                       <span class="sl-badge-stable"><t t-esc="doc.resolved"/> resolved</span>
                       <span class="sl-badge-critical" t-if="doc.critical > 0"><t t-esc="doc.critical"/> critical</span>
                     </div>
                   </div>
                 </t>
                 <t t-if="state.leaderboard.length === 0">
-                  <div style="text-align:center;color:#94A3B8;padding:24px;font-size:13px;">No data yet.</div>
+                  <div class="sl-empty">No data yet.</div>
                 </t>
               </div>
             </div>
           </div>
 
           <!-- Row 3: Alert Trend + AI Insights -->
-          <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:16px;">
+          <div class="sl-grid-admin-row-2">
             <div class="sl-glass-card">
               <div class="sl-card-title">Alert Trend</div>
               <div style="height:160px;position:relative;">
                 <canvas t-ref="trendChart"/>
               </div>
             </div>
-            <div class="sl-glass-card" style="display:flex;flex-direction:column;">
+            <div class="sl-glass-card sl-col">
               <div class="sl-card-title">AI Insights</div>
-              <div class="sl-scrollable-list" style="flex:1;max-height:160px;">
+              <div class="sl-scrollable-list sl-flex-1" style="max-height:160px;">
                 <t t-foreach="state.insights" t-as="insight" t-key="insight">
-                  <div style="border-left:3px solid #185FA5;border-radius:0 6px 6px 0;font-size:12px;color:#0F172A;background:#F0F7FF;padding:8px 10px;margin-bottom:6px;line-height:1.4;">
+                  <div class="sl-insight-item">
                     <t t-esc="insight"/>
                   </div>
                 </t>
                 <t t-if="!state.insights or state.insights.length === 0">
-                  <div style="text-align:center;color:#94A3B8;padding:24px;font-size:12px;">Collecting data...</div>
+                  <div class="sl-empty">Collecting data...</div>
                 </t>
               </div>
             </div>
@@ -179,12 +186,12 @@
               <t t-foreach="state.escalations" t-as="esc" t-key="esc.id">
                 <div class="sl-escalation-item" t-on-click="() => this.openAlert(esc.id)">
                   <div class="sl-esc-dot"/>
-                  <div style="flex:1;min-width:0;">
-                    <div class="sl-esc-text" style="color:#334155 !important;"><t t-esc="esc.headline"/></div>
+                  <div class="sl-flex-1">
+                    <div class="sl-esc-text"><t t-esc="esc.headline"/></div>
                     <div class="sl-esc-meta">
                       <t t-esc="esc.timeAgo"/>
                       <t t-if="esc.patient_id">
-                        <span style="margin-left:6px;color:#185FA5;cursor:pointer;"
+                        <span class="sl-esc-patient-link"
                               t-on-click.stop="() => this.openPatient(esc.patient_id[0])">
                           &#183; <t t-esc="esc.patient_id[1]"/>
                         </span>
@@ -197,7 +204,7 @@
                 </div>
               </t>
               <t t-if="state.escalations.length === 0">
-                <div style="text-align:center;color:#94A3B8;padding:24px;font-size:13px;">No recent escalations.</div>
+                <div class="sl-empty">No recent escalations.</div>
               </t>
             </div>
           </div>

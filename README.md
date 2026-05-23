@@ -1,247 +1,326 @@
-# SmartLab Health Monitoring
+# SmartLab — AI-Powered Clinical Monitoring Platform
 
-SmartLab is a healthcare monitoring platform built with Odoo 17, PostgreSQL, and a FastAPI AI service. It manages patients, wards, vitals, clinical alerts, dashboards, and AI-assisted anomaly detection.
+> **Real-time patient vitals monitoring with ML anomaly detection, automated clinical alerts, and Telegram notifications — built on Odoo 17.**
 
-## Current Stabilization Status
+---
 
-The project is being stabilized phase by phase.
+## Table of Contents
 
-Completed:
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Telegram Bot Setup](#telegram-bot-setup)
+- [User Roles](#user-roles)
+- [Module Structure](#module-structure)
+- [AI Service](#ai-service)
+- [Alert & Escalation Pipeline](#alert--escalation-pipeline)
+- [Production Checklist](#production-checklist)
 
-- Phase 1: security and deployment blockers
+---
 
-Next:
+## Overview
 
-- Phase 2: permissions and clinical safety
-- Phase 3: vitals and monitoring reliability
-- Phase 4: AI and alert lifecycle
-- Phase 5: dashboard accuracy
+SmartLab is a healthcare SaaS platform that monitors patient vital signs in real time, runs an Isolation Forest AI model to detect anomalies, and automatically routes clinical alerts to the right medical staff via Odoo notifications and Telegram bots.
 
-Do not mix future-phase fixes into the current phase unless they are required to keep the platform stable.
+**Key capabilities:**
+
+| Feature | Detail |
+|---|---|
+| Patient Management | Admission, discharge, ward assignment, triage routing |
+| Vitals Recording | Heart rate, BP, SpO₂, temperature, glucose, respiratory rate |
+| AI Anomaly Detection | Isolation Forest model with per-patient demographic thresholds |
+| Clinical Alerts | Severity-tiered (Low → Critical) with AI clinical narrative |
+| Alert Escalation | 3-level auto-escalation cron with Telegram + Odoo notifications |
+| Telegram Bots | Doctor bot (new alerts) · Admin bot (unhandled escalations) |
+| Dashboards | Role-specific OWL dashboards for Admin, Doctor, and Nurse |
+| Shift Handoffs | Structured nurse handoff notes per ward |
+| Analytics | Vital trend graphs, alert distribution pivot, SLA tracking |
+
+---
 
 ## Architecture
 
-Services:
-
-- `odoo`: Odoo 17 ERP application
-- `db`: PostgreSQL 15 database
-- `ai_service`: FastAPI service for vitals anomaly analysis
-
-Internal service flow:
-
-```text
-Odoo -> FastAPI AI service -> anomaly result -> Odoo vitals and alerts
+```
+                        ┌─────────────────────────────┐
+                        │        Browser / Client      │
+                        └──────────────┬──────────────┘
+                                       │ HTTP :8069
+                        ┌──────────────▼──────────────┐
+                        │         Odoo 17 ERP          │
+                        │   health_monitoring module   │
+                        └──────┬───────────┬──────────┘
+                               │           │
+              XML-RPC / ORM    │           │ HTTP (internal)
+                               │           │
+                  ┌────────────▼──┐   ┌────▼──────────────┐
+                  │  PostgreSQL   │   │  FastAPI AI Service │
+                  │     15        │   │  (Isolation Forest) │
+                  └───────────────┘   └─────────────────────┘
 ```
 
-The AI service is intended to stay private inside the Docker network. It is not published on host port `8000` in the default compose file.
+**Services:**
 
-## Environment Setup
+| Service | Image | Port |
+|---|---|---|
+| `odoo` | `odoo:17.0` | `8069` (public) |
+| `db` | `postgres:15-alpine` | internal only |
+| `ai_service` | custom FastAPI | internal only |
 
-Create a local `.env` file from the example:
+The AI service is **not** exposed to the host by default — Odoo communicates with it over the internal Docker network.
+
+---
+
+## Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Docker Engine + Compose v2)
+- A Telegram account with two bots created via [@BotFather](https://t.me/BotFather)
+
+---
+
+## Quick Start
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/AmineDnd/Health_monitoring.git
+cd Health_monitoring
+```
+
+### 2. Create your environment file
 
 ```bash
 cp .env.example .env
 ```
 
-Then replace every placeholder value.
+Open `.env` and fill in every value (see [Configuration](#configuration)).
 
-Required variables:
-
-```env
-POSTGRES_USER=replace_me
-POSTGRES_PASSWORD=replace_with_long_random_password
-POSTGRES_DB=smartlab_db
-ODOO_MASTER_PASSWORD=replace_with_long_random_master_password
-AI_SERVICE_URL=http://ai_service:8000
-AI_SERVICE_TOKEN=replace_with_long_random_service_token
-ENVIRONMENT=production
-ALLOWED_ORIGINS=http://localhost:8069
-```
-
-Security notes:
-
-- Never commit `.env`.
-- Use long random values for `POSTGRES_PASSWORD`, `ODOO_MASTER_PASSWORD`, and `AI_SERVICE_TOKEN`.
-- Rotate any credentials that were previously committed, shared, or used in demos.
-- Keep `ENVIRONMENT=production` for production-like deployments.
-- Only expose the AI service port in a separate local development override.
-
-## Start The Platform
-
-Build and start all services:
+### 3. Start all services
 
 ```bash
 docker compose up -d --build
 ```
 
-Check service status:
+Wait ~30 seconds for PostgreSQL and Odoo to finish initializing, then check:
 
 ```bash
-docker compose ps
+docker compose ps          # all services should show "running"
+docker compose logs odoo   # watch for "Modules loaded"
 ```
 
-View logs:
+### 4. Open Odoo
 
-```bash
-docker compose logs -f odoo
-docker compose logs -f ai_service
-docker compose logs -f db
 ```
-
-Open Odoo:
-
-```text
 http://localhost:8069
 ```
 
-## Odoo Module
+Log in with:
+- **Login:** `admin`
+- **Password:** your Odoo master password (set during first-run setup)
 
-The healthcare module is located at:
+### 5. Install the module
 
-```text
-odoo/addons/health_monitoring
+Go to **Apps → Search "Health Monitoring"** and click **Install**.
+
+> The module installs automatically if you run the container with `-d smartlab_db` as configured in `odoo.conf`.
+
+### 6. Set up Telegram bots
+
+See the [Telegram Bot Setup](#telegram-bot-setup) section below.
+
+---
+
+## Configuration
+
+Copy `.env.example` to `.env` and set the following variables:
+
+```env
+# PostgreSQL
+POSTGRES_USER=odoo
+POSTGRES_PASSWORD=<long-random-password>
+POSTGRES_DB=smartlab_db
+
+# Odoo master password (database manager page)
+ODOO_MASTER_PASSWORD=<long-random-password>
+
+# AI service — 'ai_service' is the Docker container name, NOT localhost
+AI_SERVICE_URL=http://ai_service:8000
+
+# Shared secret between Odoo and the AI service
+AI_SERVICE_TOKEN=<long-random-token>
+
+# FastAPI environment
+ENVIRONMENT=production
+
+# CORS origins allowed by the AI service
+ALLOWED_ORIGINS=http://localhost:8069
 ```
 
-Important areas:
+> **Never commit `.env`** — it is listed in `.gitignore`.
 
-- `models/`: patients, vitals, alerts, wards, handoffs, dashboards
-- `views/`: Odoo XML views and actions
-- `security/`: access rights and record rules
-- `static/src/js`: OWL dashboard logic
-- `static/src/xml`: OWL dashboard templates
-- `wizard/`: clinical workflow wizards
-- `data/cron.xml`: scheduled jobs
+---
 
-Demo data is opt-in through Odoo demo loading. It is not installed during a normal production module install.
+## Telegram Bot Setup
+
+SmartLab uses **two separate Telegram bots**:
+
+| Bot | Purpose |
+|---|---|
+| 🩺 **Doctor bot** | New HIGH/CRITICAL alerts · Level-1 escalations → sent to doctors |
+| 🔐 **Admin bot** | Level-2 and Level-3 escalations → sent to administrators |
+
+### Step 1 — Create the bots
+
+1. Open Telegram and message [@BotFather](https://t.me/BotFather)
+2. Send `/newbot` twice to create two bots
+3. Copy both **HTTP API tokens**
+
+### Step 2 — Save tokens in Odoo
+
+Log in as admin and go to:
+
+```
+Settings → Technical → Parameters → System Parameters
+```
+
+Create (or update) these two keys:
+
+| Key | Value |
+|---|---|
+| `health_monitoring.telegram_bot_token` | Doctor bot HTTP API token |
+| `health_monitoring.telegram_admin_bot_token` | Admin bot HTTP API token |
+
+### Step 3 — Link your Telegram account to a user
+
+Each user (admin, doctor) must verify their Telegram Chat ID:
+
+1. Open Telegram and message [@userinfobot](https://t.me/userinfobot) — send `/start` to get your numeric **Chat ID**.
+2. In Odoo go to **Settings → Users → [your user] → Telegram Notifications tab**.
+3. Paste your Chat ID, click **Send Verification Code**.
+4. The Doctor bot will send a 6-digit code — enter it and click **Confirm Code**.
+
+Once verified, that user will receive Telegram notifications through the appropriate bot.
+
+---
+
+## User Roles
+
+| Role | Group | Capabilities |
+|---|---|---|
+| **Admin** | `group_health_admin` | Full access: wards, all patients, all alerts, analytics, user management, escalation notifications |
+| **Doctor** | `group_health_doctor` | Own ward patients and alerts, vitals, alert claiming/resolving, clinical dashboards |
+| **Nurse** | `group_health_nurse` | Vitals recording, patient list (read), shift handoffs |
+
+---
+
+## Module Structure
+
+```
+odoo/addons/health_monitoring/
+├── models/
+│   ├── health_patient.py          # Patient model, admission, ward logic
+│   ├── health_vital_record.py     # Vitals recording + AI scoring trigger
+│   ├── health_alert.py            # Alert lifecycle + Telegram notifications
+│   ├── health_dashboard.py        # Role-specific dashboard KPIs
+│   ├── health_ward.py             # Ward management
+│   ├── health_handoff.py          # Shift handoff notes
+│   ├── health_notification_log.py # Audit log for all notifications
+│   ├── health_ai_analysis_job.py  # Async AI analysis job tracker
+│   └── res_users.py               # Telegram verification fields + flow
+├── views/                         # XML Odoo views and actions
+├── wizard/                        # Clinical workflow wizards
+├── security/                      # Groups, record rules, access CSV
+├── static/src/
+│   ├── js/                        # OWL dashboard components
+│   ├── xml/                       # OWL templates
+│   └── scss/                      # Custom SmartLab theme
+└── data/
+    ├── cron.xml                   # Scheduled escalation cron job
+    └── demo_hospital_data.xml     # Demo data (opt-in only)
+```
+
+---
 
 ## AI Service
 
-The AI service lives in:
+Located in `ai_service/`. Runs as a FastAPI application using an **Isolation Forest** model trained on patient vitals.
 
-```text
-ai_service
+**Endpoints:**
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/` | Public | Health check |
+| `POST` | `/analyze` | Token | Analyze a vitals reading for anomalies |
+| `POST` | `/retrain` | Token | Retrain the model on recent data |
+| `GET` | `/thresholds` | Token | Current dynamic thresholds |
+| `GET` | `/model-info` | Token | Model metadata |
+
+Protected endpoints require the `X-SmartLab-Token` header matching `AI_SERVICE_TOKEN`.
+
+**How it works:**
+
+1. A nurse records vitals → Odoo calls `POST /analyze`
+2. The AI returns an anomaly score (0–100%) and detected anomalies
+3. If score exceeds the threshold, Odoo creates a `health.alert` record
+4. The alert severity (Low/Medium/High/Critical) is determined by the score
+5. HIGH and CRITICAL alerts immediately notify doctors via Telegram
+
+---
+
+## Alert & Escalation Pipeline
+
+```
+Vitals recorded
+      │
+      ▼
+AI /analyze called
+      │
+      ▼
+Anomaly score ≥ threshold?
+      │ YES
+      ▼
+health.alert created (HIGH or CRITICAL)
+      │
+      ├──▶ Odoo chatter ping  →  assigned doctor(s)
+      └──▶ Telegram Doctor bot →  assigned doctor(s)
+                │
+                │ (cron runs every 5 min)
+                │
+      ┌─────────▼─────────┐
+      │ Still unresolved? │
+      └─────────┬─────────┘
+                │
+         ┌──────▼──────┐
+         │  Level 1    │  → Doctor bot  → doctor re-pinged
+         │  5–15 min   │
+         └──────▼──────┘
+         ┌──────▼──────┐
+         │  Level 2    │  → Admin bot   → all admins notified
+         │  15–30 min  │
+         └──────▼──────┘
+         ┌──────▼──────┐
+         │  Level 3    │  → Admin bot   → all admins notified
+         │  30+ min    │
+         └─────────────┘
 ```
 
-Protected endpoints:
-
-- `POST /analyze`
-- `POST /retrain`
-- `GET /thresholds`
-- `GET /model-info`
-
-These endpoints require the `X-SmartLab-Token` header. Odoo sends this header using `AI_SERVICE_TOKEN`.
-
-Public endpoint:
-
-- `GET /`
-
-If `ENVIRONMENT=production` and `AI_SERVICE_TOKEN` is missing, protected endpoints fail closed.
-
-## Deployment Validation
-
-Validate Docker Compose configuration:
-
-```bash
-docker compose --env-file .env config --quiet
-```
-
-Check for accidental public AI exposure:
-
-```bash
-docker compose --env-file .env config | findstr 8000
-```
-
-Check Odoo logs after startup:
-
-```bash
-docker compose logs --tail=100 odoo
-```
-
-Check AI service logs:
-
-```bash
-docker compose logs --tail=100 ai_service
-```
+---
 
 ## Production Checklist
 
-Before production:
+- [ ] All placeholders in `.env` replaced with strong random values
+- [ ] `.env` is **not** committed to git
+- [ ] AI service port `8000` is **not** published on the host
+- [ ] Odoo `list_db = False` in `odoo.conf`
+- [ ] Reverse proxy (nginx/Caddy) with TLS configured in front of Odoo
+- [ ] PostgreSQL and Odoo filestore backups scheduled
+- [ ] Telegram bot tokens stored only in Odoo System Parameters
+- [ ] All clinical users have verified their Telegram Chat IDs
+- [ ] Demo data **not** installed in production
 
-- Replace all placeholder secrets in `.env`.
-- Confirm `.env` is not committed.
-- Confirm the AI service is not exposed publicly.
-- Confirm demo data is not installed.
-- Confirm Odoo database listing is disabled.
-- Confirm reverse proxy TLS is configured outside Docker Compose.
-- Confirm backups are configured for PostgreSQL and Odoo filestore.
-- Confirm monitoring exists for Odoo, PostgreSQL, and AI service health.
-- Confirm role-based permissions are audited before clinical use.
+---
 
-## Development Notes
+## License
 
-For local AI service debugging, create a separate Docker Compose override that publishes port `8000` and mounts source code. Do not add those development-only settings to the production compose file.
-
-Recommended local override pattern:
-
-```yaml
-services:
-  ai_service:
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./ai_service:/app
-```
-
-## Stabilization Roadmap
-
-Phase 1: security and deployment blockers
-
-- Remove hardcoded production secrets.
-- Keep AI service internal by default.
-- Add shared-token protection to AI endpoints.
-- Move demo hospital data out of normal production loading.
-- Align Docker Compose with environment-driven deployment.
-
-Phase 2: permissions and clinical safety
-
-- Audit doctor, nurse, and admin access rights.
-- Verify record rules for patients, vitals, alerts, chat, and dashboards.
-- Prevent unauthorized alert claiming, resolving, editing, and deletion.
-
-Phase 3: vitals and monitoring reliability
-
-- Stabilize monitoring interval logic.
-- Validate overdue, due soon, and up-to-date calculations.
-- Prevent stale patient status and duplicate alert behavior.
-
-Phase 4: AI and alert lifecycle
-
-- Review scoring, severity mapping, alert deduplication, and re-analysis.
-- Add safer retraining controls and model lifecycle safeguards.
-
-Phase 5: dashboard accuracy
-
-- Rebuild dashboard KPIs from backend truth.
-- Verify filters, date ranges, ward statistics, and SLA calculations.
-
-Phase 6: notifications and escalation
-
-- Harden Telegram delivery, retries, queueing, and duplicate suppression.
-
-Phase 7: patient data integrity
-
-- Strengthen DOB, age, duplicate patient, admission, and ward assignment validation.
-
-Phase 8: performance and scalability
-
-- Reduce dashboard query cost.
-- Remove avoidable N+1 queries.
-- Add safe indexing and aggregation strategies.
-
-Phase 9: UI and UX maturity
-
-- Improve dashboard consistency, navigation clarity, accessibility, and loading states.
-
-Phase 10: testing and production operations
-
-- Add regression tests, permission tests, deployment checks, backup validation, and monitoring.
+LGPL-3.0 — see [LICENSE](LICENSE) for details.

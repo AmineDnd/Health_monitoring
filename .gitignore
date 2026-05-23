@@ -1,37 +1,110 @@
-# Environment Variables & Secrets
+# ── Secrets ─────────────────────────────────────────────────────────────────
 .env
 *.env
 .env.*
 
-# Python & AI Cache Artifacts
+# ── Python ───────────────────────────────────────────────────────────────────
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
 *.pyd
 .pytest_cache/
 .coverage
 htmlcov/
-isolation_forest.joblib
-scaler.joblib
-training_data.csv
 
-# Odoo Test Outputs & Logs
+# ── AI / ML artefacts ────────────────────────────────────────────────────────
+ai_service/isolation_forest.joblib
+ai_service/scaler.joblib
+ai_service/training_data.csv
+
+# ── Logs & build outputs ─────────────────────────────────────────────────────
 *.log
 *.txt
-dump_logs.py
-test_tg.py
-force_tg.py
-trigger_cron.py
+output*.txt
+odoo_logs.txt
 
-# Docker Configurations (Optional exclusions)
-# Keep docker-compose.yml but exclude local mounts
+# ── Docker volumes ───────────────────────────────────────────────────────────
 odoo_web_data/
 odoo_db_data/
 
-# IDE Files
+# ── IDE & OS ─────────────────────────────────────────────────────────────────
 .vscode/
 .idea/
-
-# OS Specific
 .DS_Store
 Thumbs.db
+.claude/
+
+# ── Root-level maintenance / debug scripts (not part of the app) ─────────────
+audit_dashboard.py
+audit_stabilization_phases.txt
+check_assets_db.py
+check_css.py
+check_db.py
+check_demo_data.py
+check_env.py
+check_tg.py
+clean_db_and_examples.py
+clear_assets.py
+create_db.py
+create_doc.py
+create_nurse_simple.py
+create_nurses.py
+deployment_readiness.md
+diagnose_admit.py
+diagnostic.py
+do_upgrade.py
+drop_db.py
+find_admin_pw.py
+find_db.py
+force_test_telegram.py
+force_update_vital_view.py
+install_french.py
+internal_setup.py
+internship_explanation.md
+list_users.py
+list_users_quick.py
+module_repair_report.md
+odoo_assets_explanation.md
+repair_report.md
+run_tests.py
+run_ui_tests.py
+seed_patient.py
+set_english.py
+setup_doctors.py
+setup_fresh_db.py
+setup_fresh_install.ps1
+setup_telegram_bots.py
+setup_test_users.py
+smartlab_user_guide.md
+test_access.py
+test_admit.py
+test_ai_comprehensive.py
+test_ai_direct.py
+test_ai_extreme.py
+test_ai_odoo.py
+test_ai_odoo_ui.py
+test_ai_profiles.py
+test_ai_v4.py
+test_escalation.py
+test_full_pipeline.py
+test_full_system.py
+test_news2_ward.py
+test_permissions.py
+test_phase8_performance.py
+test_scores.py
+test_script.py
+test_ward.py
+test_ward_security.py
+test_ward_system_full.py
+test_xmlrpc.py
+update_admin_chat_id.py
+upgrade_module.py
+verify_rules.py
+verify_workflow.py
+wipe_clinical_data.py
+wipe_patients.py
+
+# ── Misc junk ─────────────────────────────────────────────────────────────────
+"Nouveau Fichier source Python.py"
+Nouveau Fichier source Python.py
+odoo/addons/clean_db_artifacts.py
+odoo/addons/health_monitoring/cleanup_views.py

@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+
+    <!-- =====================================================================
+         Shared Telegram section — used by both admin and preferences views
+         ===================================================================== -->
+
     <!-- Add to main Users form for Administrators -->
     <record id="view_users_form_telegram" model="ir.ui.view">
         <field name="name">res.users.form.telegram</field>
@@ -7,40 +12,136 @@
         <field name="inherit_id" ref="base.view_users_form"/>
         <field name="arch" type="xml">
             <notebook position="inside">
-                <page string="Telegram Notifications">
-                    <group>
-                        <field name="telegram_chat_verified" readonly="1"/>
-                        <field name="telegram_chat_id" readonly="1"/>
-                        <field name="telegram_pending_chat_id" placeholder="e.g., 123456789"/>
-                        <field name="telegram_verification_input" password="True"/>
-                        <field name="telegram_verification_sent_at" readonly="1"/>
-                        <field name="telegram_verified_at" readonly="1"/>
-                        <button name="action_request_telegram_verification" type="object" string="Send Verification Code" class="btn-primary"/>
-                        <button name="action_confirm_telegram_verification" type="object" string="Confirm Code" class="btn-secondary"/>
-                        <button name="action_clear_telegram_chat" type="object" string="Clear Telegram" class="btn-link"/>
-                    </group>
+                <page string="Telegram Notifications" name="telegram_page">
+                    <!-- Required for modifier evaluation in inherited views -->
+                    <field name="telegram_chat_verified" invisible="1"/>
+                    <div style="max-width:640px;">
+
+                        <!-- Status banner: verified -->
+                        <div invisible="not telegram_chat_verified"
+                             style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;margin-bottom:16px;">
+                            <span style="font-size:18px;">&#10003;</span>
+                            <div>
+                                <div style="font-weight:700;color:#065F46;font-size:13px;">Telegram Linked</div>
+                                <div style="font-size:12px;color:#047857;">
+                                    Chat ID <field name="telegram_chat_id" readonly="1" nolabel="1" style="display:inline;font-weight:600;color:#065F46;"/> verified on
+                                    <field name="telegram_verified_at" readonly="1" nolabel="1" style="display:inline;color:#065F46;"/>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Status banner: not verified -->
+                        <div invisible="telegram_chat_verified"
+                             style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:10px;margin-bottom:16px;">
+                            <span style="font-size:18px;">&#9888;</span>
+                            <div style="font-size:12px;color:#92400E;">
+                                No verified Telegram account linked. Follow the steps below to receive clinical alerts.
+                            </div>
+                        </div>
+
+                        <!-- Step-by-step instructions -->
+                        <div style="background:#F8FAFC;border:1px solid #EEF2F7;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+                            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#94A3B8;margin-bottom:10px;">
+                                How to connect Telegram
+                            </div>
+                            <ol style="margin:0;padding-left:18px;font-size:12px;color:#334155;line-height:2;">
+                                <li>Open Telegram and search for <strong>@userinfobot</strong> — send <code>/start</code> to get your numeric Chat ID.</li>
+                                <li>Alternatively, message the SmartLab bot directly and send <code>/start</code> — it will reply with your Chat ID.</li>
+                                <li>Paste the Chat ID below and click <strong>Send Verification Code</strong>.</li>
+                                <li>The bot will send a 6-digit code — enter it and click <strong>Confirm Code</strong>.</li>
+                            </ol>
+                        </div>
+
+                        <group>
+                            <field name="telegram_pending_chat_id"
+                                   string="Telegram Chat ID (to verify)"
+                                   placeholder="e.g., 123456789"
+                                   invisible="telegram_chat_verified"/>
+                            <field name="telegram_verification_sent_at" readonly="1"
+                                   string="Verification Code Sent At"
+                                   invisible="not telegram_verification_sent_at"/>
+                            <field name="telegram_verification_input"
+                                   password="True"
+                                   string="Enter 6-digit Verification Code"
+                                   placeholder="Enter the code sent by the bot"
+                                   invisible="not telegram_verification_sent_at or telegram_chat_verified"/>
+                        </group>
+
+                        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+                            <button name="action_request_telegram_verification" type="object"
+                                    string="Send Verification Code"
+                                    class="btn-primary"
+                                    invisible="telegram_chat_verified"/>
+                            <button name="action_confirm_telegram_verification" type="object"
+                                    string="Confirm Code"
+                                    class="btn-secondary"
+                                    invisible="telegram_chat_verified or not telegram_verification_sent_at"/>
+                            <button name="action_clear_telegram_chat" type="object"
+                                    string="Unlink Telegram"
+                                    class="btn-link text-danger"
+                                    invisible="not telegram_chat_verified"/>
+                        </div>
+                    </div>
                 </page>
             </notebook>
         </field>
     </record>
-    
-    <!-- Add to personal Preferences form for individual Doctors -->
+
+    <!-- Add to personal Preferences form for individual Doctors/Nurses -->
     <record id="res_users_preferences_form_telegram" model="ir.ui.view">
         <field name="name">res.users.preferences.form.telegram</field>
         <field name="model">res.users</field>
         <field name="inherit_id" ref="base.view_users_form_simple_modif"/>
         <field name="arch" type="xml">
             <group name="preferences" position="inside">
-                <group string="Telegram Integration">
-                    <field name="telegram_chat_verified" readonly="1"/>
-                    <field name="telegram_chat_id" readonly="1"/>
-                    <field name="telegram_pending_chat_id" string="Telegram Chat ID to Verify" placeholder="e.g., 123456789"/>
-                    <field name="telegram_verification_input" password="True"/>
-                    <field name="telegram_verification_sent_at" readonly="1"/>
-                    <field name="telegram_verified_at" readonly="1"/>
-                    <button name="action_request_telegram_verification" type="object" string="Send Verification Code" class="btn-primary"/>
-                    <button name="action_confirm_telegram_verification" type="object" string="Confirm Code" class="btn-secondary"/>
-                    <button name="action_clear_telegram_chat" type="object" string="Clear Telegram" class="btn-link"/>
+                <group string="Telegram Clinical Alerts">
+                    <!-- Required for modifier evaluation in inherited views -->
+                    <field name="telegram_chat_verified" invisible="1"/>
+
+                    <!-- Status banner: verified -->
+                    <div invisible="not telegram_chat_verified"
+                         style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;margin-bottom:10px;">
+                        <span style="font-size:16px;color:#16A34A;">&#10003;</span>
+                        <div style="font-size:12px;">
+                            <strong style="color:#065F46;">Telegram Linked</strong> — Chat ID
+                            <field name="telegram_chat_id" readonly="1" nolabel="1" style="display:inline;font-weight:600;"/> verified
+                            on <field name="telegram_verified_at" readonly="1" nolabel="1" style="display:inline;"/>
+                        </div>
+                    </div>
+
+                    <!-- Not verified -->
+                    <div invisible="telegram_chat_verified"
+                         style="padding:8px 12px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;margin-bottom:10px;font-size:12px;color:#92400E;">
+                        Not linked. Find your Telegram Chat ID via <strong>@userinfobot</strong>, paste it below, and request a verification code.
+                    </div>
+
+                    <field name="telegram_pending_chat_id"
+                           string="Telegram Chat ID (to verify)"
+                           placeholder="Numeric Chat ID, e.g. 123456789"
+                           invisible="telegram_chat_verified"/>
+                    <field name="telegram_verification_sent_at" readonly="1"
+                           string="Verification Code Sent At"
+                           invisible="not telegram_verification_sent_at"/>
+                    <field name="telegram_verification_input"
+                           password="True"
+                           string="6-digit Verification Code"
+                           placeholder="Enter code sent by SmartLab bot"
+                           invisible="not telegram_verification_sent_at or telegram_chat_verified"/>
+
+                    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;" colspan="2">
+                        <button name="action_request_telegram_verification" type="object"
+                                string="Send Code"
+                                class="btn-primary"
+                                invisible="telegram_chat_verified"/>
+                        <button name="action_confirm_telegram_verification" type="object"
+                                string="Confirm Code"
+                                class="btn-secondary"
+                                invisible="telegram_chat_verified or not telegram_verification_sent_at"/>
+                        <button name="action_clear_telegram_chat" type="object"
+                                string="Unlink"
+                                class="btn-link"
+                                invisible="not telegram_chat_verified"/>
+                    </div>
                 </group>
             </group>
         </field>

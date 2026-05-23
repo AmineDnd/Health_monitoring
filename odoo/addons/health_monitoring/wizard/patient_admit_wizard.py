@@ -1,3 +1,4 @@
+from markupsafe import Markup, escape
 from odoo import models, fields, api
 from odoo.exceptions import ValidationError
 
@@ -42,9 +43,9 @@ class PatientAdmitWizard(models.TransientModel):
         if patient.admission_status == 'discharged':
             raise ValidationError(f"{patient.name} has been discharged. Please reactivate first.")
 
-        body = f"Patient admitted to <b>{self.ward_id.name}</b>."
+        body = Markup(f"Patient admitted to <b>{escape(self.ward_id.name)}</b>.")
         if self.notes:
-            body += f"<br/>Notes: {self.notes}"
+            body += Markup(f"<br/>Notes: {escape(self.notes)}")
 
         patient.write({
             'ward_id': self.ward_id.id,

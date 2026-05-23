@@ -8,7 +8,7 @@
     <field name="arch" type="xml">
       <form>
         <header>
-          <button string="Analyze &amp; Save" type="object" name="action_check_and_save" class="btn-primary ms-2" invisible="id"/>
+          <button string="Analyze &amp; Save" type="object" name="action_check_and_save" class="btn-primary ms-2" invisible="id and confirmation_state != 'pending'"/>
           <field name="status" widget="statusbar" statusbar_visible="normal,warning,critical"/>
         </header>
         <sheet>
@@ -184,14 +184,14 @@
                decoration-warning="spo2 &lt; 94 and spo2 >= 90"/>
         <field name="temperature" string="Temp C" widget="integer" optional="show"/>
         <field name="glucose" string="Glucose" widget="integer" optional="show"/>
-        <field name="ai_score" string="AI Risk" widget="progressbar"
-               decoration-danger="ai_score >= 70"
-               decoration-warning="ai_score >= 40 and ai_score &lt; 70"
-               decoration-success="ai_score &lt; 40"/>
         <field name="ai_analysis_state" string="AI Status" widget="badge"
                decoration-info="ai_analysis_state in ['pending', 'retrying']"
                decoration-success="ai_analysis_state == 'analyzed'"
-               decoration-danger="ai_analysis_state == 'failed'"
+               decoration-danger="ai_analysis_state == 'failed'"/>
+        <field name="ai_score" string="AI Score %" widget="integer"
+               decoration-danger="ai_analysis_state == 'analyzed' and ai_score >= 70"
+               decoration-warning="ai_analysis_state == 'analyzed' and ai_score >= 40 and ai_score &lt; 70"
+               decoration-success="ai_analysis_state == 'analyzed' and ai_score &lt; 40"
                optional="show"/>
         <field name="confirmation_state" string="Confirmation" widget="badge"
                decoration-warning="confirmation_state=='pending'"
@@ -238,16 +238,37 @@
     <field name="name">health.vital.record.search</field>
     <field name="model">health.vital.record</field>
     <field name="arch" type="xml">
-      <search>
+      <search string="Search Vital Records">
         <field name="patient_id"/>
-        <filter string="Anomalies Detected" name="anomalies" domain="[('anomaly_detected', '=', True)]"/>
-        <filter string="Pending Confirmation" name="pending_confirmation" domain="[('confirmation_state', '=', 'pending')]"/>
+
+        <!-- Clinical Status -->
+        <filter string="Critical Status" name="critical" domain="[('status', '=', 'critical')]"/>
+        <filter string="Warning Status" name="warning" domain="[('status', '=', 'warning')]"/>
         <filter string="Normal Records" name="normal" domain="[('anomaly_detected', '=', False)]"/>
         <separator/>
-        <filter string="Today's Vitals" name="today" domain="[('recorded_at', '&gt;=', context_today().strftime('%Y-%m-%d 00:00:00')), ('recorded_at', '&lt;=', context_today().strftime('%Y-%m-%d 23:59:59'))]"/>
+
+        <!-- AI Analysis -->
+        <filter string="AI Anomaly Detected" name="anomalies" domain="[('anomaly_detected', '=', True)]"/>
+        <filter string="High AI Risk (≥70)" name="high_ai_risk" domain="[('ai_score', '&gt;=', 70)]"/>
+        <filter string="AI Analysis Pending" name="pending_analysis" domain="[('ai_analysis_state', 'in', ['pending', 'retrying'])]"/>
+        <filter string="AI Analysis Failed" name="failed_analysis" domain="[('ai_analysis_state', '=', 'failed')]"/>
+        <separator/>
+
+        <!-- Confirmation -->
+        <filter string="Pending Confirmation" name="pending_confirmation" domain="[('confirmation_state', '=', 'pending')]"/>
+        <separator/>
+
+        <!-- Date Range -->
+        <filter string="Today's Vitals" name="today" domain="[('recorded_at', '&gt;=', (context_today()).strftime('%Y-%m-%d 00:00:00')), ('recorded_at', '&lt;=', (context_today()).strftime('%Y-%m-%d 23:59:59'))]"/>
+        <filter string="Last 7 Days" name="this_week" domain="[('recorded_at', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d 00:00:00'))]"/>
+        <filter string="Last 30 Days" name="last_month" domain="[('recorded_at', '&gt;=', (context_today() - datetime.timedelta(days=30)).strftime('%Y-%m-%d 00:00:00'))]"/>
+
         <group expand="0" string="Group By">
           <filter string="Patient" name="group_by_patient" context="{'group_by':'patient_id'}"/>
           <filter string="Date" name="group_by_date" context="{'group_by':'recorded_at:day'}"/>
+          <filter string="Week" name="group_by_week" context="{'group_by':'recorded_at:week'}"/>
+          <filter string="Clinical Status" name="group_by_status" context="{'group_by':'status'}"/>
+          <filter string="AI Analysis State" name="group_by_ai_status" context="{'group_by':'ai_analysis_state'}"/>
         </group>
       </search>
     </field>

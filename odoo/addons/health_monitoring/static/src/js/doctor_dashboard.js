@@ -26,10 +26,12 @@ export class DoctorDashboard extends Component {
             vitals: {},
             showVitalsChart: false,
             risk: {
-                arrhythmia: 0, arrhythmiaColor: '#10b981',
-                hypoxia: 0, hypoxiaColor: '#10b981',
-                hypertension: 0, hypertensionColor: '#10b981',
-                fever: 0, feverColor: '#10b981',
+                cardiac: 0, cardiacColor: '#34D399',
+                respiratory: 0, respiratoryColor: '#34D399',
+                hypoxia: 0, hypoxiaColor: '#34D399',
+                bloodPressure: 0, bloodPressureColor: '#34D399',
+                thermoregulation: 0, thermoregulationColor: '#34D399',
+                metabolic: 0, metabolicColor: '#34D399',
             },
         });
 

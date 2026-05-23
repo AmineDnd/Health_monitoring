@@ -1,6 +1,0 @@
-print("\n--- WIPING ALL PATIENTS, VITALS, AND ALERTS ---")
-env['health.vital.record'].search([]).unlink()
-env['health.alert'].search([]).unlink()
-env['health.patient'].search([]).unlink()
-env.cr.commit()
-print("--- DATABASE IS COMPLETELY CLEAN ---")

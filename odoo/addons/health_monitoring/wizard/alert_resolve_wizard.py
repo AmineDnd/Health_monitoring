@@ -1,3 +1,4 @@
+from markupsafe import Markup, escape
 from odoo import models, fields, api
 from odoo.exceptions import AccessError
 
@@ -25,5 +26,5 @@ class AlertResolveWizard(models.TransientModel):
             'handled_at': odoo_fields.Datetime.now(),
             'resolution_notes': self.resolution_notes
         })
-        self.alert_id.sudo().message_post(body=f"Alert resolved. Notes: {self.resolution_notes}")
+        self.alert_id.sudo().message_post(body=Markup(f"Alert resolved. Notes: {escape(self.resolution_notes)}"))
         return {'type': 'ir.actions.act_window_close'}

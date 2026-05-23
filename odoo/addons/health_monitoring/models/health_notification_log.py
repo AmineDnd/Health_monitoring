@@ -1,4 +1,14 @@
-from odoo import fields, models
+import re
+from odoo import api, fields, models
+
+
+def _strip_html_tags(text):
+    """Remove HTML/XML tags from a string, collapse whitespace."""
+    if not text:
+        return ''
+    clean = re.sub(r'<[^>]+>', ' ', str(text))
+    clean = re.sub(r'[ \t]+', ' ', clean).strip()
+    return clean
 
 
 class HealthNotificationLog(models.Model):
@@ -43,3 +53,11 @@ class HealthNotificationLog(models.Model):
     result_detail = fields.Text('Result Detail')
     payload_excerpt = fields.Text('Payload Excerpt')
     cooldown_until = fields.Datetime('Cooldown Until')
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Strip HTML tags from payload_excerpt before storage."""
+        for vals in vals_list:
+            raw = vals.get('payload_excerpt') or ''
+            vals['payload_excerpt'] = _strip_html_tags(raw)[:500]
+        return super().create(vals_list)

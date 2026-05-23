@@ -1,6 +1,6 @@
 ﻿from odoo import models, fields, api
 from odoo.exceptions import AccessError, ValidationError
-from markupsafe import Markup
+from markupsafe import Markup, escape
 from datetime import timedelta
 import requests
 import logging
@@ -91,6 +91,18 @@ class HealthAlert(models.Model):
 
     message = fields.Text('Message')
     parsed_message_html = fields.Html('AI Clinical Analysis', compute='_compute_parsed_message')
+
+    # Patient notes surfaced read-only on the alert for quick clinical context
+    patient_nurse_notes = fields.Text(
+        related='patient_id.nurse_notes',
+        string='Nurse Notes',
+        readonly=True,
+    )
+    patient_doctor_notes = fields.Text(
+        related='patient_id.doctor_notes',
+        string='Doctor Notes',
+        readonly=True,
+    )
     ai_confidence = fields.Float(
         'AI Anomaly Score (%)',
         help="Anomaly score from the AI model (0-100%). This is not a clinical confidence value.",
@@ -278,7 +290,7 @@ class HealthAlert(models.Model):
                     'assigned_doctor_id': self.env.user.id,
                     'state': 'investigating',
                 })
-                rec.sudo().message_post(body=f"Alert claimed by {self.env.user.name}.")
+                rec.sudo().message_post(body=Markup(f"Alert claimed by {escape(self.env.user.name)}."))
         return True
 
     def action_acknowledge(self):
@@ -407,7 +419,7 @@ class HealthAlert(models.Model):
                 else:
                     users_to_notify |= user
             if users_to_notify:
-                self.message_post(
+                self.with_context(mail_notify_noemail=True).message_post(
                     body=message,
                     message_type="notification",
                     partner_ids=users_to_notify.mapped('partner_id').ids,

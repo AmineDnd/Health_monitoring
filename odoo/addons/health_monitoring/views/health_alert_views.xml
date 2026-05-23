@@ -218,27 +218,60 @@
               </div>
             </div>
           </div>
+          <!-- Patient Clinical Notes — visible to all roles for continuity of care -->
+          <div class="row mt-3"
+               invisible="not patient_nurse_notes and not patient_doctor_notes">
+            <div class="col-12">
+              <div style="background:#fff;border:1px solid #EEF2F7;border-radius:12px;padding:16px 18px;">
+                <div style="display:flex;align-items:center;gap:7px;margin-bottom:12px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:#94A3B8;">
+                  <div style="width:7px;height:7px;border-radius:50%;background:#7C3AED;flex-shrink:0;"></div>
+                  Patient Clinical Notes
+                </div>
+                <div style="display:flex;gap:14px;flex-wrap:wrap;">
+                  <div style="flex:1;min-width:220px;border:1px solid #D1FAE5;border-radius:8px;overflow:hidden;"
+                       invisible="not patient_nurse_notes">
+                    <div style="padding:8px 12px;background:#F0FDF4;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#065F46;">
+                      Nurse Notes
+                    </div>
+                    <div style="padding:10px 12px;font-size:12px;color:#134E4A;line-height:1.6;white-space:pre-wrap;">
+                      <field name="patient_nurse_notes" nolabel="1" readonly="1"/>
+                    </div>
+                  </div>
+                  <div style="flex:1;min-width:220px;border:1px solid #BFDBFE;border-radius:8px;overflow:hidden;"
+                       invisible="not patient_doctor_notes">
+                    <div style="padding:8px 12px;background:#EFF6FF;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#1E3A5F;">
+                      Doctor Notes
+                    </div>
+                    <div style="padding:10px 12px;font-size:12px;color:#1E3A5F;line-height:1.6;white-space:pre-wrap;">
+                      <field name="patient_doctor_notes" nolabel="1" readonly="1"/>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <notebook>
             <page string="Notification Audit">
               <field name="notification_log_ids" readonly="1">
-                <tree create="0" edit="0" delete="0">
-                  <field name="create_date" string="When"/>
-                  <field name="channel"/>
+                <tree create="0" edit="0" delete="0" string="Notification History">
+                  <field name="create_date" string="Sent At"/>
+                  <field name="channel" widget="badge"/>
                   <field name="purpose"/>
-                  <field name="user_id"/>
-                  <field name="recipient"/>
+                  <field name="user_id" string="Recipient"/>
+                  <field name="recipient" string="Address / Chat ID" optional="show"/>
                   <field name="result" widget="badge"
                          decoration-success="result == 'sent'"
                          decoration-warning="result in ['skipped', 'cooldown']"
                          decoration-danger="result == 'failed'"/>
-                  <field name="result_detail"/>
+                  <field name="result_detail" string="Detail" optional="show"/>
+                  <field name="payload_excerpt" string="Message Preview" optional="show"/>
                 </tree>
               </field>
             </page>
           </notebook>
         </sheet>
         <div class="oe_chatter">
-          <field name="message_follower_ids"/>
           <field name="message_ids"/>
         </div>
       </form>
@@ -262,20 +295,39 @@
     <field name="name">health.alert.search</field>
     <field name="model">health.alert</field>
     <field name="arch" type="xml">
-      <search>
+      <search string="Search Alerts">
         <field name="patient_id"/>
-        <filter string="New (Unacknowledged)" name="new" domain="[('state', '=', 'new')]"/>
-        <filter string="Investigating" name="investigating" domain="[('state', '=', 'investigating')]"/>
+        <field name="assigned_doctor_id"/>
+
+        <!-- Workflow State -->
         <filter string="Active Alerts" name="active" domain="[('state', '!=', 'resolved')]"/>
+        <filter string="Unclaimed" name="unclaimed" domain="[('state', '=', 'new'), ('assigned_doctor_id', '=', False)]"/>
+        <filter string="Under Investigation" name="investigating" domain="[('state', '=', 'investigating')]"/>
+        <filter string="New (Unacknowledged)" name="new" domain="[('state', '=', 'new')]"/>
+        <filter string="Resolved" name="resolved" domain="[('state', '=', 'resolved')]"/>
         <separator/>
+
+        <!-- Escalation -->
+        <filter string="Escalated" name="escalated" domain="[('status', '=', 'escalated')]"/>
+        <filter string="Overdue Response (&gt;10 min)" name="overdue_response" domain="[('response_time_minutes', '&gt;', 10)]"/>
+        <separator/>
+
+        <!-- Severity -->
         <filter string="Critical Severity" name="critical" domain="[('severity', '=', 'critical')]"/>
         <filter string="High Severity" name="high" domain="[('severity', '=', 'high')]"/>
+        <filter string="Critical + High" name="critical_high" domain="[('severity', 'in', ['critical', 'high'])]"/>
         <separator/>
+
+        <!-- Date -->
         <filter string="Today's Alerts" name="today" domain="[('create_date', '&gt;=', context_today().strftime('%Y-%m-%d 00:00:00')), ('create_date', '&lt;=', context_today().strftime('%Y-%m-%d 23:59:59'))]"/>
+        <filter string="Last 7 Days" name="last_week" domain="[('create_date', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d 00:00:00'))]"/>
+
         <group expand="0" string="Group By">
           <filter string="Patient" name="group_by_patient" context="{'group_by':'patient_id'}"/>
           <filter string="Severity" name="group_by_severity" context="{'group_by':'severity'}"/>
-          <filter string="Status" name="group_by_state" context="{'group_by':'state'}"/>
+          <filter string="Workflow State" name="group_by_state" context="{'group_by':'state'}"/>
+          <filter string="Assigned Doctor" name="group_by_doctor" context="{'group_by':'assigned_doctor_id'}"/>
+          <filter string="Date" name="group_by_date" context="{'group_by':'create_date:day'}"/>
         </group>
       </search>
     </field>

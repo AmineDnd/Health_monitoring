@@ -127,15 +127,15 @@
                   <field name="mrn" readonly="1"/>
                   <field name="date_of_birth"/>
                   <field name="age" readonly="date_of_birth != False"/>
-                  <field name="gender" widget="radio" options="{'horizontal': true}"/>
+                  <field name="gender"/>
                   <field name="category" widget="badge"
                          decoration-info="category=='child'"
                          decoration-warning="category=='elderly'"
                          decoration-success="category=='adult'"
                          decoration-primary="category=='teen'"/>
                   <field name="lifestyle_profile" invisible="1"/>
-                  <field name="profile_male" invisible="gender == 'female'" required="1"/>
-                  <field name="profile_female" invisible="gender != 'female'" required="1"/>
+                  <field name="profile_male" invisible="gender == 'female'" required="gender != 'female'"/>
+                  <field name="profile_female" invisible="gender != 'female'" required="gender == 'female'"/>
                 </group>
               </div>
             </div>
@@ -147,6 +147,8 @@
                 </div>
                 <group>
                   <field name="is_doctor" invisible="1"/>
+                  <field name="is_nurse" invisible="1"/>
+                  <field name="is_admin" invisible="1"/>
                   <field name="ward_id" options="{'no_create': True}" placeholder="Select Ward for Admission"/>
                   <field name="doctor_id" widget="many2one_avatar_user" options="{'no_create': True}" readonly="not is_doctor"/>
                   <field name="vitals_frequency_hours"/>
@@ -265,6 +267,43 @@
                   </div>
                 </div>
               </div>
+
+              <!-- Clinical Notes — separate visual lane per role -->
+              <div style="display:flex;gap:16px;margin-top:16px;">
+
+                <!-- Nurse Notes -->
+                <div style="flex:1;background:#fff;border:1px solid #D1FAE5;border-radius:10px;overflow:hidden;">
+                  <div style="padding:10px 14px 8px 14px;border-bottom:1px solid #D1FAE5;background:#F0FDF4;display:flex;align-items:center;justify-content:space-between;">
+                    <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#065F46;display:flex;align-items:center;gap:6px;">
+                      <span style="width:7px;height:7px;border-radius:50%;background:#059669;display:inline-block;flex-shrink:0;"></span>
+                      Nurse Notes
+                    </span>
+                    <span style="font-size:10px;color:#6EE7B7;font-weight:500;">Nursing team</span>
+                  </div>
+                  <div style="padding:10px 14px 12px 14px;">
+                    <field name="nurse_notes" nolabel="1" placeholder="Enter nursing observations, care instructions, handoff notes..."
+                           style="font-size:12px;color:#134E4A;min-height:72px;line-height:1.6;"
+                           readonly="not (is_nurse or is_admin)"/>
+                  </div>
+                </div>
+
+                <!-- Doctor Notes -->
+                <div style="flex:1;background:#fff;border:1px solid #BFDBFE;border-radius:10px;overflow:hidden;">
+                  <div style="padding:10px 14px 8px 14px;border-bottom:1px solid #BFDBFE;background:#EFF6FF;display:flex;align-items:center;justify-content:space-between;">
+                    <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#1E3A5F;display:flex;align-items:center;gap:6px;">
+                      <span style="width:7px;height:7px;border-radius:50%;background:#185FA5;display:inline-block;flex-shrink:0;"></span>
+                      Doctor Notes
+                    </span>
+                    <span style="font-size:10px;color:#93C5FD;font-weight:500;">Medical team</span>
+                  </div>
+                  <div style="padding:10px 14px 12px 14px;">
+                    <field name="doctor_notes" nolabel="1" placeholder="Enter clinical assessment, treatment plan, medical observations..."
+                           style="font-size:12px;color:#1E3A5F;min-height:72px;line-height:1.6;"
+                           readonly="not (is_doctor or is_admin)"/>
+                  </div>
+                </div>
+
+              </div>
             </page>
             <page string="Vitals" name="vitals">
               <field name="vital_record_ids"/>
@@ -275,7 +314,6 @@
           </notebook>
         </sheet>
         <div class="oe_chatter">
-          <field name="message_follower_ids"/>
           <field name="message_ids"/>
         </div>
       </form>
@@ -375,17 +413,40 @@
     <field name="name">health.patient.search</field>
     <field name="model">health.patient</field>
     <field name="arch" type="xml">
-      <search>
-        <field name="name"/>
+      <search string="Search Patients">
+        <field name="name" string="Patient Name or MRN" filter_domain="['|', ('name', 'ilike', self), ('mrn', 'ilike', self)]"/>
         <field name="mrn"/>
         <field name="doctor_id"/>
-        <filter string="Critical Risk Patients" name="critical" domain="[('risk_level', '=', 'critical')]"/>
-        <filter string="High &amp; Critical Risk" name="high_critical" domain="[('risk_level', 'in', ['high', 'critical'])]"/>
+        <field name="ward_id"/>
+
+        <!-- Admission Status -->
+        <filter string="Active Patients" name="active_patients" domain="[('admission_status', 'in', ['triage', 'admitted'])]"/>
+        <filter string="In Triage (ER)" name="in_triage" domain="[('admission_status', '=', 'triage')]"/>
+        <filter string="Admitted to Ward" name="admitted" domain="[('admission_status', '=', 'admitted')]"/>
+        <filter string="Discharged" name="discharged" domain="[('admission_status', '=', 'discharged')]"/>
         <separator/>
+
+        <!-- Clinical Risk Level -->
+        <filter string="Critical Risk" name="critical" domain="[('risk_level', '=', 'critical')]"/>
+        <filter string="High Risk" name="high_risk" domain="[('risk_level', '=', 'high')]"/>
+        <filter string="High &amp; Critical" name="high_critical" domain="[('risk_level', 'in', ['high', 'critical'])]"/>
+        <separator/>
+
+        <!-- Vitals Status (uses stored last_vital_time field) -->
+        <filter string="No Vitals Yet" name="no_vitals" domain="[('last_vital_time', '=', False), ('admission_status', 'in', ['triage', 'admitted'])]"/>
+        <filter string="Recent Admissions (7 days)" name="recent_admissions" domain="[('create_date', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d 00:00:00'))]"/>
+        <separator/>
+
+        <!-- Personal Scope -->
         <filter string="My Patients" name="my_patients" domain="[('doctor_id', '=', uid)]"/>
+
         <group expand="0" string="Group By">
           <filter string="Risk Level" name="group_by_risk" context="{'group_by':'risk_level'}"/>
+          <filter string="Admission Status" name="group_by_admission" context="{'group_by':'admission_status'}"/>
           <filter string="Assigned Doctor" name="group_by_doctor" context="{'group_by':'doctor_id'}"/>
+          <filter string="Ward" name="group_by_ward" context="{'group_by':'ward_id'}"/>
+          <filter string="Gender" name="group_by_gender" context="{'group_by':'gender'}"/>
+          <filter string="Category" name="group_by_category" context="{'group_by':'category'}"/>
         </group>
       </search>
     </field>
@@ -396,6 +457,7 @@
     <field name="res_model">health.patient</field>
     <field name="view_mode">kanban,tree,form</field>
     <field name="search_view_id" ref="view_patient_search"/>
+    <field name="context">{'search_default_active_patients': 1}</field>
     <field name="help" type="html">
       <p class="o_view_nocontent_smiling_face">
         Register the first patient!

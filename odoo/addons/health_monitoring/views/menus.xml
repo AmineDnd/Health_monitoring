@@ -19,6 +19,14 @@
   <menuitem id="menu_alerts"       name="Alert History"   parent="menu_health_root" action="action_all_alerts" sequence="15" groups="health_monitoring.group_health_admin"/>
   <menuitem id="menu_vitals"       name="All Vitals"      parent="menu_health_root" action="action_vitals_all" sequence="20"/>
 
+  <!-- Shift Handoff — nurses log, admins review -->
+  <menuitem id="menu_handoff"
+            name="Shift Handoffs"
+            parent="menu_health_root"
+            action="action_health_handoff"
+            sequence="25"
+            groups="health_monitoring.group_health_nurse,health_monitoring.group_health_admin"/>
+
   <!-- Analytics -->
   <menuitem id="menu_analytics_root"
             name="Analytics"

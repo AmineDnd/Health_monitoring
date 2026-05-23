@@ -1,4 +1,4 @@
-﻿import os, json, logging, requests
+import os, json, logging, requests
 from odoo import models, fields, api, _
 from odoo.exceptions import AccessError, ValidationError
 
@@ -498,6 +498,26 @@ class HealthVitalRecord(models.Model):
                 'ai_analysis_error': False,
             })
             created_jobs |= job
+
+        # FIX ISSUE 1: Process AI jobs immediately (inline) so users see
+        # results as soon as the form reloads, instead of waiting for cron.
+        # _process_one() already uses no_ai=True context internally and
+        # handles errors via _record_failure, so this is safe.
+        if created_jobs:
+            for job in created_jobs:
+                if job.state in ('pending', 'retrying'):
+                    try:
+                        with self.env.cr.savepoint():
+                            job._process_one()
+                    except Exception as exc:
+                        _logger.exception(
+                            "Inline AI job %s failed: %s", job.id, exc
+                        )
+                        try:
+                            job._record_failure(exc)
+                        except Exception:
+                            _logger.exception("Failed to record AI job failure for job %s", job.id)
+
         return created_jobs
 
     def _prepare_ai_analysis_payload(self):
